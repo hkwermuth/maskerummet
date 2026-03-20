@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react'
 import { supabase } from './lib/supabase'
 import Garnlager from './components/Garnlager'
 import Ideeboard from './components/Ideeboard'
+import Arkiv from './components/Arkiv'
 import Auth from './components/Auth'
 
 const TABS = [
   { id: 'garnlager', label: 'Garnlager' },
-  { id: 'ideer', label: 'Idéer' },
+  { id: 'arkiv',     label: 'Arkiv' },
+  { id: 'ideer',     label: 'Idéer' },
 ]
 
 export default function App() {
@@ -113,7 +115,8 @@ export default function App() {
 
       {/* Content */}
       {activeTab === 'garnlager' && <Garnlager user={user} />}
-      {activeTab === 'ideer' && <Ideeboard />}
+      {activeTab === 'arkiv'     && <Arkiv />}
+      {activeTab === 'ideer'     && <Ideeboard user={user} />}
     </div>
   )
 }

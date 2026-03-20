@@ -3,7 +3,7 @@
 // articleNumber = Permins produktnummer (trykt på banderolen)
 // Barcode-matching: EAN-13 koder fra Permin starter typisk med 570285 + articleNumber
 
-// ─── Bella (75% Kid Mohair, 20% Uld, 5% Polyamid, 200m/50g, pindstr. 3-4) ───
+// ─── Bella (75% Kid Mohair, 20% Uld, 5% Polyamid, 145m/50g, pindstr. 6) ───
 
 export const BELLA = [
   { articleNumber: '883201', colorName: 'White',           colorNameDa: 'Hvid',               hex: '#FFFFFF' },
@@ -67,7 +67,7 @@ export const BELLA = [
   { articleNumber: '8832105', colorName: 'Mint Sorbet',   colorNameDa: 'Mint sorbet',         hex: '#90E8C0' },
 ]
 
-// ─── Bella Color (75% Kid Mohair, 20% Uld, 5% Polyamid, 145m/50g, pindstr. 3-4) ─
+// ─── Bella Color (75% Kid Mohair, 20% Uld, 5% Polyamid, 145m/50g, pindstr. 6) ─
 
 export const BELLA_COLOR = [
   { articleNumber: '883150', colorName: 'Råhvid',              hex: '#F5F0E8' },
@@ -116,8 +116,8 @@ export const BELLA_COLOR = [
 // ─── Combined catalog ─────────────────────────────────────────────────────────
 
 export const PERMIN_CATALOG = [
-  ...BELLA.map(e => ({ ...e, series: 'Bella', brand: 'Permin', fiber: 'Kid Mohair/Uld', metrage: 145, weight: 'DK', pindstr: '3-4' })),
-  ...BELLA_COLOR.map(e => ({ ...e, series: 'Bella Color', brand: 'Permin', fiber: 'Kid Mohair/Uld', metrage: 145, weight: 'DK', pindstr: '3-4' })),
+  ...BELLA.map(e => ({ ...e, series: 'Bella', brand: 'Permin', fiber: 'Kid Mohair/Uld', metrage: 145, weight: 'DK', pindstr: '6' })),
+  ...BELLA_COLOR.map(e => ({ ...e, series: 'Bella Color', brand: 'Permin', fiber: 'Kid Mohair/Uld', metrage: 145, weight: 'DK', pindstr: '6' })),
 ]
 
 /**

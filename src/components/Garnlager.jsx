@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase, toDb, fromDb } from '../lib/supabase'
+import { supabase, toDb, fromDb, uploadFile } from '../lib/supabase'
 import BarcodeScanner from './BarcodeScanner'
+import BrugNøglerModal from './BrugNøglerModal'
 import { PERMIN_CATALOG } from '../data/perminCatalog'
+import { detectColorFamily, COLOR_FAMILY_LABELS } from '../data/colorFamilies'
 
-const WEIGHTS = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
+const WEIGHTS  = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
 const STATUSES = ['På lager', 'I brug', 'Brugt op', 'Ønskeliste']
+const FIBER_PILLS = ['Uld', 'Merino', 'Mohair', 'Alpaka', 'Silke', 'Bomuld', 'Hør', 'Akryl']
 
 const STATUS_COLORS = {
   'På lager': '#D0E8D4',
@@ -20,9 +23,10 @@ const STATUS_TEXT = {
 }
 
 const EMPTY_FORM = {
-  name: '', brand: '', colorName: '', colorCode: '',
+  name: '', brand: '', colorName: '', colorCode: '', colorCategory: '',
   weight: 'DK', fiber: '', metrage: '', pindstr: '',
   antal: 1, status: 'På lager', hex: '#A8C4C4', noter: '', barcode: '',
+  imageUrl: null,
 }
 
 // ─── Catalog autocomplete ─────────────────────────────────────────────────────
@@ -239,12 +243,17 @@ export default function Garnlager({ user }) {
   const [q, setQ] = useState('')
   const [filterWeight, setFilterWeight] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [filterFiber, setFilterFiber] = useState('')
+
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
 
   const [modal, setModal] = useState(null) // null | 'add' | yarn.id
   const [form, setForm] = useState(EMPTY_FORM)
 
   const [showGuide, setShowGuide] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
+  const [brugModal, setBrugModal] = useState(null) // yarn object or null
   const [saveError, setSaveError] = useState(null)
 
   // ── Load from Supabase ──────────────────────────────────────────────────────
@@ -276,30 +285,54 @@ export default function Garnlager({ user }) {
   // ── CRUD ─────────────────────────────────────────────────────────────────────
   async function save() {
     setSaveError(null)
-    if (modal === 'add') {
-      const { data, error } = await supabase
-        .from('yarn_items')
-        .insert([{ ...toDb(form), user_id: user.id }])
-        .select()
-        .single()
-      if (error) {
-        setSaveError(`Kunne ikke gemme: ${error.message} (kode: ${error.code})`)
-        return
+    try {
+      // Auto-detect color category from color name if not manually set
+      const colorCategory = form.colorCategory || detectColorFamily(form.colorName) || null
+      const formWithCategory = { ...form, colorCategory }
+
+      let savedId = modal === 'add' ? null : modal
+      let dbRow
+
+      if (modal === 'add') {
+        const { data, error } = await supabase
+          .from('yarn_items')
+          .insert([{ ...toDb(formWithCategory), user_id: user.id }])
+          .select()
+          .single()
+        if (error) { setSaveError(`Kunne ikke gemme: ${error.message} (kode: ${error.code})`); return }
+        dbRow = data
+        savedId = data.id
+      } else {
+        const { data, error } = await supabase
+          .from('yarn_items')
+          .update(toDb(formWithCategory))
+          .eq('id', modal)
+          .select()
+          .single()
+        if (error) { setSaveError(`Kunne ikke opdatere: ${error.message} (kode: ${error.code})`); return }
+        dbRow = data
       }
-      if (data) setYarns(prev => [...prev, fromDb(data)])
-    } else {
-      const { data, error } = await supabase
-        .from('yarn_items')
-        .update(toDb(form))
-        .eq('id', modal)
-        .select()
-        .single()
-      if (error) {
-        setSaveError(`Kunne ikke opdatere: ${error.message} (kode: ${error.code})`)
-        return
+
+      // Upload image if a new file was selected
+      if (imageFile && savedId) {
+        const ext = imageFile.name.split('.').pop()
+        const url = await uploadFile('yarn-images', `${user.id}/${savedId}.${ext}`, imageFile)
+        await supabase.from('yarn_items').update({ image_url: url }).eq('id', savedId)
+        dbRow.image_url = url
       }
-      if (data) setYarns(prev => prev.map(y => y.id === modal ? fromDb(data) : y))
+
+      const mapped = fromDb(dbRow)
+      if (modal === 'add') {
+        setYarns(prev => [...prev, mapped])
+      } else {
+        setYarns(prev => prev.map(y => y.id === modal ? mapped : y))
+      }
+    } catch (e) {
+      setSaveError('Fejl: ' + e.message)
+      return
     }
+    setImageFile(null)
+    setImagePreview(null)
     flashSave()
     setModal(null)
   }
@@ -311,22 +344,50 @@ export default function Garnlager({ user }) {
     flashSave()
   }
 
-  function openAdd() { setForm({ ...EMPTY_FORM }); setModal('add') }
-  function openEdit(y) { setForm({ ...y }); setModal(y.id) }
+  function openAdd() {
+    setForm({ ...EMPTY_FORM })
+    setImageFile(null)
+    setImagePreview(null)
+    setModal('add')
+  }
+  function openEdit(y) {
+    setForm({ ...y })
+    setImageFile(null)
+    setImagePreview(y.imageUrl ?? null)
+    setModal(y.id)
+  }
   function setF(k, v) { setForm(p => ({ ...p, [k]: v })) }
 
+  function handleImageFile(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  function toggleFiberInForm(fiber) {
+    const current = form.fiber || ''
+    const parts = current.split(',').map(s => s.trim()).filter(Boolean)
+    const fiberLower = fiber.toLowerCase()
+    const exists = parts.some(p => p.toLowerCase() === fiberLower)
+    const newParts = exists ? parts.filter(p => p.toLowerCase() !== fiberLower) : [...parts, fiber]
+    setF('fiber', newParts.join(', '))
+  }
+
   function selectFromCatalog(entry) {
+    const colorName = entry.colorNameDa ?? entry.colorName
     setForm(p => ({
       ...p,
-      name:      entry.series,
-      brand:     entry.brand,
-      colorName: entry.colorNameDa ?? entry.colorName,
-      colorCode: entry.articleNumber,
-      fiber:     entry.fiber,
-      metrage:   entry.metrage,
-      weight:    entry.weight,
-      pindstr:   entry.pindstr,
-      hex:       entry.hex,
+      name:          entry.series,
+      brand:         entry.brand,
+      colorName,
+      colorCode:     entry.articleNumber,
+      colorCategory: detectColorFamily(colorName) || p.colorCategory,
+      fiber:         entry.fiber,
+      metrage:       entry.metrage,
+      weight:        entry.weight,
+      pindstr:       entry.pindstr,
+      hex:           entry.hex,
     }))
   }
 
@@ -339,11 +400,13 @@ export default function Garnlager({ user }) {
   // ── Filtering ───────────────────────────────────────────────────────────────
   const filtered = yarns.filter(y => {
     const qL = q.toLowerCase()
-    return (
-      (!qL || [y.name, y.brand, y.colorName].some(s => (s ?? '').toLowerCase().includes(qL))) &&
-      (!filterWeight || y.weight === filterWeight) &&
-      (!filterStatus || y.status === filterStatus)
+    const matchesSearch = !qL || (
+      [y.name, y.brand, y.colorName, y.colorCategory, y.fiber, y.noter].some(s => (s ?? '').toLowerCase().includes(qL))
     )
+    const matchesWeight = !filterWeight || y.weight === filterWeight
+    const matchesStatus = !filterStatus || y.status === filterStatus
+    const matchesFiber  = !filterFiber  || (y.fiber ?? '').toLowerCase().includes(filterFiber.toLowerCase())
+    return matchesSearch && matchesWeight && matchesStatus && matchesFiber
   })
 
   const totalNgl = yarns.reduce((s, y) => s + Number(y.antal || 0), 0)
@@ -359,6 +422,22 @@ export default function Garnlager({ user }) {
 
       {showGuide && <FiveSGuide onClose={() => setShowGuide(false)} />}
       {showScanner && <BarcodeScanner onClose={() => setShowScanner(false)} onAddToLager={handleScanResult} />}
+      {brugModal && (
+        <BrugNøglerModal
+          yarn={brugModal}
+          user={user}
+          onClose={() => setBrugModal(null)}
+          onSaved={(usageRow, newQty, newStatus) => {
+            setYarns(prev => prev.map(y =>
+              y.id === brugModal.id
+                ? { ...y, antal: newQty, status: newStatus ?? y.status }
+                : y
+            ))
+            setBrugModal(null)
+            setModal(null)
+          }}
+        />
+      )}
 
       {/* Sub-header */}
       <div style={{ background: '#2C4A3E', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #1E3828', flexWrap: 'wrap' }}>
@@ -407,11 +486,11 @@ export default function Garnlager({ user }) {
       </div>
 
       {/* Filters */}
-      <div style={{ padding: '14px 20px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ padding: '12px 20px 8px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           value={q}
           onChange={e => setQ(e.target.value)}
-          placeholder="Søg garn, mærke eller farve..."
+          placeholder="Søg garn, mærke, farve eller grøn/brun/blå..."
           style={{ flex: '1 1 180px', minWidth: '0', padding: '8px 12px', border: '1px solid #D0C8BA', borderRadius: '6px', fontSize: '13px', background: '#FFFCF7', color: '#2C2018', fontFamily: "'DM Sans', sans-serif" }}
         />
         <select value={filterWeight} onChange={e => setFilterWeight(e.target.value)} style={{ ...inputStyle, cursor: 'pointer', flex: '0 0 auto' }}>
@@ -422,12 +501,32 @@ export default function Garnlager({ user }) {
           <option value="">Alle statusser</option>
           {STATUSES.map(s => <option key={s}>{s}</option>)}
         </select>
-        {(q || filterWeight || filterStatus) && (
-          <button onClick={() => { setQ(''); setFilterWeight(''); setFilterStatus('') }}
+        {(q || filterWeight || filterStatus || filterFiber) && (
+          <button onClick={() => { setQ(''); setFilterWeight(''); setFilterStatus(''); setFilterFiber('') }}
             style={{ padding: '7px 12px', border: '1px solid #D0C8BA', borderRadius: '6px', background: 'transparent', fontSize: '12px', color: '#8B7D6B', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
             ✕ Ryd
           </button>
         )}
+      </div>
+
+      {/* Fiber pills */}
+      <div style={{ padding: '0 20px 12px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {FIBER_PILLS.map(f => (
+          <button
+            key={f}
+            onClick={() => setFilterFiber(filterFiber.toLowerCase() === f.toLowerCase() ? '' : f)}
+            style={{
+              padding: '4px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer',
+              fontFamily: "'DM Sans', sans-serif", border: '1px solid',
+              background: filterFiber.toLowerCase() === f.toLowerCase() ? '#2C4A3E' : 'transparent',
+              color:      filterFiber.toLowerCase() === f.toLowerCase() ? '#fff' : '#6B5D4F',
+              borderColor: filterFiber.toLowerCase() === f.toLowerCase() ? '#2C4A3E' : '#C8C0B0',
+              transition: 'all .15s',
+            }}
+          >
+            {f}
+          </button>
+        ))}
       </div>
 
       {/* Grid */}
@@ -451,7 +550,13 @@ export default function Garnlager({ user }) {
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(44,32,24,.13)' }}
               onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
             >
-              <div style={{ height: '72px', background: y.hex || '#D0C8BA' }} />
+              {y.imageUrl ? (
+                <div style={{ height: '100px', overflow: 'hidden' }}>
+                  <img src={y.imageUrl} alt={y.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ) : (
+                <div style={{ height: '72px', background: y.hex || '#D0C8BA' }} />
+              )}
               <div style={{ padding: '12px' }}>
                 <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.12em', color: '#8B7D6B', marginBottom: '2px' }}>{y.brand}</div>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '17px', fontWeight: 600, color: '#2C2018', marginBottom: '3px' }}>{y.name}</div>
@@ -482,7 +587,7 @@ export default function Garnlager({ user }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
               {[
                 ['name', 'Garnnavn'], ['brand', 'Mærke'],
-                ['fiber', 'Fiber'], ['metrage', 'Løbelængde/nøgle (m)'],
+                ['metrage', 'Løbelængde/nøgle (m)'],
                 ['pindstr', 'Pindstørrelse'], ['antal', 'Antal nøgler'],
               ].map(([k, l]) => (
                 <Field key={k} label={l}>
@@ -497,12 +602,48 @@ export default function Garnlager({ user }) {
                 </Field>
               ))}
 
+              {/* Fiber med hurtigvalg */}
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <Label>Fiber</Label>
+                <input
+                  value={form.fiber ?? ''}
+                  onChange={e => setF('fiber', e.target.value)}
+                  placeholder="F.eks. 80% Uld, 20% Mohair"
+                  style={inputStyle}
+                />
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                  {FIBER_PILLS.map(f => {
+                    const active = (form.fiber || '').toLowerCase().includes(f.toLowerCase())
+                    return (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => toggleFiberInForm(f)}
+                        style={{
+                          padding: '3px 10px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer',
+                          fontFamily: "'DM Sans', sans-serif", border: '1px solid',
+                          background: active ? '#2C4A3E' : 'transparent',
+                          color:      active ? '#fff'    : '#6B5D4F',
+                          borderColor: active ? '#2C4A3E' : '#C8C0B0',
+                        }}
+                      >
+                        {f}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               <Field label="Farvenavn">
                 <CatalogSearch
                   value={form.colorName ?? ''}
-                  onChange={v => setF('colorName', v)}
+                  onChange={v => {
+                    setF('colorName', v)
+                    const detected = detectColorFamily(v)
+                    if (detected && !form.colorCategory) setF('colorCategory', detected)
+                  }}
                   onSelect={selectFromCatalog}
-                  placeholder="F.eks. Råhvid, Blå..."
+                  placeholder="F.eks. Blomstereng, Camel..."
                   field="colorName"
                 />
               </Field>
@@ -515,6 +656,27 @@ export default function Garnlager({ user }) {
                   placeholder="F.eks. 883174"
                   field="colorCode"
                 />
+              </Field>
+
+              {/* Color category — auto-detected, can be overridden */}
+              <Field label="Farvekategori (til søgning)">
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <input
+                    value={form.colorCategory ?? ''}
+                    onChange={e => setF('colorCategory', e.target.value)}
+                    placeholder={detectColorFamily(form.colorName) ?? 'F.eks. grøn, brun...'}
+                    style={{ ...inputStyle, flex: 1 }}
+                    list="color-family-list"
+                  />
+                  <datalist id="color-family-list">
+                    {COLOR_FAMILY_LABELS.map(c => <option key={c} value={c} />)}
+                  </datalist>
+                  {(form.colorCategory || detectColorFamily(form.colorName)) && (
+                    <span style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '20px', background: '#EDE7D8', color: '#6B5D4F', whiteSpace: 'nowrap' }}>
+                      {form.colorCategory || detectColorFamily(form.colorName)}
+                    </span>
+                  )}
+                </div>
               </Field>
 
               <Field label="Garnvægt">
@@ -530,13 +692,43 @@ export default function Garnlager({ user }) {
               </Field>
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <Label>Farve</Label>
+                <Label>Farve (hex)</Label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input type="color" value={form.hex || '#A8C4C4'} onChange={e => setF('hex', e.target.value)}
                     style={{ width: '44px', height: '34px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px' }} />
                   <input value={form.hex || ''} onChange={e => setF('hex', e.target.value)} style={{ ...inputStyle, flex: 1 }} />
                   <div style={{ width: '34px', height: '34px', borderRadius: '6px', background: form.hex || '#A8C4C4', border: '1px solid #D0C8BA', flexShrink: 0 }} />
                 </div>
+              </div>
+
+              {/* Billede upload */}
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <Label>Billede af garnet</Label>
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '8px 12px', border: '1px dashed #C0B8A8',
+                  borderRadius: '8px', cursor: 'pointer', background: '#F4EFE6',
+                }}>
+                  <input type="file" accept="image/*" onChange={handleImageFile} style={{ display: 'none' }} />
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="preview" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #D0C8BA' }} />
+                  ) : (
+                    <div style={{ width: '56px', height: '56px', background: '#EDE7D8', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', color: '#8B7D6B' }}>📷</div>
+                  )}
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#2C2018', fontWeight: 500 }}>{imagePreview ? 'Skift billede' : 'Upload billede'}</div>
+                    <div style={{ fontSize: '11px', color: '#8B7D6B' }}>JPG eller PNG — vises på garnkortet</div>
+                  </div>
+                </label>
+                {imagePreview && (
+                  <button
+                    type="button"
+                    onClick={() => { setImageFile(null); setImagePreview(null); setF('imageUrl', null) }}
+                    style={{ alignSelf: 'flex-start', fontSize: '11px', color: '#8B3A2A', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    ✕ Fjern billede
+                  </button>
+                )}
               </div>
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -571,6 +763,14 @@ export default function Garnlager({ user }) {
               {modal !== 'add' && (
                 <button onClick={del} style={{ padding: '8px 14px', background: '#F0E8E0', color: '#8B3A2A', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', marginRight: 'auto', fontFamily: "'DM Sans', sans-serif" }}>
                   Slet
+                </button>
+              )}
+              {modal !== 'add' && Number(form.antal) > 0 && (
+                <button
+                  onClick={() => { setBrugModal(yarns.find(y => y.id === modal)) }}
+                  style={{ padding: '8px 14px', background: '#F4EFE6', color: '#6A5638', border: '1px solid #C8B89A', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  Brug nøgler
                 </button>
               )}
               <button onClick={() => setModal(null)} style={{ padding: '8px 14px', border: '1px solid #D0C8BA', borderRadius: '6px', background: 'transparent', fontSize: '13px', cursor: 'pointer', color: '#6B5D4F', fontFamily: "'DM Sans', sans-serif" }}>

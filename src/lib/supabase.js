@@ -24,15 +24,17 @@ const EXTENDED_COLS_ENABLED = true
 
 export function toDb(yarn) {
   const base = {
-    name:        yarn.name        || null,
-    brand:       yarn.brand       || null,
-    color_name:  yarn.colorName   || null,
-    color_code:  yarn.colorCode   || null,
-    fiber:       yarn.fiber       || null,
-    yarn_weight: yarn.weight      || null,
-    gauge:       yarn.pindstr     || null,
-    meters:      yarn.metrage     ? Number(yarn.metrage) : null,
-    barcode:     yarn.barcode     || null,
+    name:           yarn.name          || null,
+    brand:          yarn.brand         || null,
+    color_name:     yarn.colorName     || null,
+    color_code:     yarn.colorCode     || null,
+    color_category: yarn.colorCategory || null,
+    fiber:          yarn.fiber         || null,
+    yarn_weight:    yarn.weight        || null,
+    gauge:          yarn.pindstr       || null,
+    meters:         yarn.metrage       ? Number(yarn.metrage) : null,
+    barcode:        yarn.barcode       || null,
+    image_url:      yarn.imageUrl      ?? null,
   }
   if (EXTENDED_COLS_ENABLED) {
     base.quantity  = yarn.antal  ? parseFloat(yarn.antal) : 1
@@ -43,21 +45,80 @@ export function toDb(yarn) {
   return base
 }
 
+// ── yarn_usage mapping ────────────────────────────────────────────────────────
+
+export function toUsageDb(u) {
+  return {
+    yarn_item_id:      u.yarnItemId      ?? null,
+    yarn_name:         u.yarnName        ?? null,
+    yarn_brand:        u.yarnBrand       ?? null,
+    color_name:        u.colorName       ?? null,
+    color_code:        u.colorCode       ?? null,
+    hex_color:         u.hex             ?? null,
+    quantity_used:     u.quantityUsed    ? parseFloat(u.quantityUsed) : null,
+    used_for:          u.usedFor         ?? null,
+    needle_size:       u.needleSize      ?? null,
+    held_with:         u.heldWith        ?? null,
+    notes:             u.notes           ?? null,
+    project_image_url: u.projectImageUrl ?? null,
+    pattern_pdf_url:   u.patternPdfUrl   ?? null,
+    used_at:           u.usedAt          ?? new Date().toISOString().slice(0, 10),
+  }
+}
+
+export function fromUsageDb(row) {
+  return {
+    id:              row.id,
+    yarnItemId:      row.yarn_item_id,
+    yarnName:        row.yarn_name,
+    yarnBrand:       row.yarn_brand,
+    colorName:       row.color_name,
+    colorCode:       row.color_code,
+    hex:             row.hex_color ?? '#A8C4C4',
+    quantityUsed:    row.quantity_used,
+    usedFor:         row.used_for,
+    needleSize:      row.needle_size,
+    heldWith:        row.held_with,
+    notes:           row.notes,
+    projectImageUrl: row.project_image_url,
+    patternPdfUrl:   row.pattern_pdf_url,
+    usedAt:          row.used_at,
+    createdAt:       row.created_at,
+  }
+}
+
+// ── Storage helpers ────────────────────────────────────────────────────────────
+
+export async function uploadFile(bucket, path, file) {
+  const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
+  if (error) throw error
+  const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path)
+  // For private buckets, create a signed URL instead
+  const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(path, 60 * 60 * 24 * 365)
+  return signed?.signedUrl ?? publicUrl
+}
+
+export async function deleteFile(bucket, path) {
+  await supabase.storage.from(bucket).remove([path])
+}
+
 export function fromDb(row) {
   return {
-    id:        row.id,
-    name:      row.name,
-    brand:     row.brand,
-    colorName: row.color_name,
-    colorCode: row.color_code,
-    fiber:     row.fiber,
-    weight:    row.yarn_weight,
-    pindstr:   row.gauge,
-    metrage:   row.meters,
-    antal:     row.quantity  ?? 1,
-    status:    row.status    ?? 'På lager',
-    hex:       row.hex_color ?? '#A8C4C4',
-    noter:     row.notes     ?? '',
-    barcode:   row.barcode,
+    id:            row.id,
+    name:          row.name,
+    brand:         row.brand,
+    colorName:     row.color_name,
+    colorCode:     row.color_code,
+    colorCategory: row.color_category ?? null,
+    fiber:         row.fiber,
+    weight:        row.yarn_weight,
+    pindstr:       row.gauge,
+    metrage:       row.meters,
+    antal:         row.quantity  ?? 1,
+    status:        row.status    ?? 'På lager',
+    hex:           row.hex_color ?? '#A8C4C4',
+    noter:         row.notes     ?? '',
+    barcode:       row.barcode,
+    imageUrl:      row.image_url ?? null,
   }
 }
