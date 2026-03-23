@@ -3,11 +3,13 @@ import { supabase } from './lib/supabase'
 import Garnlager from './components/Garnlager'
 import Ideeboard from './components/Ideeboard'
 import Arkiv from './components/Arkiv'
+import FindGarn from './components/FindGarn'
 import Auth from './components/Auth'
 
 const TABS = [
   { id: 'garnlager', label: 'Garnlager' },
-  { id: 'arkiv',     label: 'Arkiv' },
+  { id: 'arkiv',     label: 'Færdige projekter' },
+  { id: 'findgarn',  label: 'Find garn' },
   { id: 'ideer',     label: 'Idéer' },
 ]
 
@@ -115,7 +117,8 @@ export default function App() {
 
       {/* Content */}
       {activeTab === 'garnlager' && <Garnlager user={user} />}
-      {activeTab === 'arkiv'     && <Arkiv />}
+      {activeTab === 'arkiv'     && <Arkiv user={user} />}
+      {activeTab === 'findgarn'  && <FindGarn />}
       {activeTab === 'ideer'     && <Ideeboard user={user} />}
     </div>
   )

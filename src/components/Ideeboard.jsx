@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-const ADMIN_EMAILS = ['hannah@leanmind.dk', 'hkwermuth@gmail.com']
+const ADMIN_EMAILS = ['hannah@leanmind.dk', 'hkwermuth@gmail.com', 'pernillejin@hotmail.com']
 
 const COLS = [
   { id: 'garnlager',   label: 'Garnlager',            emoji: '🧶', ac: '#2C4A3E', hdr: '#1A3028', border: '#3A6050' },
