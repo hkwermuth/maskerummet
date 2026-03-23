@@ -3,7 +3,10 @@ import { supabase, toDb, fromDb, uploadFile } from '../lib/supabase'
 import BarcodeScanner from './BarcodeScanner'
 import BrugNøglerModal from './BrugNøglerModal'
 import { PERMIN_CATALOG } from '../data/perminCatalog'
+import { FILCOLANA_CATALOG } from '../data/filcolanaCatalog'
 import { detectColorFamily, COLOR_FAMILY_LABELS } from '../data/colorFamilies'
+
+const ALL_CATALOG = [...PERMIN_CATALOG, ...FILCOLANA_CATALOG]
 
 const WEIGHTS  = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
 const STATUSES = ['På lager', 'I brug', 'Brugt op', 'Ønskeliste']
@@ -39,7 +42,7 @@ function CatalogSearch({ value, onChange, onSelect, placeholder, field }) {
   useEffect(() => {
     const q = (value || '').toLowerCase().trim()
     if (q.length < 1) { setHits([]); setOpen(false); return }
-    const results = PERMIN_CATALOG.filter(e => {
+    const results = ALL_CATALOG.filter(e => {
       if (field === 'colorCode') return e.articleNumber.includes(q)
       return (
         e.colorName?.toLowerCase().includes(q) ||

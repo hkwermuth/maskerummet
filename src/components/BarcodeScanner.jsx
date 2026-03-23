@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/library'
 import { lookupByBarcode } from '../data/perminCatalog'
+import { lookupTiliaByBarcode } from '../data/filcolanaCatalog'
+
+function lookupAllCatalogs(code) {
+  return lookupByBarcode(code) || lookupTiliaByBarcode(code)
+}
 
 export default function BarcodeScanner({ onClose, onAddToLager }) {
   const videoRef = useRef(null)
@@ -35,7 +40,7 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
         reader.reset()
         setScanHint('')
         setScanning(false)
-        const found = lookupByBarcode(code)
+        const found = lookupAllCatalogs(code)
         setResult(found ? { ...found, scannedCode: code } : { notFound: true, scannedCode: code })
       }
     ).catch(e => {
@@ -56,7 +61,7 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
   }, [])
 
   function handleManualLookup() {
-    const found = lookupByBarcode(manualCode.trim())
+    const found = lookupAllCatalogs(manualCode.trim())
     setScanning(false)
     if (found) {
       setResult({ ...found, scannedCode: manualCode.trim() })
