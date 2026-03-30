@@ -1,45 +1,87 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import ForgotPassword from './ForgotPassword'
 
-const REMEMBERED_EMAIL_KEY = 'maskerummet-email'
-
-export default function Auth() {
-  const [email, setEmail] = useState('')
+export default function ResetPassword({ onBack }) {
   const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [success, setSuccess] = useState(false)
 
-  // Pre-fill remembered email on mount
+  // Check if user has recovery session (from reset email)
   useEffect(() => {
-    const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY)
-    if (saved) setEmail(saved)
+    const { data } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // User is in password recovery state
+      }
+    })
+    return () => data?.subscription?.unsubscribe()
   }, [])
 
-  async function signIn(e) {
+  async function handleReset(e) {
     e.preventDefault()
-    setLoading(true)
     setError(null)
 
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-
-    if (err) {
-      setError(
-        err.message === 'Invalid login credentials'
-          ? 'Forkert e-mail eller adgangskode.'
-          : err.message
-      )
+    if (password !== passwordConfirm) {
+      setError('Adgangskoderne stemmer ikke overens.')
       return
     }
 
-    // Remember email for next time
-    localStorage.setItem(REMEMBERED_EMAIL_KEY, email)
+    if (password.length < 6) {
+      setError('Adgangskoden skal være mindst 6 tegn.')
+      return
+    }
+
+    setLoading(true)
+    const { error: err } = await supabase.auth.updateUser({ password })
+    setLoading(false)
+
+    if (err) {
+      setError(err.message || 'Der skete en fejl. Prøv igen.')
+      return
+    }
+
+    setSuccess(true)
   }
 
-  if (showForgotPassword) {
-    return <ForgotPassword onBack={() => setShowForgotPassword(false)} />
+  if (success) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#F4EFE6',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'DM Sans', sans-serif", padding: '20px',
+      }}>
+        <div style={{
+          background: '#FFFCF7', borderRadius: '16px',
+          padding: '48px 40px', width: '380px', maxWidth: '100%',
+          boxShadow: '0 8px 40px rgba(44,32,24,.12)', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '32px', marginBottom: '16px' }}>✓</div>
+          <div style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: '24px', fontWeight: 600, color: '#2C4A3E', marginBottom: '12px',
+          }}>
+            Adgangskode nulstillet
+          </div>
+          <div style={{ fontSize: '13px', color: '#8B7D6B', lineHeight: '1.6', marginBottom: '24px' }}>
+            Din adgangskode er nu ændret. Du kan nu logge ind med din nye adgangskode.
+          </div>
+          <button
+            onClick={onBack}
+            style={{
+              padding: '12px 24px',
+              background: '#2C4A3E',
+              color: '#fff', border: 'none', borderRadius: '8px',
+              fontSize: '14px', fontWeight: 500,
+              cursor: 'pointer',
+              fontFamily: "'DM Sans', sans-serif",
+            }}
+          >
+            Gå til login
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -54,32 +96,32 @@ export default function Auth() {
         boxShadow: '0 8px 40px rgba(44,32,24,.12)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '32px', marginBottom: '8px' }}>🧶</div>
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔐</div>
           <div style={{
             fontFamily: "'Cormorant Garamond', serif",
             fontSize: '28px', fontWeight: 600, color: '#2C4A3E', marginBottom: '6px',
           }}>
-            Maskerummet
+            Sæt ny adgangskode
           </div>
           <div style={{ fontSize: '13px', color: '#8B7D6B' }}>
-            Log ind for at åbne dit garnlager
+            Vælg en sikker adgangskode
           </div>
         </div>
 
-        <form onSubmit={signIn}>
+        <form onSubmit={handleReset}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
               <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.1em', color: '#8B7D6B' }}>
-                E-mail
+                Ny adgangskode
               </label>
               <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="din@email.dk"
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
                 required
-                autoComplete="email"
+                autoComplete="new-password"
                 style={{
                   padding: '10px 12px', border: '1px solid #D0C8BA',
                   borderRadius: '8px', fontSize: '14px',
@@ -91,15 +133,15 @@ export default function Auth() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
               <label style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.1em', color: '#8B7D6B' }}>
-                Adgangskode
+                Bekræft adgangskode
               </label>
               <input
                 type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
+                value={passwordConfirm}
+                onChange={e => setPasswordConfirm(e.target.value)}
                 placeholder="••••••••"
                 required
-                autoComplete="current-password"
+                autoComplete="new-password"
                 style={{
                   padding: '10px 12px', border: '1px solid #D0C8BA',
                   borderRadius: '8px', fontSize: '14px',
@@ -120,7 +162,7 @@ export default function Auth() {
 
             <button
               type="submit"
-              disabled={loading || !email || !password}
+              disabled={loading || !password || !passwordConfirm}
               style={{
                 padding: '12px', marginTop: '4px',
                 background: loading ? '#8AAAA0' : '#2C4A3E',
@@ -131,26 +173,10 @@ export default function Auth() {
                 transition: 'background .15s',
               }}
             >
-              {loading ? 'Logger ind...' : 'Log ind'}
+              {loading ? 'Gemmer...' : 'Gem ny adgangskode'}
             </button>
           </div>
         </form>
-
-        <button
-          onClick={() => setShowForgotPassword(true)}
-          style={{
-            marginTop: '16px', width: '100%',
-            background: 'transparent', border: 'none',
-            color: '#8B7D6B', fontSize: '12px', cursor: 'pointer',
-            fontFamily: "'DM Sans', sans-serif", textDecoration: 'underline',
-          }}
-        >
-          Glemt adgangskode?
-        </button>
-
-        <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '11px', color: '#B0A090' }}>
-          Din e-mail huskes automatisk til næste gang
-        </div>
       </div>
     </div>
   )

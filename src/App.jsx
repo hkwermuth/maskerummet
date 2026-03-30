@@ -5,6 +5,7 @@ import Ideeboard from './components/Ideeboard'
 import Arkiv from './components/Arkiv'
 import FindGarn from './components/FindGarn'
 import Auth from './components/Auth'
+import ResetPassword from './components/ResetPassword'
 
 const TABS = [
   { id: 'garnlager', label: 'Garnlager' },
@@ -16,6 +17,26 @@ const TABS = [
 export default function App() {
   const [activeTab, setActiveTab] = useState('garnlager')
   const [session, setSession] = useState(undefined) // undefined = loading
+  const [isResetPasswordPage, setIsResetPasswordPage] = useState(false)
+
+  useEffect(() => {
+    // Check if we're on reset password page
+    const checkResetPasswordHash = () => {
+      const hash = window.location.hash
+      if (hash.includes('/reset-password') || hash.includes('type=recovery')) {
+        setIsResetPasswordPage(true)
+      } else {
+        setIsResetPasswordPage(false)
+      }
+    }
+
+    checkResetPasswordHash()
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', checkResetPasswordHash)
+
+    return () => window.removeEventListener('hashchange', checkResetPasswordHash)
+  }, [])
 
   useEffect(() => {
     // Get current session on mount
@@ -42,6 +63,14 @@ export default function App() {
         <span>Indlæser...</span>
       </div>
     )
+  }
+
+  // Reset password page — show password reset screen
+  if (isResetPasswordPage) {
+    return <ResetPassword onBack={() => {
+      setIsResetPasswordPage(false)
+      window.location.hash = ''
+    }} />
   }
 
   // Not logged in — show login screen
