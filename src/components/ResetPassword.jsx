@@ -7,15 +7,89 @@ export default function ResetPassword({ onBack }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
+  const [sessionReady, setSessionReady] = useState(false)
+  const [initializing, setInitializing] = useState(true)
 
-  // Check if user has recovery session (from reset email)
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        // User is in password recovery state
+    const establishSession = async () => {
+      console.log('=== ResetPassword: Establishing session ===')
+      console.log('URL hash:', window.location.hash)
+      console.log('URL search:', window.location.search)
+      console.log('Full URL:', window.location.href)
+
+      // 1. Check if SDK already has a session (auto-detected from URL)
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('Existing session:', session ? 'YES' : 'NO')
+
+      if (session) {
+        console.log('Session found — ready to update password')
+        setSessionReady(true)
+        setInitializing(false)
+        return
+      }
+
+      // 2. Try to manually parse tokens from URL
+      const hash = window.location.hash
+      const search = window.location.search
+
+      // Extract tokens using regex (handles double-hash, single-hash, any format)
+      const accessToken = hash.match(/access_token=([^&]+)/)?.[1]
+                       || search.match(/access_token=([^&]+)/)?.[1]
+      const refreshToken = hash.match(/refresh_token=([^&]+)/)?.[1]
+                        || search.match(/refresh_token=([^&]+)/)?.[1]
+
+      // Try PKCE code exchange (Supabase v2 may use this)
+      const code = new URLSearchParams(search).get('code')
+
+      console.log('Parsed tokens:', {
+        hasAccessToken: !!accessToken,
+        hasRefreshToken: !!refreshToken,
+        hasCode: !!code,
+      })
+
+      if (accessToken && refreshToken) {
+        console.log('Trying setSession with parsed tokens...')
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+        console.log('setSession result:', { data: !!data?.session, error: error?.message })
+        if (!error && data?.session) {
+          setSessionReady(true)
+          setInitializing(false)
+          return
+        }
+      }
+
+      if (code) {
+        console.log('Trying exchangeCodeForSession with PKCE code...')
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+        console.log('exchangeCode result:', { data: !!data?.session, error: error?.message })
+        if (!error && data?.session) {
+          setSessionReady(true)
+          setInitializing(false)
+          return
+        }
+      }
+
+      console.log('No tokens found — waiting for onAuthStateChange...')
+      // Don't set error yet — onAuthStateChange might still fire
+      setInitializing(false)
+    }
+
+    establishSession()
+
+    // Also listen for PASSWORD_RECOVERY event as fallback
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('onAuthStateChange event:', event, 'session:', !!session)
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        console.log('Session established via onAuthStateChange')
+        setSessionReady(true)
+        setInitializing(false)
       }
     })
-    return () => data?.subscription?.unsubscribe()
+
+    return () => subscription.unsubscribe()
   }, [])
 
   async function handleReset(e) {
@@ -32,16 +106,64 @@ export default function ResetPassword({ onBack }) {
       return
     }
 
-    setLoading(true)
-    const { error: err } = await supabase.auth.updateUser({ password })
-    setLoading(false)
-
-    if (err) {
-      setError(err.message || 'Der skete en fejl. Prøv igen.')
-      return
+    if (!sessionReady) {
+      // Last attempt: check session one more time before giving up
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setSessionReady(true)
+      } else {
+        setError('Ingen aktiv session. Prøv at klikke reset-linket fra din email igen.')
+        return
+      }
     }
 
-    setSuccess(true)
+    setLoading(true)
+
+    try {
+      console.log('Calling updateUser...')
+      const { data, error } = await supabase.auth.updateUser({ password })
+      console.log('updateUser result:', { data: !!data, error: error?.message })
+
+      if (error) {
+        throw error
+      }
+
+      console.log('Password updated successfully!')
+      setSuccess(true)
+    } catch (err) {
+      console.error('Password update error:', err)
+      setError(err.message || 'Der skete en fejl. Prøv igen.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Loading while establishing session
+  if (initializing) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#F4EFE6',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'DM Sans', sans-serif", padding: '20px',
+      }}>
+        <div style={{
+          background: '#FFFCF7', borderRadius: '16px',
+          padding: '48px 40px', width: '380px', maxWidth: '100%',
+          boxShadow: '0 8px 40px rgba(44,32,24,.12)', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '32px', marginBottom: '16px' }}>⏳</div>
+          <div style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: '20px', fontWeight: 600, color: '#2C4A3E', marginBottom: '12px',
+          }}>
+            Verificerer nulstillings-link
+          </div>
+          <div style={{ fontSize: '13px', color: '#8B7D6B', lineHeight: '1.6' }}>
+            Venligst vent...
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (success) {
@@ -106,6 +228,11 @@ export default function ResetPassword({ onBack }) {
           <div style={{ fontSize: '13px', color: '#8B7D6B' }}>
             Vælg en sikker adgangskode
           </div>
+          {!sessionReady && (
+            <div style={{ fontSize: '11px', color: '#B0A090', marginTop: '8px' }}>
+              Advarsel: Ingen session fundet. Tjek at du brugte linket fra din email.
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleReset}>

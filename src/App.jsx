@@ -23,19 +23,31 @@ export default function App() {
     // Check if we're on reset password page
     const checkResetPasswordHash = () => {
       const hash = window.location.hash
-      if (hash.includes('/reset-password') || hash.includes('type=recovery')) {
+      const search = window.location.search
+
+      // Check for reset password route or recovery token in URL
+      const isResetPasswordRoute = hash.includes('/reset-password')
+      const isRecoveryToken = hash.includes('type=recovery') || search.includes('type=recovery')
+
+      if (isResetPasswordRoute || isRecoveryToken) {
         setIsResetPasswordPage(true)
+        console.log('✓ Reset password page detected')
       } else {
         setIsResetPasswordPage(false)
       }
     }
 
+    // Check immediately on mount
     checkResetPasswordHash()
 
     // Listen for hash changes
     window.addEventListener('hashchange', checkResetPasswordHash)
+    window.addEventListener('popstate', checkResetPasswordHash)
 
-    return () => window.removeEventListener('hashchange', checkResetPasswordHash)
+    return () => {
+      window.removeEventListener('hashchange', checkResetPasswordHash)
+      window.removeEventListener('popstate', checkResetPasswordHash)
+    }
   }, [])
 
   useEffect(() => {
@@ -45,12 +57,25 @@ export default function App() {
     })
 
     // Listen for auth state changes (magic link callback, logout, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
+      // Supabase fires PASSWORD_RECOVERY when user clicks reset email link
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsResetPasswordPage(true)
+      }
     })
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // Reset password page — show password reset screen (before checking session)
+  // This ensures password reset is shown even if a session was auto-established
+  if (isResetPasswordPage) {
+    return <ResetPassword onBack={() => {
+      setIsResetPasswordPage(false)
+      window.location.hash = ''
+    }} />
+  }
 
   // Loading state while Supabase resolves the session
   if (session === undefined) {
@@ -63,14 +88,6 @@ export default function App() {
         <span>Indlæser...</span>
       </div>
     )
-  }
-
-  // Reset password page — show password reset screen
-  if (isResetPasswordPage) {
-    return <ResetPassword onBack={() => {
-      setIsResetPasswordPage(false)
-      window.location.hash = ''
-    }} />
   }
 
   // Not logged in — show login screen
