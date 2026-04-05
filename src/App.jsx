@@ -4,6 +4,7 @@ import Garnlager from './components/Garnlager'
 import Ideeboard from './components/Ideeboard'
 import Arkiv from './components/Arkiv'
 import FindGarn from './components/FindGarn'
+import YarnVisualizer from './components/YarnVisualizer'
 import Auth from './components/Auth'
 import ResetPassword from './components/ResetPassword'
 
@@ -11,6 +12,7 @@ const TABS = [
   { id: 'garnlager', label: 'Garnlager' },
   { id: 'arkiv',     label: 'Færdige projekter' },
   { id: 'findgarn',  label: 'Find garn' },
+  { id: 'visualizer', label: 'Prøv garn' },
   { id: 'ideer',     label: 'Idéer' },
 ]
 
@@ -165,6 +167,7 @@ export default function App() {
       {activeTab === 'garnlager' && <Garnlager user={user} />}
       {activeTab === 'arkiv'     && <Arkiv user={user} />}
       {activeTab === 'findgarn'  && <FindGarn />}
+      {activeTab === 'visualizer' && <YarnVisualizer user={user} />}
       {activeTab === 'ideer'     && <Ideeboard user={user} />}
     </div>
   )
