@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/garn",
-      "destination": "https://garn-maskerummet.vercel.app/garn"
+      "destination": "https://garn-katalog-git-main-hkwermuths-projects.vercel.app/garn"
     },
     {
       "source": "/garn/:path*",
-      "destination": "https://garn-maskerummet.vercel.app/garn/:path*"
+      "destination": "https://garn-katalog-git-main-hkwermuths-projects.vercel.app/garn/:path*"
     }
   ]
 }
