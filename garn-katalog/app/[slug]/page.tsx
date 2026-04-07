@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabasePublicClient } from '@/lib/supabase/public'
 import { toSlug } from '@/lib/slug'
 import { FiberBar } from '@/components/FiberBar'
 import type { Yarn, Color } from '@/lib/types'
@@ -10,7 +10,7 @@ export const revalidate = 3600
 export const dynamicParams = true
 
 async function fetchAllYarns(): Promise<Yarn[]> {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabasePublicClient()
   const { data } = await supabase.from('yarns_full').select('*')
   return (data ?? []) as Yarn[]
 }
@@ -19,7 +19,7 @@ async function fetchYarnBySlug(slug: string): Promise<{ yarn: Yarn; colors: Colo
   const yarns = await fetchAllYarns()
   const yarn = yarns.find((y) => toSlug(y.producer, y.name, y.series) === slug)
   if (!yarn) return null
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabasePublicClient()
   const { data: colors } = await supabase.from('colors').select('*').eq('yarn_id', yarn.id)
   return { yarn, colors: (colors ?? []) as Color[] }
 }

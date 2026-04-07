@@ -1,11 +1,11 @@
 import type { MetadataRoute } from 'next'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabasePublicClient } from '@/lib/supabase/public'
 import { toSlug } from '@/lib/slug'
 import type { Yarn } from '@/lib/types'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://maskerummet.vercel.app'
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabasePublicClient()
   const { data } = await supabase.from('yarns_full').select('*')
   const yarns = (data ?? []) as Yarn[]
 
