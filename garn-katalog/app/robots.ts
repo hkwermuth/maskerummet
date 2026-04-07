@@ -1,9 +1,10 @@
 import type { MetadataRoute } from 'next'
 
+// Indeksering er blokeret indtil siden er klar til offentligheden.
+// For at åbne for crawlere: skift til { userAgent: '*', allow: '/garn' }
+// og tilføj sitemap-feltet igen.
 export default function robots(): MetadataRoute.Robots {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://maskerummet.vercel.app'
   return {
-    rules: [{ userAgent: '*', allow: '/garn' }],
-    sitemap: `${base}/garn/sitemap.xml`,
+    rules: [{ userAgent: '*', disallow: '/' }],
   }
 }

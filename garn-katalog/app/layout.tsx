@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description:
     'Dansk garn-katalog med fibre, løbelængde, pinde, strikkefasthed, pleje og oprindelse for hvert garn.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'https://maskerummet.vercel.app'),
+  // Blokér indeksering indtil siden er klar. Fjern dette felt for at åbne for Google.
+  robots: { index: false, follow: false, nocache: true },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
