@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/garn",
+      "destination": "https://garn-maskerummet.vercel.app/garn"
+    },
+    {
+      "source": "/garn/:path*",
+      "destination": "https://garn-maskerummet.vercel.app/garn/:path*"
+    }
+  ]
+}
