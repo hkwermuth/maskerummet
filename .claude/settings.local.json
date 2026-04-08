@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(git push:*)",
+      "Bash(npx supabase:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm install:*)",
+      "Bash(curl -s http://localhost:3210/garn -o test.html -w \"HTTP %{http_code}\\\\n\")",
+      "Bash(grep -oE \"Kunne ikke hente garner: [^<]{0,300}|[0-9]+ garner med fibre\" test.html)",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 3210 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_-Force }\")",
+      "Bash(powershell -Command \"$pids = Get-NetTCPConnection -LocalPort 3210 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; foreach \\($p in $pids\\) { Stop-Process -Id $p -Force; Write-Host \"\"Killed $p\"\" }\")",
+      "Bash(powershell -Command \"\\(Get-NetTCPConnection -LocalPort 3210 -ErrorAction SilentlyContinue\\).OwningProcess | Sort-Object -Unique | Stop-Process -Force -PassThru | Select-Object Id,ProcessName\")",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 3210 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_OwningProcess -Force -ErrorAction SilentlyContinue; Write-Host \\(''Killed PID '' + $_OwningProcess\\) }\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File C:DevAI_projectsmaskerummetkill3210.ps1)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:/Dev/AI_projects/maskerummet/kill3210.ps1\")",
+      "WebFetch(domain:www.permin.dk)",
+      "WebSearch"
+    ]
+  }
+}

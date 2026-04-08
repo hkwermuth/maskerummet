@@ -1,4 +1,5 @@
 import type { FiberComponent } from '@/lib/types'
+import { labelFiber } from '@/lib/labels'
 
 const COLORS: Record<string, string> = {
   merinould: '#C8A982',
@@ -25,9 +26,7 @@ const COLORS: Record<string, string> = {
   courtelle: '#A8A8A8',
 }
 
-function fiberLabel(f: string): string {
-  return f.replace(/_/g, ' ')
-}
+const fiberLabel = labelFiber
 
 export function FiberBar({ fibers }: { fibers: FiberComponent[] | null | undefined }) {
   if (!fibers || fibers.length === 0) return null

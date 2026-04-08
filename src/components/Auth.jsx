@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import ForgotPassword from './ForgotPassword'
 
-const REMEMBERED_EMAIL_KEY = 'maskerummet-email'
+const REMEMBERED_EMAIL_KEY = 'striq-email'
 
 export default function Auth() {
   const [email, setEmail] = useState('')
@@ -59,7 +59,7 @@ export default function Auth() {
             fontFamily: "'Cormorant Garamond', serif",
             fontSize: '28px', fontWeight: 600, color: '#2C4A3E', marginBottom: '6px',
           }}>
-            Maskerummet
+            STRIQ
           </div>
           <div style={{ fontSize: '13px', color: '#8B7D6B' }}>
             Log ind for at åbne dit garnlager

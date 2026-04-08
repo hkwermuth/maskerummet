@@ -1,4 +1,4 @@
-# Maskerummet
+# STRIQ
 
 Lokal prototype til Garnlager-modulet.
 
@@ -22,7 +22,7 @@ Terminalen viser en adresse som `http://192.168.x.x:5173` — åbn den på din t
 ## Struktur
 
 ```
-maskerummet/
+striq/
 ├── src/
 │   ├── components/
 │   │   └── Garnlager.jsx   ← hovedkomponenten

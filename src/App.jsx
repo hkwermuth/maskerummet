@@ -15,6 +15,7 @@ const TABS = [
   { id: 'findgarn',   label: 'Find garn' },
   { id: 'visualizer', label: 'Prøv garn' },
   { id: 'ideer',      label: 'Idéer' },
+  { id: 'garnkatalog', label: 'Garn-katalog', href: import.meta.env.DEV ? 'http://localhost:3210/garn' : '/garn', external: true },
 ]
 
 const FEATURES = [
@@ -73,6 +74,26 @@ const FEATURES = [
         <circle cx="16" cy="32" r="3" fill="#C16B47"/>
         <circle cx="24" cy="32" r="3" fill="#8B7D6B"/>
         <circle cx="32" cy="32" r="3" fill="#D8D0E8"/>
+      </svg>
+    ),
+  },
+  {
+    id: 'garnkatalog',
+    title: 'Garn-katalog',
+    href: import.meta.env.DEV ? 'http://localhost:3210/garn' : '/garn',
+    external: true,
+    desc: 'Udforsk vores katalog over garner med fibre, tykkelse, pleje, pinde og farver.',
+    icon: (
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <rect x="6" y="8" width="10" height="32" rx="1.5" fill="#E8E0D4" stroke="#2C4A3E" strokeWidth="1.5"/>
+        <rect x="18" y="8" width="10" height="32" rx="1.5" fill="#D0E8D4" stroke="#2C4A3E" strokeWidth="1.5"/>
+        <rect x="30" y="8" width="10" height="32" rx="1.5" fill="#FFE0C4" stroke="#2C4A3E" strokeWidth="1.5"/>
+        <line x1="8" y1="14" x2="14" y2="14" stroke="#C16B47" strokeWidth="1.2"/>
+        <line x1="8" y1="18" x2="14" y2="18" stroke="#8B7D6B" strokeWidth="1"/>
+        <line x1="20" y1="14" x2="26" y2="14" stroke="#C16B47" strokeWidth="1.2"/>
+        <line x1="20" y1="18" x2="26" y2="18" stroke="#8B7D6B" strokeWidth="1"/>
+        <line x1="32" y1="14" x2="38" y2="14" stroke="#C16B47" strokeWidth="1.2"/>
+        <line x1="32" y1="18" x2="38" y2="18" stroke="#8B7D6B" strokeWidth="1"/>
       </svg>
     ),
   },
@@ -196,30 +217,39 @@ export default function App() {
           letterSpacing: '.02em', marginRight: '20px', paddingBottom: '14px',
           flexShrink: 0,
         }}>
-          Maskerummet
+          STRIQ
         </div>
 
-        {TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              background: activeTab === tab.id ? '#F4EFE6' : 'transparent',
-              color: activeTab === tab.id ? '#2C4A3E' : '#9ABFB0',
-              border: 'none',
-              borderRadius: '6px 6px 0 0',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: activeTab === tab.id ? 500 : 400,
-              fontFamily: "'DM Sans', sans-serif",
-              cursor: 'pointer',
-              letterSpacing: '.02em',
-              transition: 'background .15s, color .15s',
-            }}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {TABS.map(tab => {
+          const isActive = activeTab === tab.id
+          const tabStyle = {
+            background: isActive ? '#F4EFE6' : 'transparent',
+            color: isActive ? '#2C4A3E' : '#9ABFB0',
+            border: 'none',
+            borderRadius: '6px 6px 0 0',
+            padding: '8px 16px',
+            fontSize: '13px',
+            fontWeight: isActive ? 500 : 400,
+            fontFamily: "'DM Sans', sans-serif",
+            cursor: 'pointer',
+            letterSpacing: '.02em',
+            transition: 'background .15s, color .15s',
+            textDecoration: 'none',
+            display: 'inline-block',
+          }
+          if (tab.external) {
+            return (
+              <a key={tab.id} href={tab.href} target="_blank" rel="noopener noreferrer" style={tabStyle}>
+                {tab.label}
+              </a>
+            )
+          }
+          return (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={tabStyle}>
+              {tab.label}
+            </button>
+          )
+        })}
 
         {/* Spacer */}
         <div style={{ flex: 1 }} />
@@ -256,7 +286,7 @@ export default function App() {
               fontSize: 36, fontWeight: 600, color: '#2C4A3E',
               margin: '0 0 8px', letterSpacing: '.01em',
             }}>
-              Velkommen, {user.email.split('@')[0]}
+              Velkommen til STRIQ
             </h1>
             <p style={{
               fontSize: 15, color: '#5A4E42', margin: 0,
@@ -274,21 +304,31 @@ export default function App() {
             gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
             gap: 16,
           }}>
-            {FEATURES.map(f => (
-              <button
+            {FEATURES.map(f => {
+              const cardStyle = {
+                background: '#FFFCF7', border: '1px solid #E8E0D4',
+                borderRadius: 16, padding: '28px 24px',
+                textAlign: 'left', cursor: 'pointer',
+                transition: 'transform .15s, box-shadow .15s',
+                boxShadow: '0 1px 4px rgba(44,32,24,.06)',
+                fontFamily: "'DM Sans', sans-serif",
+                display: 'flex', flexDirection: 'column', gap: 12,
+                textDecoration: 'none', color: 'inherit',
+              }
+              const hoverProps = {
+                onMouseEnter: e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(44,32,24,.12)' },
+                onMouseLeave: e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.06)' },
+              }
+              const Tag = f.external ? 'a' : 'button'
+              const tagProps = f.external
+                ? { href: f.href, target: '_blank', rel: 'noopener noreferrer' }
+                : { onClick: () => setActiveTab(f.id) }
+              return (
+              <Tag
                 key={f.id}
-                onClick={() => setActiveTab(f.id)}
-                style={{
-                  background: '#FFFCF7', border: '1px solid #E8E0D4',
-                  borderRadius: 16, padding: '28px 24px',
-                  textAlign: 'left', cursor: 'pointer',
-                  transition: 'transform .15s, box-shadow .15s',
-                  boxShadow: '0 1px 4px rgba(44,32,24,.06)',
-                  fontFamily: "'DM Sans', sans-serif",
-                  display: 'flex', flexDirection: 'column', gap: 12,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(44,32,24,.12)' }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.06)' }}
+                {...tagProps}
+                style={cardStyle}
+                {...hoverProps}
               >
                 <div>{f.icon}</div>
                 <h3 style={{
@@ -310,8 +350,8 @@ export default function App() {
                 }}>
                   Åbn →
                 </span>
-              </button>
-            ))}
+              </Tag>
+            )})}
           </div>
         </div>
       )}

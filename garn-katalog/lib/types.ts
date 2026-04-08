@@ -34,6 +34,18 @@ export type Yarn = {
   color_count: number | null
 }
 
+export type SubstitutionCandidate = {
+  yarn_id: string
+  producer: string
+  name: string
+  series: string | null
+  score: number
+  verdict: 'perfekt' | 'god' | 'forbehold' | 'virker_ikke' | string
+  is_manual: boolean
+  critical_field: string | null
+  notes: string | null
+}
+
 export type Color = {
   id: string
   yarn_id: string

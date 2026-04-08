@@ -5,6 +5,11 @@ import { createSupabasePublicClient } from '@/lib/supabase/public'
 import { toSlug } from '@/lib/slug'
 import { FiberBar } from '@/components/FiberBar'
 import type { Yarn, Color } from '@/lib/types'
+import { getSubstitutions } from '@/lib/substitutions'
+import {
+  labelThickness, labelSpin, labelFinish, labelWash, labelStatus,
+  da, joinDa,
+} from '@/lib/labels'
 
 export const revalidate = 3600
 export const dynamicParams = true
@@ -57,6 +62,7 @@ export default async function YarnDetailPage(
   const result = await fetchYarnBySlug(slug)
   if (!result) notFound()
   const { yarn, colors } = result
+  const substitutions = await getSubstitutions(yarn.id, 8)
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -76,21 +82,32 @@ export default async function YarnDetailPage(
       {yarn.series && <div className="text-bark italic mt-1">{yarn.series}</div>}
 
       <section className="mt-6">
-        <h2 className="font-serif text-xl text-forest mb-2">Fibre</h2>
+        <h2 className="font-serif text-xl text-forest mb-2">Materiale</h2>
         <FiberBar fibers={yarn.fibers} />
       </section>
 
+      {yarn.description && (
+        <section className="mt-6">
+          {yarn.description.split(/\n\n+/).map((para, i) => (
+            <p key={i} className="text-bark leading-relaxed mb-3 last:mb-0">{para}</p>
+          ))}
+        </section>
+      )}
+
       <section className="mt-6 grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-        <Field label="Tykkelse" value={yarn.thickness_category} />
-        <Field label="Løbelængde" value={yarn.length_per_100g_m ? `${yarn.length_per_100g_m} m/100g` : null} />
-        <Field label="Bolde" value={yarn.ball_weight_g ? `${yarn.ball_weight_g} g` : null} />
+        <Field label="Tykkelse" value={labelThickness(yarn.thickness_category)} />
         <Field
-          label="Pinde"
+          label="Løbelængde pr. 100 g"
+          value={yarn.length_per_100g_m ? `${da(yarn.length_per_100g_m)} m` : null}
+        />
+        <Field label="Nøglevægt" value={yarn.ball_weight_g ? `${da(yarn.ball_weight_g)} g` : null} />
+        <Field
+          label="Pindestørrelse"
           value={
             yarn.needle_min_mm && yarn.needle_max_mm
-              ? `${yarn.needle_min_mm}–${yarn.needle_max_mm} mm`
+              ? `${da(yarn.needle_min_mm)}–${da(yarn.needle_max_mm)} mm`
               : yarn.needle_min_mm
-              ? `${yarn.needle_min_mm} mm`
+              ? `${da(yarn.needle_min_mm)} mm`
               : null
           }
         />
@@ -98,29 +115,25 @@ export default async function YarnDetailPage(
           label="Strikkefasthed"
           value={
             yarn.gauge_stitches_10cm
-              ? `${yarn.gauge_stitches_10cm} m × ${yarn.gauge_rows_10cm ?? '?'} p / 10 cm${
-                  yarn.gauge_needle_mm ? ` (pind ${yarn.gauge_needle_mm} mm)` : ''
+              ? `${da(yarn.gauge_stitches_10cm)} m / ${da(yarn.gauge_rows_10cm) ?? '?'} p på 10 cm${
+                  yarn.gauge_needle_mm ? ` (pind ${da(yarn.gauge_needle_mm)} mm)` : ''
                 }`
               : null
           }
         />
-        <Field label="Spinding" value={yarn.spin_type} />
-        <Field label="Twist" value={yarn.twist_structure} />
-        <Field label="Finish" value={yarn.finish} />
-        <Field label="Pleje" value={yarn.wash_care?.replace(/_/g, ' ')} />
+        <Field label="Spinding" value={labelSpin(yarn.spin_type)} />
+        <Field label="Tråd" value={yarn.twist_structure} />
+        <Field label="Finish" value={labelFinish(yarn.finish)} />
+        <Field label="Vaskeanvisning" value={labelWash(yarn.wash_care)} />
         <Field label="Spundet i" value={yarn.origin_country} />
-        <Field label="Fiber-oprindelse" value={yarn.fiber_origin_country} />
-        <Field label="Status" value={yarn.status} />
+        <Field label="Fiberoprindelse" value={yarn.fiber_origin_country} />
+        <Field label="Status" value={labelStatus(yarn.status)} />
       </section>
 
       {yarn.use_cases && yarn.use_cases.length > 0 && (
         <section className="mt-6">
-          <h2 className="font-serif text-xl text-forest mb-2">Brug</h2>
-          <div className="flex flex-wrap gap-2">
-            {yarn.use_cases.map((u) => (
-              <span key={u} className="bg-stone text-bark text-xs px-2 py-1 rounded">{u}</span>
-            ))}
-          </div>
+          <h2 className="font-serif text-xl text-forest mb-2">Velegnet til</h2>
+          <p className="text-bark">{joinDa(yarn.use_cases)}</p>
         </section>
       )}
 
@@ -135,12 +148,6 @@ export default async function YarnDetailPage(
         </section>
       )}
 
-      {yarn.description && (
-        <section className="mt-6">
-          <h2 className="font-serif text-xl text-forest mb-2">Beskrivelse</h2>
-          <p className="text-bark leading-relaxed">{yarn.description}</p>
-        </section>
-      )}
 
       {colors.length > 0 && (
         <section className="mt-6">
@@ -157,7 +164,58 @@ export default async function YarnDetailPage(
           </div>
         </section>
       )}
+      {substitutions.length > 0 && (
+        <section className="mt-8">
+          <h2 className="font-serif text-xl text-forest mb-1">Mulige substitutter</h2>
+          <p className="text-xs text-bark/70 mb-3">
+            Forslagene er automatisk beregnet ud fra garnets tykkelse, løbelængde, strikkefasthed, fiberindhold og vaskeanvisning.
+          </p>
+          <ul className="divide-y divide-stone border border-stone rounded-lg overflow-hidden">
+            {substitutions.map((s) => {
+              const slug = toSlug(s.producer, s.name, s.series)
+              return (
+                <li key={s.yarn_id}>
+                  <Link
+                    href={`/${slug}`}
+                    className="flex items-center justify-between gap-3 px-4 py-3 bg-white hover:bg-cream transition"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs uppercase tracking-wider text-terracotta">{s.producer}</div>
+                      <div className="text-forest truncate">
+                        {s.name}
+                        {s.series ? <span className="italic text-bark"> — {s.series}</span> : null}
+                      </div>
+                      {s.notes && <div className="text-xs text-bark/80 mt-1">{s.notes}</div>}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {s.is_manual && (
+                        <span title="Verificeret manuelt" className="text-xs text-forest">✓</span>
+                      )}
+                      <VerdictBadge verdict={s.verdict} />
+                    </div>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
     </article>
+  )
+}
+
+function VerdictBadge({ verdict }: { verdict: string }) {
+  const map: Record<string, string> = {
+    perfekt: 'bg-moss/40 text-forest',
+    god: 'bg-sky-100 text-sky-900',
+    forbehold: 'bg-amber-100 text-amber-900',
+    virker_ikke: 'bg-red-100 text-red-900',
+  }
+  const cls = map[verdict] ?? 'bg-stone text-bark'
+  return (
+    <span className={`text-[11px] uppercase tracking-wider px-2 py-1 rounded ${cls}`}>
+      {verdict.replace(/_/g, ' ')}
+    </span>
   )
 }
 
