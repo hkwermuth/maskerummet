@@ -46,6 +46,13 @@ function validHexForColorInput(hex) {
   return /^#[0-9A-Fa-f]{6}$/.test(s) ? s : FALLBACK_HEX
 }
 
+function isCatalogSwatchUrl(url) {
+  const s = String(url || '')
+  // Permin uses 100x100 swatches at /img/spec/<hash>.png
+  if (s.includes('/img/spec/')) return true
+  return false
+}
+
 function normalizeUserHexInput(raw) {
   const s = String(raw || '').trim()
   if (!s) return ''
@@ -611,13 +618,54 @@ export default function Garnlager({ user }) {
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(44,32,24,.13)' }}
               onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
             >
-              {y.imageUrl || y.catalogImageUrl ? (
-                <div style={{ height: '100px', overflow: 'hidden' }}>
-                  <img src={y.imageUrl || y.catalogImageUrl} alt={y.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-              ) : (
-                <div style={{ height: '72px', background: (y.hex && y.hex.trim()) ? y.hex : '#D0C8BA' }} />
-              )}
+              {(() => {
+                const headerUrl = y.imageUrl || y.catalogImageUrl
+                if (!headerUrl) {
+                  return <div style={{ height: '72px', background: (y.hex && y.hex.trim()) ? y.hex : '#D0C8BA' }} />
+                }
+
+                // If it's a tiny catalog swatch (100x100), do NOT upscale it to full width.
+                const isSwatch = !y.imageUrl && y.catalogImageUrl && isCatalogSwatchUrl(y.catalogImageUrl)
+                if (isSwatch) {
+                  const bg = (y.hex && y.hex.trim()) ? y.hex : '#F4EFE6'
+                  return (
+                    <div style={{
+                      height: '100px',
+                      background: bg,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}>
+                      <div style={{
+                        width: 76,
+                        height: 76,
+                        borderRadius: 12,
+                        background: 'rgba(255,255,255,.72)',
+                        border: '1px solid rgba(44,32,24,.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 10px rgba(44,32,24,.12)',
+                        backdropFilter: 'blur(2px)',
+                      }}>
+                        <img
+                          src={headerUrl}
+                          alt={y.name}
+                          style={{ width: 64, height: 64, objectFit: 'contain', imageRendering: 'auto' }}
+                        />
+                      </div>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div style={{ height: '100px', overflow: 'hidden' }}>
+                    <img src={headerUrl} alt={y.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                )
+              })()}
               <div style={{ padding: '12px' }}>
                 <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.12em', color: '#8B7D6B', marginBottom: '2px' }}>{y.brand}</div>
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '17px', fontWeight: 600, color: '#2C2018', marginBottom: '3px' }}>{y.name}</div>
@@ -864,7 +912,18 @@ export default function Garnlager({ user }) {
                   {imagePreview ? (
                     <img src={imagePreview} alt="preview" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #D0C8BA' }} />
                   ) : form.catalogImageUrl ? (
-                    <img src={form.catalogImageUrl} alt="Katalog" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #D0C8BA' }} />
+                    <img
+                      src={form.catalogImageUrl}
+                      alt="Katalog"
+                      style={{
+                        width: '56px',
+                        height: '56px',
+                        objectFit: isCatalogSwatchUrl(form.catalogImageUrl) ? 'contain' : 'cover',
+                        borderRadius: '6px',
+                        border: '1px solid #D0C8BA',
+                        background: isCatalogSwatchUrl(form.catalogImageUrl) ? 'rgba(255,255,255,.65)' : 'transparent',
+                      }}
+                    />
                   ) : (
                     <div style={{ width: '56px', height: '56px', background: '#EDE7D8', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', color: '#8B7D6B' }}>📷</div>
                   )}
@@ -873,6 +932,11 @@ export default function Garnlager({ user }) {
                     <div style={{ fontSize: '11px', color: '#8B7D6B' }}>JPG eller PNG — vises på garnkortet</div>
                   </div>
                 </label>
+                {!imagePreview && form.catalogImageUrl && isCatalogSwatchUrl(form.catalogImageUrl) && (
+                  <div style={{ fontSize: '11px', color: '#8B7D6B', lineHeight: '1.45' }}>
+                    Katalogbilledet er en lille farveprøve (100×100). Upload et foto for skarpere kort.
+                  </div>
+                )}
                 {imagePreview && (
                   <button
                     type="button"
