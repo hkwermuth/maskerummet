@@ -14,6 +14,86 @@ import {
 export const revalidate = 3600
 export const dynamicParams = true
 
+function clamp01(n: number) {
+  return Math.min(1, Math.max(0, n))
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const s = (hex || '').trim().replace(/^#/, '')
+  if (!/^[0-9A-Fa-f]{6}$/.test(s)) return null
+  const r = parseInt(s.slice(0, 2), 16)
+  const g = parseInt(s.slice(2, 4), 16)
+  const b = parseInt(s.slice(4, 6), 16)
+  return { r, g, b }
+}
+
+function rgbToHsl({ r, g, b }: { r: number; g: number; b: number }) {
+  const rn = r / 255
+  const gn = g / 255
+  const bn = b / 255
+  const max = Math.max(rn, gn, bn)
+  const min = Math.min(rn, gn, bn)
+  const d = max - min
+  const l = (max + min) / 2
+  let h = 0
+  let s = 0
+  if (d !== 0) {
+    s = d / (1 - Math.abs(2 * l - 1))
+    switch (max) {
+      case rn:
+        h = ((gn - bn) / d) % 6
+        break
+      case gn:
+        h = (bn - rn) / d + 2
+        break
+      default:
+        h = (rn - gn) / d + 4
+    }
+    h = h * 60
+    if (h < 0) h += 360
+  }
+  return { h, s: clamp01(s), l: clamp01(l) }
+}
+
+function numericOrInfinity(v: unknown) {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY
+}
+
+function sortColorsByVisualHue(colors: Color[]) {
+  // Strategy:
+  // - Colors with a valid hex come first, sorted by hue then saturation then lightness.
+  // - Near-grayscale (low saturation) are placed after chromatic colors and sorted by lightness.
+  // - Colors without hex are last, sorted by color_number if possible.
+  return [...colors].sort((a, b) => {
+    const ah = a.hex_code ? rgbToHsl(hexToRgb(a.hex_code) ?? { r: NaN, g: NaN, b: NaN }) : null
+    const bh = b.hex_code ? rgbToHsl(hexToRgb(b.hex_code) ?? { r: NaN, g: NaN, b: NaN }) : null
+    const aHas = !!(a.hex_code && hexToRgb(a.hex_code))
+    const bHas = !!(b.hex_code && hexToRgb(b.hex_code))
+    if (aHas !== bHas) return aHas ? -1 : 1
+
+    if (aHas && bHas && ah && bh) {
+      const aGray = ah.s < 0.08
+      const bGray = bh.s < 0.08
+      if (aGray !== bGray) return aGray ? 1 : -1
+
+      if (!aGray && !bGray) {
+        if (ah.h !== bh.h) return ah.h - bh.h
+        if (ah.s !== bh.s) return bh.s - ah.s
+        if (ah.l !== bh.l) return ah.l - bh.l
+      } else {
+        // Grayscale: sort light → dark
+        if (ah.l !== bh.l) return bh.l - ah.l
+      }
+    }
+
+    const an = numericOrInfinity(a.color_number)
+    const bn = numericOrInfinity(b.color_number)
+    if (an !== bn) return an - bn
+    return String(a.color_name ?? '').localeCompare(String(b.color_name ?? ''), 'da')
+  })
+}
+
 async function fetchAllYarns(): Promise<Yarn[]> {
   const supabase = createSupabasePublicClient()
   const { data } = await supabase.from('yarns_full').select('*')
@@ -26,7 +106,7 @@ async function fetchYarnBySlug(slug: string): Promise<{ yarn: Yarn; colors: Colo
   if (!yarn) return null
   const supabase = createSupabasePublicClient()
   const { data: colors } = await supabase.from('colors').select('*').eq('yarn_id', yarn.id)
-  return { yarn, colors: (colors ?? []) as Color[] }
+  return { yarn, colors: sortColorsByVisualHue((colors ?? []) as Color[]) }
 }
 
 export async function generateStaticParams() {
@@ -155,9 +235,15 @@ export default async function YarnDetailPage(
           <div className="flex flex-wrap gap-2">
             {colors.map((c) => (
               <div key={c.id} className="flex items-center gap-2 text-xs">
-                {c.hex_code && (
-                  <span className="w-5 h-5 rounded-full border border-stone" style={{ background: c.hex_code }} />
-                )}
+                {c.image_url ? (
+                  <img
+                    src={c.image_url}
+                    alt=""
+                    className="w-8 h-8 rounded object-cover border border-stone shrink-0"
+                  />
+                ) : c.hex_code ? (
+                  <span className="w-5 h-5 rounded-full border border-stone shrink-0" style={{ background: c.hex_code }} />
+                ) : null}
                 <span>{c.color_name ?? c.color_number}</span>
               </div>
             ))}

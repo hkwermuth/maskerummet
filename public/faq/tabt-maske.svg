@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <rect width="900" height="600" rx="32" fill="#FFFCF7"/>
+  <rect x="60" y="60" width="780" height="480" rx="24" fill="#F4EFE6" stroke="#E8E0D4" stroke-width="4"/>
+  <g font-family="DM Sans, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="110" y="150" font-size="42" font-weight="700" fill="#2C4A3E">Tabt maske</text>
+    <text x="110" y="210" font-size="22" fill="#2C2018" opacity="0.85">Stop · Find stigen · Hækl op</text>
+  </g>
+  <g stroke="#C0B8A8" stroke-width="10" stroke-linecap="round">
+    <path d="M220 280v240M300 280v240M380 280v240M460 280v240M540 280v240"/>
+  </g>
+  <g stroke="#C16B47" stroke-width="10" stroke-linecap="round">
+    <path d="M220 320c40 40 80 40 120 0s80-40 120 0 80 40 120 0"/>
+    <path d="M220 400c40 40 80 40 120 0s80-40 120 0 80 40 120 0"/>
+  </g>
+  <g>
+    <circle cx="380" cy="470" r="34" fill="#D0E8D4" stroke="#2C4A3E" stroke-width="6"/>
+    <path d="M610 260l80 80" stroke="#2C4A3E" stroke-width="12" stroke-linecap="round"/>
+    <path d="M670 220l-60 160" stroke="#2C4A3E" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="610" cy="260" r="10" fill="#2C4A3E"/>
+  </g>
+</svg>
+

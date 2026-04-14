@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <rect width="900" height="600" rx="32" fill="#FFFCF7"/>
+  <rect x="60" y="60" width="780" height="480" rx="24" fill="#F4EFE6" stroke="#E8E0D4" stroke-width="4"/>
+  <g font-family="DM Sans, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="110" y="150" font-size="42" font-weight="700" fill="#2C4A3E">Italiensk opslag</text>
+    <text x="110" y="210" font-size="22" fill="#2C2018" opacity="0.85">Elastisk tubular kant</text>
+  </g>
+  <g>
+    <rect x="120" y="280" width="660" height="220" rx="22" fill="#FFFFFF" stroke="#E8E0D4" stroke-width="4"/>
+    <g stroke="#2C4A3E" stroke-width="10" stroke-linecap="round">
+      <path d="M170 420h560"/>
+    </g>
+    <g stroke="#C16B47" stroke-width="10" stroke-linecap="round">
+      <path d="M190 360c30-50 70-50 100 0s70 50 100 0 70-50 100 0 70 50 100 0 70-50 100 0"/>
+    </g>
+  </g>
+</svg>
+

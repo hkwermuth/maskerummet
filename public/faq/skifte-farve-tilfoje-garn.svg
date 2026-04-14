@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <rect width="900" height="600" rx="32" fill="#FFFCF7"/>
+  <rect x="60" y="60" width="780" height="480" rx="24" fill="#F4EFE6" stroke="#E8E0D4" stroke-width="4"/>
+  <g font-family="DM Sans, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="110" y="150" font-size="42" font-weight="700" fill="#2C4A3E">Garnskift</text>
+    <text x="110" y="210" font-size="22" fill="#2C2018" opacity="0.85">Skift tråd · Hæft ender · Farveskift</text>
+  </g>
+  <g>
+    <path d="M150 360c140-140 280-140 420 0" fill="none" stroke="#C16B47" stroke-width="12" stroke-linecap="round"/>
+    <path d="M150 420c140-140 280-140 420 0" fill="none" stroke="#2C4A3E" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="380" cy="400" r="18" fill="#FFFCF7" stroke="#C0B8A8" stroke-width="6"/>
+  </g>
+  <g>
+    <rect x="610" y="300" width="200" height="220" rx="18" fill="#FFFFFF" stroke="#E8E0D4" stroke-width="4"/>
+    <path d="M640 340h140" stroke="#C0B8A8" stroke-width="8" stroke-linecap="round"/>
+    <path d="M640 390h120" stroke="#8B7D6B" stroke-width="8" stroke-linecap="round"/>
+    <path d="M640 440h150" stroke="#C16B47" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>
+

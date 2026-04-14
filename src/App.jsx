@@ -7,6 +7,7 @@ import FindGarn from './components/FindGarn'
 import YarnVisualizer from './components/YarnVisualizer'
 import Auth from './components/Auth'
 import ResetPassword from './components/ResetPassword'
+import Faq from './components/Faq'
 
 const TABS = [
   { id: 'hjem',       label: 'Hjem' },
@@ -14,7 +15,7 @@ const TABS = [
   { id: 'arkiv',      label: 'Færdige projekter' },
   { id: 'findgarn',   label: 'Find garn' },
   { id: 'visualizer', label: 'Prøv garn' },
-  { id: 'ideer',      label: 'Idéer' },
+  { id: 'faq',        label: 'FAQ' },
   { id: 'garnkatalog', label: 'Garn-katalog', href: import.meta.env.DEV ? 'http://localhost:3210/garn' : '/garn', external: true },
 ]
 
@@ -98,19 +99,18 @@ const FEATURES = [
     ),
   },
   {
-    id: 'ideer',
-    title: 'Idéer',
-    desc: 'Saml inspiration til kommende projekter på dit eget idébræt. Organiser med kolonner og flyt rundt.',
+    id: 'faq',
+    title: 'FAQ',
+    desc: 'De mest stillede spørgsmål om strik og garn — med korte svar og video-links.',
     icon: (
       <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-        <rect x="4" y="8" width="12" height="32" rx="3" fill="#D0E8D4" stroke="#2C4A3E" strokeWidth="1.5"/>
-        <rect x="18" y="8" width="12" height="32" rx="3" fill="#FFE0C4" stroke="#2C4A3E" strokeWidth="1.5"/>
-        <rect x="32" y="8" width="12" height="32" rx="3" fill="#D8D0E8" stroke="#2C4A3E" strokeWidth="1.5"/>
-        <rect x="6" y="12" width="8" height="6" rx="1.5" fill="#FFFCF7"/>
-        <rect x="6" y="20" width="8" height="4" rx="1.5" fill="#FFFCF7"/>
-        <rect x="20" y="12" width="8" height="8" rx="1.5" fill="#FFFCF7"/>
-        <rect x="34" y="12" width="8" height="5" rx="1.5" fill="#FFFCF7"/>
-        <rect x="34" y="19" width="8" height="6" rx="1.5" fill="#FFFCF7"/>
+        <rect x="8" y="10" width="32" height="28" rx="6" fill="#FFFCF7" stroke="#2C4A3E" strokeWidth="1.5"/>
+        <path d="M16 18h16" stroke="#C16B47" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M16 24h12" stroke="#8B7D6B" strokeWidth="2" strokeLinecap="round"/>
+        <path d="M16 30h14" stroke="#C0B8A8" strokeWidth="2" strokeLinecap="round"/>
+        <circle cx="34" cy="30" r="5" fill="#D0E8D4" stroke="#2C4A3E" strokeWidth="1.5"/>
+        <path d="M32.8 30a1.2 1.2 0 1 1 1.8 1.05c-.7.4-1 .7-1 1.45" stroke="#2C4A3E" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
+        <circle cx="34" cy="34.2" r="1" fill="#2C4A3E"/>
       </svg>
     ),
   },
@@ -151,6 +151,34 @@ export default function App() {
       window.removeEventListener('popstate', checkResetPasswordHash)
     }
   }, [])
+
+  useEffect(() => {
+    const applyTabFromUrl = () => {
+      // Don't hijack the reset-password UX.
+      if (isResetPasswordPage) return
+
+      const hash = (window.location.hash ?? '').toLowerCase()
+      const params = new URLSearchParams(window.location.search ?? '')
+      const tabParam = (params.get('tab') ?? '').toLowerCase()
+
+      const tab =
+        tabParam ||
+        (hash.startsWith('#') ? hash.slice(1) : '')
+
+      // "ideer" is intentionally hidden from the top nav, but still accessible by URL.
+      if (tab === 'ideer' || tab === 'faq' || tab === 'garnlager' || tab === 'arkiv' || tab === 'findgarn' || tab === 'visualizer' || tab === 'hjem') {
+        setActiveTab(tab)
+      }
+    }
+
+    applyTabFromUrl()
+    window.addEventListener('hashchange', applyTabFromUrl)
+    window.addEventListener('popstate', applyTabFromUrl)
+    return () => {
+      window.removeEventListener('hashchange', applyTabFromUrl)
+      window.removeEventListener('popstate', applyTabFromUrl)
+    }
+  }, [isResetPasswordPage])
 
   useEffect(() => {
     // Get current session on mount
@@ -359,6 +387,7 @@ export default function App() {
       {activeTab === 'arkiv'     && <Arkiv user={user} />}
       {activeTab === 'findgarn'  && <FindGarn />}
       {activeTab === 'visualizer' && <YarnVisualizer user={user} />}
+      {activeTab === 'faq'       && <Faq />}
       {activeTab === 'ideer'     && <Ideeboard user={user} />}
     </div>
   )

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <rect width="900" height="600" rx="32" fill="#FFFCF7"/>
+  <rect x="60" y="60" width="780" height="480" rx="24" fill="#F4EFE6" stroke="#E8E0D4" stroke-width="4"/>
+  <g font-family="DM Sans, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="110" y="150" font-size="42" font-weight="700" fill="#2C4A3E">Vask &amp; blocking</text>
+    <text x="110" y="210" font-size="22" fill="#2C2018" opacity="0.85">Fugt · Form · Tør fladt</text>
+  </g>
+  <g>
+    <rect x="120" y="280" width="360" height="220" rx="22" fill="#FFFFFF" stroke="#E8E0D4" stroke-width="4"/>
+    <path d="M160 420c40 30 80 30 120 0s80-30 120 0" fill="none" stroke="#2C4A3E" stroke-width="10" stroke-linecap="round"/>
+    <path d="M190 330c0 60 220 60 220 0" fill="none" stroke="#C16B47" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="220" cy="310" r="10" fill="#C16B47"/>
+    <circle cx="320" cy="310" r="10" fill="#C16B47"/>
+  </g>
+  <g>
+    <rect x="540" y="280" width="260" height="220" rx="22" fill="#FFFFFF" stroke="#E8E0D4" stroke-width="4"/>
+    <path d="M580 330h180" stroke="#C0B8A8" stroke-width="8" stroke-linecap="round"/>
+    <path d="M580 370h150" stroke="#8B7D6B" stroke-width="8" stroke-linecap="round"/>
+    <path d="M580 410h170" stroke="#C16B47" stroke-width="8" stroke-linecap="round"/>
+    <path d="M650 450c0 0 30-20 60 0" stroke="#2C4A3E" stroke-width="6" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>
+

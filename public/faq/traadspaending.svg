@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <rect width="900" height="600" rx="32" fill="#FFFCF7"/>
+  <rect x="60" y="60" width="780" height="480" rx="24" fill="#F4EFE6" stroke="#E8E0D4" stroke-width="4"/>
+  <g font-family="DM Sans, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="110" y="150" font-size="42" font-weight="700" fill="#2C4A3E">Trådspænding</text>
+    <text x="110" y="210" font-size="22" fill="#2C2018" opacity="0.85">For stramt ” for løst</text>
+  </g>
+  <g>
+    <rect x="130" y="280" width="280" height="220" rx="22" fill="#FFFFFF" stroke="#E8E0D4" stroke-width="4"/>
+    <text x="165" y="330" font-family="DM Sans, system-ui" font-size="22" fill="#5A4E42">Stramt</text>
+    <g stroke="#2C4A3E" stroke-width="8" stroke-linecap="round">
+      <path d="M170 380h200"/>
+      <path d="M170 420h200"/>
+      <path d="M170 460h200"/>
+    </g>
+  </g>
+  <g>
+    <rect x="490" y="280" width="280" height="220" rx="22" fill="#FFFFFF" stroke="#E8E0D4" stroke-width="4"/>
+    <text x="525" y="330" font-family="DM Sans, system-ui" font-size="22" fill="#5A4E42">Løst</text>
+    <g stroke="#C16B47" stroke-width="8" stroke-linecap="round">
+      <path d="M530 380h200"/>
+      <path d="M530 420h200"/>
+      <path d="M530 460h200"/>
+    </g>
+    <g stroke="#C16B47" stroke-width="6" opacity="0.35">
+      <path d="M540 365c15 25 35 25 50 0s35-25 50 0 35 25 50 0"/>
+    </g>
+  </g>
+  <path d="M430 390h40" stroke="#8B7D6B" stroke-width="10" stroke-linecap="round"/>
+  <path d="M430 430h40" stroke="#8B7D6B" stroke-width="10" stroke-linecap="round"/>
+</svg>
+

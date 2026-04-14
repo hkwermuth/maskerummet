@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <rect width="900" height="600" rx="32" fill="#FFFCF7"/>
+  <rect x="60" y="60" width="780" height="480" rx="24" fill="#F4EFE6" stroke="#E8E0D4" stroke-width="4"/>
+  <g font-family="DM Sans, system-ui, -apple-system, Segoe UI, sans-serif" fill="#2C2018">
+    <text x="110" y="150" font-size="42" font-weight="700" fill="#2C4A3E">Kom godt i gang</text>
+    <text x="110" y="210" font-size="22" opacity="0.85">Slå op · Ret/Vrang · Luk af</text>
+  </g>
+  <g>
+    <circle cx="200" cy="330" r="70" fill="#D0E8D4" stroke="#2C4A3E" stroke-width="6"/>
+    <path d="M160 330c12-30 36-48 70-48 34 0 58 18 70 48" fill="none" stroke="#C16B47" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="200" cy="330" r="18" fill="#FFFCF7" stroke="#C0B8A8" stroke-width="4"/>
+  </g>
+  <g>
+    <rect x="360" y="260" width="420" height="160" rx="20" fill="#FFFFFF" stroke="#E8E0D4" stroke-width="4"/>
+    <path d="M400 305h320" stroke="#C16B47" stroke-width="8" stroke-linecap="round"/>
+    <path d="M400 350h260" stroke="#8B7D6B" stroke-width="8" stroke-linecap="round"/>
+    <path d="M400 395h290" stroke="#C0B8A8" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>
+

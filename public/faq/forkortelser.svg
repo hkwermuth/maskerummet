@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <rect width="900" height="600" rx="32" fill="#FFFCF7"/>
+  <rect x="60" y="60" width="780" height="480" rx="24" fill="#F4EFE6" stroke="#E8E0D4" stroke-width="4"/>
+  <g font-family="DM Sans, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="110" y="150" font-size="42" font-weight="700" fill="#2C4A3E">Forkortelser</text>
+    <text x="110" y="210" font-size="22" fill="#2C2018" opacity="0.85">r · vr · omsl · 2 r sm · træk over</text>
+  </g>
+  <g>
+    <rect x="110" y="270" width="680" height="260" rx="22" fill="#FFFFFF" stroke="#E8E0D4" stroke-width="4"/>
+    <g font-family="DM Sans, system-ui" font-size="26" fill="#2C2018">
+      <text x="150" y="335"><tspan font-weight="700" fill="#2C4A3E">r</tspan> = ret</text>
+      <text x="150" y="385"><tspan font-weight="700" fill="#2C4A3E">vr</tspan> = vrang</text>
+      <text x="150" y="435"><tspan font-weight="700" fill="#C16B47">omsl</tspan> = omslag</text>
+      <text x="450" y="335"><tspan font-weight="700" fill="#C16B47">2 r sm</tspan> = indtagning</text>
+      <text x="450" y="385"><tspan font-weight="700" fill="#8B7D6B">1 l af</tspan> = slip 1 maske</text>
+      <text x="450" y="435"><tspan font-weight="700" fill="#8B7D6B">træk over</tspan> = løft over</text>
+    </g>
+  </g>
+</svg>
+

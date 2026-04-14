@@ -178,7 +178,12 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved }) {
             <div>
               <div style={{ fontSize: '11px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.1em' }}>{entry.yarnBrand}</div>
               <div style={{ fontSize: '15px', fontWeight: 500, color: '#2C2018' }}>{entry.yarnName} · {entry.colorName}</div>
-              <div style={{ fontSize: '11px', color: '#8B7D6B' }}>{entry.quantityUsed} ngl brugt · {entry.colorCode}</div>
+              <div style={{ fontSize: '11px', color: '#8B7D6B' }}>
+                {entry.quantityUsed} ngl brugt · {entry.colorCode}
+                {entry.catalogYarnId && (
+                  <span style={{ marginLeft: '6px', color: '#1E4D3A' }}>· katalog</span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -601,6 +606,9 @@ export default function Arkiv({ user }) {
                 </div>
                 <div style={{ fontSize: '11px', color: '#8B7D6B', marginBottom: '8px' }}>
                   {e.yarnBrand} · {e.yarnName} · {e.colorName}
+                  {e.catalogYarnId && (
+                    <span style={{ marginLeft: '6px', fontSize: '10px', color: '#1E4D3A' }}>(katalog)</span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '11px', background: '#EDE7D8', color: '#5A4228', borderRadius: '20px', padding: '2px 8px' }}>{e.quantityUsed} ngl</span>

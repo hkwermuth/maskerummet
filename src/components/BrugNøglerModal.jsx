@@ -97,6 +97,8 @@ export default function BrugNøglerModal({ yarn, user, onClose, onSaved }) {
         colorName:  yarn.colorName,
         colorCode:  yarn.colorCode,
         hex:        yarn.hex,
+        catalogYarnId:  yarn.catalogYarnId  ?? null,
+        catalogColorId: yarn.catalogColorId ?? null,
       })
 
       const { data: usageRow, error: insertErr } = await supabase
@@ -193,7 +195,7 @@ export default function BrugNøglerModal({ yarn, user, onClose, onSaved }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <Field label={`Antal nøgler brugt (max ${maxQty})`}>
               <input
-                type="number" step="0.5" min="0.5" max={maxQty}
+                type="number" step="0.25" min="0.25" max={maxQty}
                 value={form.quantityUsed}
                 onChange={e => setF('quantityUsed', e.target.value)}
                 style={inputStyle}

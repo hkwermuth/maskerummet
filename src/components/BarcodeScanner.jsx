@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { BrowserMultiFormatReader } from '@zxing/library'
 import { lookupByBarcode } from '../data/perminCatalog'
 import { lookupTiliaByBarcode } from '../data/filcolanaCatalog'
+import { resolveBarcodeToCatalog, applyCatalogYarnColorToForm, displayYarnName } from '../lib/catalog'
 
 function lookupAllCatalogs(code) {
   return lookupByBarcode(code) || lookupTiliaByBarcode(code)
@@ -10,12 +11,43 @@ function lookupAllCatalogs(code) {
 export default function BarcodeScanner({ onClose, onAddToLager }) {
   const videoRef = useRef(null)
   const readerRef = useRef(null)
-  const lastCodeRef = useRef(null)   // debounce: last seen code
+  const lastCodeRef = useRef(null)
   const [result, setResult] = useState(null)
   const [scanning, setScanning] = useState(true)
-  const [scanHint, setScanHint] = useState('')  // "Holder stabil..."
+  const [resolving, setResolving] = useState(false)
+  const [scanHint, setScanHint] = useState('')
   const [error, setError] = useState(null)
   const [manualCode, setManualCode] = useState('')
+
+  async function resolveCode(code) {
+    const trimmed = (code || '').trim()
+    if (!trimmed) return
+    setResolving(true)
+    setResult(null)
+    try {
+      const cat = await resolveBarcodeToCatalog(trimmed)
+      if (cat) {
+        setResult({
+          source: 'catalog',
+          yarn: cat.yarn,
+          color: cat.color,
+          scannedCode: trimmed,
+        })
+        setResolving(false)
+        return
+      }
+      const local = lookupAllCatalogs(trimmed)
+      if (local) {
+        setResult({ source: 'local', local, scannedCode: trimmed })
+      } else {
+        setResult({ notFound: true, scannedCode: trimmed })
+      }
+    } catch (e) {
+      console.error(e)
+      setResult({ notFound: true, scannedCode: trimmed })
+    }
+    setResolving(false)
+  }
 
   function startReader() {
     const reader = new BrowserMultiFormatReader()
@@ -29,19 +61,16 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
         if (!res) return
         const code = res.getText()
 
-        // Require same code twice in a row to confirm (reduces false reads)
         if (lastCodeRef.current !== code) {
           lastCodeRef.current = code
           setScanHint('Holder stabil...')
           return
         }
 
-        // Confirmed — same code read twice
         reader.reset()
         setScanHint('')
         setScanning(false)
-        const found = lookupAllCatalogs(code)
-        setResult(found ? { ...found, scannedCode: code } : { notFound: true, scannedCode: code })
+        resolveCode(code)
       }
     ).catch(e => {
       setError(
@@ -61,50 +90,69 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
   }, [])
 
   function handleManualLookup() {
-    const found = lookupAllCatalogs(manualCode.trim())
     setScanning(false)
-    if (found) {
-      setResult({ ...found, scannedCode: manualCode.trim() })
-    } else {
-      setResult({ notFound: true, scannedCode: manualCode.trim() })
-    }
+    resolveCode(manualCode.trim())
   }
 
   function handleAddToLager() {
-    if (!result || result.notFound) return
-    onAddToLager({
-      name:      result.series,
-      brand:     result.brand,
-      colorName: result.colorName ?? result.colorNameDa,
-      colorCode: result.articleNumber,
-      weight:    result.weight,
-      fiber:     result.fiber,
-      metrage:   result.metrage,
-      pindstr:   result.pindstr,
-      antal:     1,
-      status:    'På lager',
-      hex:       result.hex,
-      noter:     '',
-      barcode:   result.scannedCode,
-    })
-    onClose()
+    if (!result || result.notFound || resolving) return
+    if (result.source === 'catalog') {
+      const payload = applyCatalogYarnColorToForm(result.yarn, result.color, {
+        antal: 1,
+        status: 'På lager',
+        noter: '',
+        barcode: result.scannedCode,
+        imageUrl: null,
+      })
+      onAddToLager(payload)
+      onClose()
+      return
+    }
+    if (result.source === 'local') {
+      const r = result.local
+      onAddToLager({
+        name:      r.series,
+        brand:     r.brand,
+        colorName: r.colorName ?? r.colorNameDa,
+        colorCode: r.articleNumber,
+        weight:    r.weight,
+        fiber:     r.fiber,
+        metrage:   r.metrage,
+        pindstr:   r.pindstr,
+        antal:     1,
+        status:    'På lager',
+        hex:       r.hex,
+        noter:     '',
+        barcode:   result.scannedCode,
+        catalogYarnId: null,
+        catalogColorId: null,
+        catalogImageUrl: null,
+      })
+      onClose()
+    }
   }
 
   function rescan() {
     try { readerRef.current?.reset() } catch {}
     setResult(null)
     setScanning(true)
+    setResolving(false)
     setScanHint('')
     setManualCode('')
     setTimeout(() => startReader(), 200)
   }
 
   const textContrast = hex => {
-    const r = parseInt(hex.slice(1, 3), 16)
-    const g = parseInt(hex.slice(3, 5), 16)
-    const b = parseInt(hex.slice(5, 7), 16)
+    const h = hex || '#A8C4C4'
+    const r = parseInt(h.slice(1, 3), 16)
+    const g = parseInt(h.slice(3, 5), 16)
+    const b = parseInt(h.slice(5, 7), 16)
     return (0.299 * r + 0.587 * g + 0.114 * b) > 160 ? '#2C2018' : '#FFFFFF'
   }
+
+  const catalogHex = result?.source === 'catalog' && result.color?.hex_code
+    ? (String(result.color.hex_code).startsWith('#') ? result.color.hex_code : `#${result.color.hex_code}`)
+    : '#A8C4C4'
 
   return (
     <div
@@ -123,7 +171,6 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
         overflow: 'hidden',
       }}>
 
-        {/* Header */}
         <div style={{
           background: '#2C4A3E', padding: '16px 20px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -150,13 +197,11 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
           </button>
         </div>
 
-        {/* Camera view */}
         <div style={{ position: 'relative', background: '#000', aspectRatio: '4/3' }}>
           <video
             ref={videoRef}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
-          {/* Scanning overlay */}
           {scanning && !error && (
             <div style={{
               position: 'absolute', inset: 0,
@@ -191,11 +236,15 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
           )}
         </div>
 
-        {/* Result or manual input */}
         <div style={{ padding: '20px' }}>
 
-          {/* Not found or success */}
-          {result && result.notFound && (
+          {resolving && (
+            <div style={{ textAlign: 'center', padding: '12px', fontSize: '13px', color: '#6B5D4F' }}>
+              Slår op i garn-katalog…
+            </div>
+          )}
+
+          {result && result.notFound && !resolving && (
             <div style={{
               background: '#FFF3E0', borderRadius: '10px',
               padding: '16px', marginBottom: '16px', textAlign: 'center',
@@ -210,53 +259,92 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
             </div>
           )}
 
-          {result && !result.notFound && (
+          {result && result.source === 'catalog' && !resolving && (
             <div style={{ marginBottom: '16px' }}>
               <div style={{
                 borderRadius: '10px', overflow: 'hidden',
                 border: '1px solid #D0C8BA',
               }}>
                 <div style={{
-                  height: '80px', background: result.hex,
+                  height: '80px', background: catalogHex,
                   display: 'flex', alignItems: 'flex-end',
                   padding: '10px 14px',
                 }}>
                   <span style={{
                     fontSize: '10px', fontWeight: 600, letterSpacing: '.08em',
                     textTransform: 'uppercase',
-                    color: textContrast(result.hex),
+                    color: textContrast(catalogHex),
                     background: 'rgba(0,0,0,.15)', borderRadius: '4px',
                     padding: '2px 7px',
                   }}>
-                    {result.articleNumber}
+                    {result.color?.color_number}
                   </span>
                 </div>
                 <div style={{ padding: '14px', background: '#FFFCF7' }}>
                   <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.1em' }}>
-                    {result.brand} · {result.series}
+                    Garn-katalog
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#6B5D4F', marginTop: '4px' }}>
+                    {result.yarn?.producer}
                   </div>
                   <div style={{
                     fontFamily: "'Cormorant Garamond', serif",
                     fontSize: '20px', fontWeight: 600, color: '#2C2018', margin: '3px 0',
                   }}>
-                    {result.colorName ?? result.colorNameDa}
+                    {displayYarnName(result.yarn)}
                   </div>
-                  {result.colorNameDa && result.colorName !== result.colorNameDa && (
-                    <div style={{ fontSize: '12px', color: '#6B5D4F', marginBottom: '6px' }}>
-                      {result.colorNameDa}
-                    </div>
-                  )}
-                  <div style={{ fontSize: '11px', color: '#8B7D6B', display: 'flex', gap: '12px' }}>
-                    <span>{result.fiber}</span>
-                    <span>Løbelængde: {result.metrage} m/50g</span>
-                    <span>Pind {result.pindstr}</span>
+                  <div style={{ fontSize: '14px', color: '#2C2018' }}>
+                    {result.color?.color_name || '—'}
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Manual input */}
+          {result && result.source === 'local' && !resolving && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{
+                borderRadius: '10px', overflow: 'hidden',
+                border: '1px solid #D0C8BA',
+              }}>
+                <div style={{
+                  height: '80px', background: result.local.hex,
+                  display: 'flex', alignItems: 'flex-end',
+                  padding: '10px 14px',
+                }}>
+                  <span style={{
+                    fontSize: '10px', fontWeight: 600, letterSpacing: '.08em',
+                    textTransform: 'uppercase',
+                    color: textContrast(result.local.hex),
+                    background: 'rgba(0,0,0,.15)', borderRadius: '4px',
+                    padding: '2px 7px',
+                  }}>
+                    {result.local.articleNumber}
+                  </span>
+                </div>
+                <div style={{ padding: '14px', background: '#FFFCF7' }}>
+                  <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.1em' }}>
+                    Lokalt katalog
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#8B7D6B' }}>
+                    {result.local.brand} · {result.local.series}
+                  </div>
+                  <div style={{
+                    fontFamily: "'Cormorant Garamond', serif",
+                    fontSize: '20px', fontWeight: 600, color: '#2C2018', margin: '3px 0',
+                  }}>
+                    {result.local.colorName ?? result.local.colorNameDa}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#8B7D6B', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <span>{result.local.fiber}</span>
+                    <span>Løbelængde: {result.local.metrage} m/50g</span>
+                    <span>Pind {result.local.pindstr}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div style={{ marginBottom: '14px' }}>
             <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '6px' }}>
               Eller indtast produktnummer manuelt
@@ -275,12 +363,12 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
               />
               <button
                 onClick={handleManualLookup}
-                disabled={!manualCode}
+                disabled={!manualCode || resolving}
                 style={{
                   padding: '8px 14px', background: '#2C4A3E', color: '#fff',
                   border: 'none', borderRadius: '6px', fontSize: '13px',
-                  cursor: manualCode ? 'pointer' : 'default',
-                  opacity: manualCode ? 1 : 0.5,
+                  cursor: manualCode && !resolving ? 'pointer' : 'default',
+                  opacity: manualCode && !resolving ? 1 : 0.5,
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               >
@@ -289,21 +377,21 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
             </div>
           </div>
 
-          {/* Action buttons */}
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
             {result && (
               <button
                 onClick={rescan}
+                disabled={resolving}
                 style={{
                   padding: '8px 14px', border: '1px solid #D0C8BA', borderRadius: '6px',
-                  background: 'transparent', fontSize: '13px', cursor: 'pointer',
+                  background: 'transparent', fontSize: '13px', cursor: resolving ? 'default' : 'pointer',
                   color: '#6B5D4F', fontFamily: "'DM Sans', sans-serif",
                 }}
               >
                 Skann igen
               </button>
             )}
-            {result && !result.notFound && (
+            {result && !result.notFound && !resolving && (
               <button
                 onClick={handleAddToLager}
                 style={{

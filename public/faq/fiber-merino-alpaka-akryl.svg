@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <rect width="900" height="600" rx="32" fill="#FFFCF7"/>
+  <rect x="60" y="60" width="780" height="480" rx="24" fill="#F4EFE6" stroke="#E8E0D4" stroke-width="4"/>
+  <g font-family="DM Sans, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="110" y="150" font-size="42" font-weight="700" fill="#2C4A3E">Fibre</text>
+    <text x="110" y="210" font-size="22" fill="#2C2018" opacity="0.85">Merino · Alpaka · Akryl</text>
+  </g>
+  <g>
+    <circle cx="250" cy="380" r="85" fill="#D0E8D4" stroke="#2C4A3E" stroke-width="6"/>
+    <circle cx="450" cy="380" r="85" fill="#FFE0C4" stroke="#2C4A3E" stroke-width="6"/>
+    <circle cx="650" cy="380" r="85" fill="#D8D0E8" stroke="#2C4A3E" stroke-width="6"/>
+    <g font-family="DM Sans, system-ui" font-size="24" font-weight="700" fill="#2C2018">
+      <text x="205" y="390">Merino</text>
+      <text x="415" y="390">Alpaka</text>
+      <text x="618" y="390">Akryl</text>
+    </g>
+  </g>
+</svg>
+

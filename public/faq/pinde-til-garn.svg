@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <rect width="900" height="600" rx="32" fill="#FFFCF7"/>
+  <rect x="60" y="60" width="780" height="480" rx="24" fill="#F4EFE6" stroke="#E8E0D4" stroke-width="4"/>
+  <g font-family="DM Sans, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="110" y="150" font-size="42" font-weight="700" fill="#2C4A3E">Pinde &amp; garn</text>
+    <text x="110" y="210" font-size="22" fill="#2C2018" opacity="0.85">Banderole ’ pindestørrelse ’ prøvelap</text>
+  </g>
+  <g>
+    <rect x="110" y="270" width="300" height="220" rx="22" fill="#FFFFFF" stroke="#E8E0D4" stroke-width="4"/>
+    <text x="150" y="325" font-family="DM Sans, system-ui" font-size="20" fill="#5A4E42">Pindestr.</text>
+    <text x="150" y="365" font-family="DM Sans, system-ui" font-size="42" font-weight="700" fill="#2C4A3E">4.0 mm</text>
+    <text x="150" y="420" font-family="DM Sans, system-ui" font-size="20" fill="#5A4E42">Strikkefasthed</text>
+    <text x="150" y="460" font-family="DM Sans, system-ui" font-size="28" font-weight="700" fill="#2C2018">20 m / 10 cm</text>
+  </g>
+  <g>
+    <path d="M520 270l260 0" stroke="#2C4A3E" stroke-width="10" stroke-linecap="round"/>
+    <path d="M520 330l260 0" stroke="#C16B47" stroke-width="10" stroke-linecap="round"/>
+    <path d="M520 390l260 0" stroke="#8B7D6B" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="520" cy="270" r="12" fill="#2C4A3E"/>
+    <circle cx="520" cy="330" r="12" fill="#C16B47"/>
+    <circle cx="520" cy="390" r="12" fill="#8B7D6B"/>
+    <text x="540" y="470" font-family="DM Sans, system-ui" font-size="18" fill="#5A4E42">0,5 mm op/ned ændrer udtrykket</text>
+  </g>
+</svg>
+

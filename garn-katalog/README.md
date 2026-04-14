@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-Åbn http://localhost:3000/garn
+Åbn http://localhost:3210/garn (port **3210** matcher linket fra hovedappen i dev; kør begge servere: Vite på 5173 og Next her.)
 
 ## Struktur
 

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <rect width="900" height="600" rx="32" fill="#FFFCF7"/>
+  <rect x="60" y="60" width="780" height="480" rx="24" fill="#F4EFE6" stroke="#E8E0D4" stroke-width="4"/>
+  <g font-family="DM Sans, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="110" y="150" font-size="42" font-weight="700" fill="#2C4A3E">Strikkefasthed</text>
+    <text x="110" y="210" font-size="22" fill="#2C2018" opacity="0.85">Masker pr. 10 cm</text>
+  </g>
+  <g>
+    <rect x="120" y="260" width="420" height="260" rx="22" fill="#FFFFFF" stroke="#E8E0D4" stroke-width="4"/>
+    <g stroke="#C0B8A8" stroke-width="2">
+      <path d="M160 300h340M160 340h340M160 380h340M160 420h340M160 460h340"/>
+      <path d="M160 300v200M200 300v200M240 300v200M280 300v200M320 300v200M360 300v200M400 300v200M440 300v200M480 300v200"/>
+    </g>
+    <rect x="160" y="320" width="240" height="140" rx="14" fill="#D0E8D4" opacity="0.7"/>
+  </g>
+  <g>
+    <rect x="580" y="280" width="220" height="180" rx="18" fill="#FFFFFF" stroke="#E8E0D4" stroke-width="4"/>
+    <text x="610" y="340" font-family="DM Sans, system-ui" font-size="22" fill="#5A4E42">Mål her</text>
+    <text x="610" y="385" font-family="DM Sans, system-ui" font-size="34" font-weight="700" fill="#2C2018">10 cm</text>
+    <path d="M610 410h150" stroke="#2C4A3E" stroke-width="8" stroke-linecap="round"/>
+    <path d="M610 430h110" stroke="#C16B47" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>
+

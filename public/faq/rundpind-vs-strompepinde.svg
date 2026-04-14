@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600">
+  <rect width="900" height="600" rx="32" fill="#FFFCF7"/>
+  <rect x="60" y="60" width="780" height="480" rx="24" fill="#F4EFE6" stroke="#E8E0D4" stroke-width="4"/>
+  <g font-family="DM Sans, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="110" y="150" font-size="42" font-weight="700" fill="#2C4A3E">Rundpind vs. DPN</text>
+    <text x="110" y="210" font-size="22" fill="#2C2018" opacity="0.85">Rundt · små omkredse · magic loop</text>
+  </g>
+  <g>
+    <path d="M160 420c80-160 240-160 320 0" fill="none" stroke="#2C4A3E" stroke-width="10" stroke-linecap="round"/>
+    <path d="M200 340l-60 60" stroke="#C16B47" stroke-width="12" stroke-linecap="round"/>
+    <path d="M440 340l60 60" stroke="#C16B47" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="140" cy="400" r="10" fill="#C16B47"/>
+    <circle cx="500" cy="400" r="10" fill="#C16B47"/>
+  </g>
+  <g>
+    <path d="M590 320l220 0" stroke="#2C4A3E" stroke-width="10" stroke-linecap="round"/>
+    <path d="M610 370l200 0" stroke="#C16B47" stroke-width="10" stroke-linecap="round"/>
+    <path d="M630 420l180 0" stroke="#8B7D6B" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="590" cy="320" r="10" fill="#2C4A3E"/>
+    <circle cx="610" cy="370" r="10" fill="#C16B47"/>
+    <circle cx="630" cy="420" r="10" fill="#8B7D6B"/>
+  </g>
+</svg>
+

@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase, toDb, fromDb, uploadFile } from '../lib/supabase'
+import {
+  searchYarnsFull,
+  fetchYarnFullById,
+  fetchColorsForYarn,
+  displayYarnName,
+  applyCatalogYarnOnlyToForm,
+  applyCatalogYarnColorToForm,
+} from '../lib/catalog'
 import BarcodeScanner from './BarcodeScanner'
 import BrugNøglerModal from './BrugNøglerModal'
-import { PERMIN_CATALOG } from '../data/perminCatalog'
-import { FILCOLANA_CATALOG } from '../data/filcolanaCatalog'
-import { detectColorFamily, COLOR_FAMILY_LABELS } from '../data/colorFamilies'
-
-const ALL_CATALOG = [...PERMIN_CATALOG, ...FILCOLANA_CATALOG]
+import { detectColorFamily, COLOR_FAMILY_LABELS, COLOR_FAMILY_DEFAULT_HEX, yarnMatchesStashSearch } from '../data/colorFamilies'
 
 const WEIGHTS  = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
 const STATUSES = ['På lager', 'I brug', 'Brugt op', 'Ønskeliste']
@@ -28,36 +32,60 @@ const STATUS_TEXT = {
 const EMPTY_FORM = {
   name: '', brand: '', colorName: '', colorCode: '', colorCategory: '',
   weight: 'DK', fiber: '', metrage: '', pindstr: '',
-  antal: 1, status: 'På lager', hex: '#A8C4C4', noter: '', barcode: '',
+  antal: 1, status: 'På lager', hex: '', noter: '', barcode: '',
   imageUrl: null,
+  catalogYarnId: null,
+  catalogColorId: null,
+  catalogImageUrl: null,
 }
 
-// ─── Catalog autocomplete ─────────────────────────────────────────────────────
+const FALLBACK_HEX = '#E8E4DC'
 
-function CatalogSearch({ value, onChange, onSelect, placeholder, field }) {
+function validHexForColorInput(hex) {
+  const s = (hex || '').trim()
+  return /^#[0-9A-Fa-f]{6}$/.test(s) ? s : FALLBACK_HEX
+}
+
+function normalizeUserHexInput(raw) {
+  const s = String(raw || '').trim()
+  if (!s) return ''
+  const noHash = s.replace(/^#/, '').replace(/\s+/g, '')
+  if (/^[0-9A-Fa-f]{6}$/.test(noHash)) return `#${noHash.toLowerCase()}`
+  // Allow user to keep typing partial / other formats; keep as-is.
+  return s
+}
+
+// ─── Garn-katalog søgning (Supabase `yarns_full`) ─────────────────────────────
+
+function YarnCatalogSearch({ value, onChange, onSelectYarn, placeholder }) {
   const [open, setOpen] = useState(false)
   const [hits, setHits] = useState([])
+  const [loading, setLoading] = useState(false)
   const wrapRef = useRef(null)
+  const debounceRef = useRef(null)
 
   useEffect(() => {
-    const q = (value || '').toLowerCase().trim()
-    if (q.length < 1) { setHits([]); setOpen(false); return }
-    const results = ALL_CATALOG.filter(e => {
-      if (field === 'colorCode') return e.articleNumber.includes(q)
-      return (
-        e.colorName?.toLowerCase().includes(q) ||
-        (e.colorNameDa?.toLowerCase().includes(q)) ||
-        e.articleNumber.includes(q) ||
-        e.series.toLowerCase().includes(q)
-      )
-    }).slice(0, 8)
-    setHits(results)
-    setOpen(results.length > 0)
-  }, [value, field])
+    const q = (value || '').trim()
+    if (q.length < 1) {
+      setHits([])
+      setOpen(false)
+      return
+    }
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(async () => {
+      setLoading(true)
+      const r = await searchYarnsFull(q)
+      setHits(r)
+      setOpen(r.length > 0)
+      setLoading(false)
+    }, 320)
+    return () => clearTimeout(debounceRef.current)
+  }, [value])
 
-  // Close on outside click
   useEffect(() => {
-    function handler(e) { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false) }
+    function handler(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
+    }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
@@ -66,11 +94,15 @@ function CatalogSearch({ value, onChange, onSelect, placeholder, field }) {
     <div ref={wrapRef} style={{ position: 'relative' }}>
       <input
         value={value}
-        onChange={e => { onChange(e.target.value); }}
+        onChange={e => onChange(e.target.value)}
         onFocus={() => hits.length > 0 && setOpen(true)}
         placeholder={placeholder}
         style={inputStyle}
+        autoComplete="off"
       />
+      {loading && (
+        <div style={{ fontSize: '10px', color: '#8B7D6B', marginTop: '4px' }}>Søger i katalog…</div>
+      )}
       {open && (
         <div style={{
           position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 200,
@@ -78,28 +110,24 @@ function CatalogSearch({ value, onChange, onSelect, placeholder, field }) {
           boxShadow: '0 8px 24px rgba(44,32,24,.15)', marginTop: '2px',
           maxHeight: '240px', overflowY: 'auto',
         }}>
-          {hits.map(e => (
+          {hits.map(y => (
             <div
-              key={e.articleNumber}
-              onMouseDown={() => { onSelect(e); setOpen(false) }}
+              key={y.id}
+              onMouseDown={() => { onSelectYarn(y); setOpen(false) }}
               style={{
-                display: 'flex', alignItems: 'center', gap: '10px',
+                display: 'flex', alignItems: 'flex-start', gap: '10px',
                 padding: '9px 12px', cursor: 'pointer',
                 borderBottom: '1px solid #F0EAE0',
               }}
-              onMouseEnter={el => el.currentTarget.style.background = '#F4EFE6'}
-              onMouseLeave={el => el.currentTarget.style.background = 'transparent'}
+              onMouseEnter={el => { el.currentTarget.style.background = '#F4EFE6' }}
+              onMouseLeave={el => { el.currentTarget.style.background = 'transparent' }}
             >
-              <div style={{
-                width: '28px', height: '28px', borderRadius: '6px',
-                background: e.hex, border: '1px solid rgba(0,0,0,.08)', flexShrink: 0,
-              }} />
-              <div style={{ minWidth: 0 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ fontSize: '12px', fontWeight: 500, color: '#2C2018' }}>
-                  {e.series} · {e.colorNameDa ?? e.colorName}
+                  {displayYarnName(y)}
                 </div>
                 <div style={{ fontSize: '11px', color: '#8B7D6B' }}>
-                  {e.articleNumber} · {e.fiber} · {e.metrage}m
+                  {y.producer}{y.thickness_category ? ` · ${y.thickness_category}` : ''}
                 </div>
               </div>
             </div>
@@ -259,6 +287,10 @@ export default function Garnlager({ user }) {
   const [brugModal, setBrugModal] = useState(null) // yarn object or null
   const [saveError, setSaveError] = useState(null)
 
+  const [catalogQuery, setCatalogQuery] = useState('')
+  const [selectedYarn, setSelectedYarn] = useState(null)
+  const [colorsForYarn, setColorsForYarn] = useState([])
+
   // ── Load from Supabase ──────────────────────────────────────────────────────
   useEffect(() => {
     async function fetchYarns() {
@@ -349,15 +381,29 @@ export default function Garnlager({ user }) {
 
   function openAdd() {
     setForm({ ...EMPTY_FORM })
+    setCatalogQuery('')
+    setSelectedYarn(null)
+    setColorsForYarn([])
     setImageFile(null)
     setImagePreview(null)
     setModal('add')
   }
-  function openEdit(y) {
+  async function openEdit(y) {
     setForm({ ...y })
+    setCatalogQuery('')
+    setSelectedYarn(null)
+    setColorsForYarn([])
     setImageFile(null)
     setImagePreview(y.imageUrl ?? null)
     setModal(y.id)
+    if (y.catalogYarnId) {
+      const yarn = await fetchYarnFullById(y.catalogYarnId)
+      if (yarn) {
+        setSelectedYarn(yarn)
+        setCatalogQuery(displayYarnName(yarn))
+        setColorsForYarn(await fetchColorsForYarn(yarn.id))
+      }
+    }
   }
   function setF(k, v) { setForm(p => ({ ...p, [k]: v })) }
 
@@ -377,35 +423,47 @@ export default function Garnlager({ user }) {
     setF('fiber', newParts.join(', '))
   }
 
-  function selectFromCatalog(entry) {
-    const colorName = entry.colorNameDa ?? entry.colorName
-    setForm(p => ({
-      ...p,
-      name:          entry.series,
-      brand:         entry.brand,
-      colorName,
-      colorCode:     entry.articleNumber,
-      colorCategory: detectColorFamily(colorName) || p.colorCategory,
-      fiber:         entry.fiber,
-      metrage:       entry.metrage,
-      weight:        entry.weight,
-      pindstr:       entry.pindstr,
-      hex:           entry.hex,
+  async function handleSelectCatalogYarn(yarn) {
+    setSelectedYarn(yarn)
+    setCatalogQuery(displayYarnName(yarn))
+    const cols = await fetchColorsForYarn(yarn.id)
+    setColorsForYarn(cols)
+    setForm(f => applyCatalogYarnOnlyToForm(yarn, { ...f, antal: f.antal || 1 }))
+  }
+
+  function clearCatalogLink() {
+    setSelectedYarn(null)
+    setColorsForYarn([])
+    setCatalogQuery('')
+    setForm(f => ({
+      ...f,
+      catalogYarnId: null,
+      catalogColorId: null,
+      catalogImageUrl: null,
     }))
   }
 
   // ── Scanner callback ────────────────────────────────────────────────────────
   function handleScanResult(yarnData) {
     setForm({ ...EMPTY_FORM, ...yarnData })
+    setCatalogQuery('')
+    setSelectedYarn(null)
+    setColorsForYarn([])
+    if (yarnData.catalogYarnId) {
+      fetchYarnFullById(yarnData.catalogYarnId).then(y => {
+        if (y) {
+          setSelectedYarn(y)
+          setCatalogQuery(displayYarnName(y))
+          fetchColorsForYarn(y.id).then(setColorsForYarn)
+        }
+      })
+    }
     setModal('add')
   }
 
   // ── Filtering ───────────────────────────────────────────────────────────────
   const filtered = yarns.filter(y => {
-    const qL = q.toLowerCase()
-    const matchesSearch = !qL || (
-      [y.name, y.brand, y.colorName, y.colorCategory, y.fiber, y.noter].some(s => (s ?? '').toLowerCase().includes(qL))
-    )
+    const matchesSearch = yarnMatchesStashSearch(y, q)
     const matchesWeight = !filterWeight || y.weight === filterWeight
     const matchesStatus = !filterStatus || y.status === filterStatus
     const matchesFiber  = !filterFiber  || (y.fiber ?? '').toLowerCase().includes(filterFiber.toLowerCase())
@@ -493,7 +551,7 @@ export default function Garnlager({ user }) {
         <input
           value={q}
           onChange={e => setQ(e.target.value)}
-          placeholder="Søg garn, mærke, farve eller grøn/brun/blå..."
+          placeholder="Søg garn, farve (pink finder også lyserød-hex), hex…"
           style={{ flex: '1 1 180px', minWidth: '0', padding: '8px 12px', border: '1px solid #D0C8BA', borderRadius: '6px', fontSize: '13px', background: '#FFFCF7', color: '#2C2018', fontFamily: "'DM Sans', sans-serif" }}
         />
         <select value={filterWeight} onChange={e => setFilterWeight(e.target.value)} style={{ ...inputStyle, cursor: 'pointer', flex: '0 0 auto' }}>
@@ -553,12 +611,12 @@ export default function Garnlager({ user }) {
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(44,32,24,.13)' }}
               onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
             >
-              {y.imageUrl ? (
+              {y.imageUrl || y.catalogImageUrl ? (
                 <div style={{ height: '100px', overflow: 'hidden' }}>
-                  <img src={y.imageUrl} alt={y.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={y.imageUrl || y.catalogImageUrl} alt={y.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               ) : (
-                <div style={{ height: '72px', background: y.hex || '#D0C8BA' }} />
+                <div style={{ height: '72px', background: (y.hex && y.hex.trim()) ? y.hex : '#D0C8BA' }} />
               )}
               <div style={{ padding: '12px' }}>
                 <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.12em', color: '#8B7D6B', marginBottom: '2px' }}>{y.brand}</div>
@@ -568,6 +626,9 @@ export default function Garnlager({ user }) {
                   <Chip style={{ background: '#EDE7D8', color: '#5A4228' }}>{y.weight}</Chip>
                   <Chip style={{ background: '#E4EEE4', color: '#2A4A2A' }}>{y.antal} ngl</Chip>
                   <Chip style={{ background: STATUS_COLORS[y.status], color: STATUS_TEXT[y.status] }}>{y.status}</Chip>
+                  {y.catalogYarnId && (
+                    <Chip style={{ background: '#D8E8E0', color: '#1E4D3A' }}>Katalog</Chip>
+                  )}
                 </div>
                 {y.noter && <div style={{ marginTop: '8px', fontSize: '11px', color: '#8B7D6B', fontStyle: 'italic', lineHeight: '1.45' }}>{y.noter}</div>}
               </div>
@@ -588,6 +649,55 @@ export default function Garnlager({ user }) {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <Field label="Søg i garn-katalog">
+                  <YarnCatalogSearch
+                    value={catalogQuery}
+                    onChange={setCatalogQuery}
+                    onSelectYarn={handleSelectCatalogYarn}
+                    placeholder="Skriv mærke eller garnnavn fra maskerummet…"
+                  />
+                </Field>
+                {form.catalogYarnId && (
+                  <button
+                    type="button"
+                    onClick={clearCatalogLink}
+                    style={{ alignSelf: 'flex-start', fontSize: '11px', color: '#8B3A2A', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif", textDecoration: 'underline' }}
+                  >
+                    Fjern katalog-link
+                  </button>
+                )}
+              </div>
+              {selectedYarn && colorsForYarn.length >= 1 && (
+                <Field label="Farve fra katalog">
+                  <select
+                    value={form.catalogColorId || ''}
+                    onChange={e => {
+                      const id = e.target.value
+                      if (!id) {
+                        setForm(f => applyCatalogYarnOnlyToForm(selectedYarn, { ...f, antal: f.antal || 1 }))
+                        return
+                      }
+                      const c = colorsForYarn.find(x => x.id === id)
+                      if (c) {
+                        setForm(f => {
+                          const next = applyCatalogYarnColorToForm(selectedYarn, c, f)
+                          const cn = next.colorName || ''
+                          return { ...next, colorCategory: detectColorFamily(cn) || f.colorCategory }
+                        })
+                      }
+                    }}
+                    style={{ ...inputStyle, cursor: 'pointer' }}
+                  >
+                    <option value="">Vælg farve…</option>
+                    {colorsForYarn.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.color_number} · {c.color_name || '—'}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              )}
               {[
                 ['name', 'Garnnavn'], ['brand', 'Mærke'],
                 ['metrage', 'Løbelængde/nøgle (m)'],
@@ -598,7 +708,7 @@ export default function Garnlager({ user }) {
                     value={form[k] ?? ''}
                     onChange={e => setF(k, e.target.value)}
                     type={k === 'antal' || k === 'metrage' ? 'number' : 'text'}
-                    step={k === 'antal' ? '0.5' : k === 'metrage' ? '1' : undefined}
+                    step={k === 'antal' ? '0.25' : k === 'metrage' ? '1' : undefined}
                     min={k === 'antal' ? '0' : undefined}
                     style={inputStyle}
                   />
@@ -638,26 +748,38 @@ export default function Garnlager({ user }) {
               </div>
 
               <Field label="Farvenavn">
-                <CatalogSearch
+                <input
                   value={form.colorName ?? ''}
-                  onChange={v => {
-                    setF('colorName', v)
-                    const detected = detectColorFamily(v)
-                    if (detected && !form.colorCategory) setF('colorCategory', detected)
+                  onChange={e => {
+                    const v = e.target.value
+                    setForm(p => {
+                      const detected = detectColorFamily(v)
+                      const nextCategory = (p.colorCategory && String(p.colorCategory).trim())
+                        ? p.colorCategory
+                        : (detected ?? p.colorCategory)
+                      const shouldSetHex = !(p.hex && String(p.hex).trim())
+                      const nextHex = shouldSetHex && detected && COLOR_FAMILY_DEFAULT_HEX[detected]
+                        ? COLOR_FAMILY_DEFAULT_HEX[detected]
+                        : p.hex
+                      return {
+                        ...p,
+                        colorName: v,
+                        colorCategory: nextCategory ?? '',
+                        hex: nextHex ?? '',
+                      }
+                    })
                   }}
-                  onSelect={selectFromCatalog}
-                  placeholder="F.eks. Blomstereng, Camel..."
-                  field="colorName"
+                  placeholder="F.eks. Blomstereng, Camel…"
+                  style={inputStyle}
                 />
               </Field>
 
               <Field label="Farvenummer">
-                <CatalogSearch
+                <input
                   value={form.colorCode ?? ''}
-                  onChange={v => setF('colorCode', v)}
-                  onSelect={selectFromCatalog}
+                  onChange={e => setF('colorCode', e.target.value)}
                   placeholder="F.eks. 883174"
-                  field="colorCode"
+                  style={inputStyle}
                 />
               </Field>
 
@@ -666,7 +788,21 @@ export default function Garnlager({ user }) {
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <input
                     value={form.colorCategory ?? ''}
-                    onChange={e => setF('colorCategory', e.target.value)}
+                    onChange={e => {
+                      const v = e.target.value
+                      setForm(p => {
+                        const detected = detectColorFamily(v)
+                        const shouldSetHex = !(p.hex && String(p.hex).trim())
+                        const nextHex = shouldSetHex && detected && COLOR_FAMILY_DEFAULT_HEX[detected]
+                          ? COLOR_FAMILY_DEFAULT_HEX[detected]
+                          : p.hex
+                        return {
+                          ...p,
+                          colorCategory: v,
+                          hex: nextHex ?? '',
+                        }
+                      })
+                    }}
                     placeholder={detectColorFamily(form.colorName) ?? 'F.eks. grøn, brun...'}
                     style={{ ...inputStyle, flex: 1 }}
                     list="color-family-list"
@@ -696,11 +832,23 @@ export default function Garnlager({ user }) {
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <Label>Farve (hex)</Label>
+                {!(form.hex || '').trim() && (
+                  <div style={{ fontSize: '11px', color: '#8B7D6B', marginBottom: '2px' }}>Ingen farve valgt — vælg farve fra kataloget eller skriv eget hex.</div>
+                )}
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input type="color" value={form.hex || '#A8C4C4'} onChange={e => setF('hex', e.target.value)}
-                    style={{ width: '44px', height: '34px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px' }} />
-                  <input value={form.hex || ''} onChange={e => setF('hex', e.target.value)} style={{ ...inputStyle, flex: 1 }} />
-                  <div style={{ width: '34px', height: '34px', borderRadius: '6px', background: form.hex || '#A8C4C4', border: '1px solid #D0C8BA', flexShrink: 0 }} />
+                  <input
+                    type="color"
+                    value={validHexForColorInput(form.hex)}
+                    onChange={e => setF('hex', e.target.value)}
+                    style={{ width: '44px', height: '34px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px' }}
+                  />
+                  <input
+                    value={form.hex || ''}
+                    onChange={e => setF('hex', normalizeUserHexInput(e.target.value))}
+                    placeholder="#RRGGBB"
+                    style={{ ...inputStyle, flex: 1 }}
+                  />
+                  <div style={{ width: '34px', height: '34px', borderRadius: '6px', background: (form.hex && form.hex.trim()) ? form.hex : '#D0C8BA', border: '1px solid #D0C8BA', flexShrink: 0 }} />
                 </div>
               </div>
 
@@ -715,6 +863,8 @@ export default function Garnlager({ user }) {
                   <input type="file" accept="image/*" onChange={handleImageFile} style={{ display: 'none' }} />
                   {imagePreview ? (
                     <img src={imagePreview} alt="preview" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #D0C8BA' }} />
+                  ) : form.catalogImageUrl ? (
+                    <img src={form.catalogImageUrl} alt="Katalog" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #D0C8BA' }} />
                   ) : (
                     <div style={{ width: '56px', height: '56px', background: '#EDE7D8', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', color: '#8B7D6B' }}>📷</div>
                   )}

@@ -11,7 +11,7 @@ export const supabase = createClient(
 //   yarn_weight, gauge, meters, grams, image_url, barcode, created_at
 //
 // Extended columns (add via SQL if needed):
-//   quantity, status, hex_color, notes
+//   quantity, status, hex_color, notes, catalog_yarn_id, catalog_color_id, catalog_image_url
 //
 // Run this SQL in Supabase to enable all fields:
 //   ALTER TABLE public.yarn_items
@@ -41,6 +41,9 @@ export function toDb(yarn) {
     base.status    = yarn.status || 'På lager'
     base.hex_color = yarn.hex    || null
     base.notes     = yarn.noter  || null
+    base.catalog_yarn_id  = yarn.catalogYarnId  ?? null
+    base.catalog_color_id = yarn.catalogColorId ?? null
+    base.catalog_image_url = yarn.catalogImageUrl ?? null
   }
   return base
 }
@@ -55,6 +58,8 @@ export function toUsageDb(u) {
     color_name:        u.colorName       ?? null,
     color_code:        u.colorCode       ?? null,
     hex_color:         u.hex             ?? null,
+    catalog_yarn_id:   u.catalogYarnId   ?? null,
+    catalog_color_id:  u.catalogColorId  ?? null,
     quantity_used:     u.quantityUsed    ? parseFloat(u.quantityUsed) : null,
     used_for:          u.usedFor         ?? null,
     needle_size:       u.needleSize      ?? null,
@@ -75,6 +80,8 @@ export function fromUsageDb(row) {
     colorName:       row.color_name,
     colorCode:       row.color_code,
     hex:             row.hex_color ?? '#A8C4C4',
+    catalogYarnId:   row.catalog_yarn_id ?? null,
+    catalogColorId:  row.catalog_color_id ?? null,
     quantityUsed:    row.quantity_used,
     usedFor:         row.used_for,
     needleSize:      row.needle_size,
@@ -116,9 +123,12 @@ export function fromDb(row) {
     metrage:       row.meters,
     antal:         row.quantity  ?? 1,
     status:        row.status    ?? 'På lager',
-    hex:           row.hex_color ?? '#A8C4C4',
+    hex:           row.hex_color ?? '',
     noter:         row.notes     ?? '',
     barcode:       row.barcode,
     imageUrl:      row.image_url ?? null,
+    catalogYarnId:  row.catalog_yarn_id  ?? null,
+    catalogColorId: row.catalog_color_id ?? null,
+    catalogImageUrl: row.catalog_image_url ?? null,
   }
 }
