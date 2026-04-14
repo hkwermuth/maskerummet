@@ -29,9 +29,14 @@ export default async function AdminPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-serif text-3xl text-forest">Editor: garn</h1>
-        <Link href="/admin/new" className="bg-forest text-cream px-4 py-2 rounded-lg text-sm">
-          + Nyt garn
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/suggestions" className="bg-stone text-bark px-4 py-2 rounded-lg text-sm">
+            Moderation
+          </Link>
+          <Link href="/admin/new" className="bg-forest text-cream px-4 py-2 rounded-lg text-sm">
+            + Nyt garn
+          </Link>
+        </div>
       </div>
       <div className="bg-cream border border-stone rounded-xl divide-y divide-stone">
         {(yarns ?? []).map((y) => (

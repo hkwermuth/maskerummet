@@ -21,7 +21,7 @@ export default function LoginPage() {
 
   return (
     <div className="max-w-md">
-      <h1 className="font-serif text-3xl text-forest mb-4">Log ind som editor</h1>
+      <h1 className="font-serif text-3xl text-forest mb-4">Log ind</h1>
       {sent ? (
         <p className="text-bark">Tjek din email for et magisk link.</p>
       ) : (

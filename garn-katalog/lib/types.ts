@@ -46,6 +46,36 @@ export type SubstitutionCandidate = {
   notes: string | null
 }
 
+export type Verdict = 'perfekt' | 'god' | 'forbehold' | 'virker_ikke'
+
+export type SubstitutionVoteRow = {
+  id: string
+  target_yarn_id: string
+  candidate_yarn_id: string
+  user_id: string
+  verdict: Verdict
+  comment: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type SubstitutionSuggestionRow = {
+  id: string
+  target_yarn_id: string
+  suggested_yarn_id: string | null
+  suggested_producer: string | null
+  suggested_name: string | null
+  suggested_series: string | null
+  suggested_url: string | null
+  suggested_specs: unknown | null
+  suggestion_type: 'catalog' | 'external'
+  status: 'new' | 'approved' | 'rejected'
+  user_id: string
+  comment: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type Color = {
   id: string
   yarn_id: string

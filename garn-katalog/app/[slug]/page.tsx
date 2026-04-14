@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createSupabasePublicClient } from '@/lib/supabase/public'
 import { toSlug } from '@/lib/slug'
 import { FiberBar } from '@/components/FiberBar'
+import { SubstitutionsSection } from '@/components/substitutions/SubstitutionsSection'
 import type { Yarn, Color } from '@/lib/types'
 import { getSubstitutions } from '@/lib/substitutions'
 import {
@@ -250,58 +251,8 @@ export default async function YarnDetailPage(
           </div>
         </section>
       )}
-      {substitutions.length > 0 && (
-        <section className="mt-8">
-          <h2 className="font-serif text-xl text-forest mb-1">Mulige substitutter</h2>
-          <p className="text-xs text-bark/70 mb-3">
-            Forslagene er automatisk beregnet ud fra garnets tykkelse, løbelængde, strikkefasthed, fiberindhold og vaskeanvisning.
-          </p>
-          <ul className="divide-y divide-stone border border-stone rounded-lg overflow-hidden">
-            {substitutions.map((s) => {
-              const slug = toSlug(s.producer, s.name, s.series)
-              return (
-                <li key={s.yarn_id}>
-                  <Link
-                    href={`/${slug}`}
-                    className="flex items-center justify-between gap-3 px-4 py-3 bg-white hover:bg-cream transition"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-xs uppercase tracking-wider text-terracotta">{s.producer}</div>
-                      <div className="text-forest truncate">
-                        {s.name}
-                        {s.series ? <span className="italic text-bark"> — {s.series}</span> : null}
-                      </div>
-                      {s.notes && <div className="text-xs text-bark/80 mt-1">{s.notes}</div>}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {s.is_manual && (
-                        <span title="Verificeret manuelt" className="text-xs text-forest">✓</span>
-                      )}
-                      <VerdictBadge verdict={s.verdict} />
-                    </div>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      )}
+      {substitutions.length > 0 && <SubstitutionsSection yarnId={yarn.id} substitutions={substitutions} />}
     </article>
-  )
-}
-
-function VerdictBadge({ verdict }: { verdict: string }) {
-  const map: Record<string, string> = {
-    perfekt: 'bg-moss/40 text-forest',
-    god: 'bg-sky-100 text-sky-900',
-    forbehold: 'bg-amber-100 text-amber-900',
-    virker_ikke: 'bg-red-100 text-red-900',
-  }
-  const cls = map[verdict] ?? 'bg-stone text-bark'
-  return (
-    <span className={`text-[11px] uppercase tracking-wider px-2 py-1 rounded ${cls}`}>
-      {verdict.replace(/_/g, ' ')}
-    </span>
   )
 }
 

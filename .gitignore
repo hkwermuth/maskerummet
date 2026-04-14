@@ -5,5 +5,8 @@ dist
 .env.local
 .env.*.local
 
+# Excel temp/lock files
+~$*.xlsx
+
 # Cursor/Claude — shared launch config only; not machine-local settings
 .claude/settings.local.json
