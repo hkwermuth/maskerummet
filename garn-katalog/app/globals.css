@@ -5,7 +5,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@400;500;600&display=swap');
 
 html, body {
-  background: #F4EFE6;
+  background: transparent;
   color: #2C4A3E;
   font-family: 'DM Sans', system-ui, sans-serif;
 }
