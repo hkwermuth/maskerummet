@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase, toUsageDb, uploadFile } from '../lib/supabase'
 
 const inputStyle = {
@@ -53,6 +53,17 @@ function FileUploadField({ label, accept, preview, onChange, hint }) {
 export default function BrugNøglerModal({ yarn, user, onClose, onSaved }) {
   const today = new Date().toISOString().slice(0, 10)
 
+  const [projects, setProjects] = useState([])
+  const [projectMode, setProjectMode] = useState('existing') // 'existing' | 'new'
+  const [selectedProjectId, setSelectedProjectId] = useState('')
+  const [newProject, setNewProject] = useState({
+    title: '',
+    usedAt: today,
+    needleSize: yarn.pindstr ?? '',
+    heldWith: '',
+    notes: '',
+  })
+
   const [form, setForm] = useState({
     quantityUsed: 1,
     usedFor:      '',
@@ -69,6 +80,22 @@ export default function BrugNøglerModal({ yarn, user, onClose, onSaved }) {
   const [error, setError] = useState(null)
 
   function setF(k, v) { setForm(p => ({ ...p, [k]: v })) }
+  function setNP(k, v) { setNewProject(p => ({ ...p, [k]: v })) }
+
+  useEffect(() => {
+    async function loadProjects() {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id,title,used_at,created_at')
+        .order('used_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(200)
+      if (error) console.error(error)
+      setProjects(data ?? [])
+      if ((data ?? []).length > 0) setSelectedProjectId(data[0].id)
+    }
+    loadProjects()
+  }, [])
 
   function handleImage(e) {
     const file = e.target.files[0]
@@ -88,9 +115,31 @@ export default function BrugNøglerModal({ yarn, user, onClose, onSaved }) {
     setSaving(true)
     setError(null)
     try {
+      let projectId = null
+      if (projectMode === 'existing') {
+        if (!selectedProjectId) throw new Error('Vælg et projekt.')
+        projectId = selectedProjectId
+      } else {
+        const { data: project, error: pErr } = await supabase
+          .from('projects')
+          .insert([{
+            user_id: user.id,
+            title: newProject.title || null,
+            used_at: newProject.usedAt || null,
+            needle_size: newProject.needleSize || null,
+            held_with: newProject.heldWith || null,
+            notes: newProject.notes || null,
+          }])
+          .select()
+          .single()
+        if (pErr) throw pErr
+        projectId = project.id
+      }
+
       // Insert usage record first to get the id
       const usageData = toUsageDb({
         ...form,
+        projectId,
         yarnItemId: yarn.id,
         yarnName:   yarn.name,
         yarnBrand:  yarn.brand,
@@ -191,6 +240,57 @@ export default function BrugNøglerModal({ yarn, user, onClose, onSaved }) {
 
         {/* Form */}
         <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+          <div style={{ border: '1px solid #EDE7D8', borderRadius: '10px', padding: '12px 12px', background: '#F9F6F0' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setProjectMode('existing')}
+                style={{ padding: '6px 10px', borderRadius: '999px', border: '1px solid #D0C8BA', background: projectMode === 'existing' ? '#EDE7D8' : 'transparent', cursor: 'pointer', fontSize: '12px', fontFamily: "'DM Sans', sans-serif" }}
+              >
+                Tilføj til eksisterende projekt
+              </button>
+              <button
+                type="button"
+                onClick={() => setProjectMode('new')}
+                style={{ padding: '6px 10px', borderRadius: '999px', border: '1px solid #D0C8BA', background: projectMode === 'new' ? '#EDE7D8' : 'transparent', cursor: 'pointer', fontSize: '12px', fontFamily: "'DM Sans', sans-serif" }}
+              >
+                Opret nyt projekt
+              </button>
+            </div>
+
+            {projectMode === 'existing' ? (
+              <Field label="Projekt">
+                <select value={selectedProjectId} onChange={e => setSelectedProjectId(e.target.value)} style={inputStyle}>
+                  {(projects ?? []).map(p => (
+                    <option key={p.id} value={p.id}>
+                      {(p.title || 'Unavngivet projekt')}{p.used_at ? ` — ${p.used_at}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <Field label="Projektnavn">
+                  <input value={newProject.title} onChange={e => setNP('title', e.target.value)} placeholder="F.eks. Bluse" style={inputStyle} />
+                </Field>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <Field label="Dato">
+                    <input type="date" value={newProject.usedAt} onChange={e => setNP('usedAt', e.target.value)} style={inputStyle} />
+                  </Field>
+                  <Field label="Pindestørrelse">
+                    <input value={newProject.needleSize} onChange={e => setNP('needleSize', e.target.value)} placeholder="mm" style={inputStyle} />
+                  </Field>
+                </div>
+                <Field label="Strikket med">
+                  <input value={newProject.heldWith} onChange={e => setNP('heldWith', e.target.value)} style={inputStyle} />
+                </Field>
+                <Field label="Noter">
+                  <textarea value={newProject.notes} onChange={e => setNP('notes', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
+                </Field>
+              </div>
+            )}
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <Field label={`Antal nøgler brugt (max ${maxQty})`}>

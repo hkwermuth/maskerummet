@@ -130,6 +130,22 @@ export async function fetchColorsForYarn(yarnId) {
   return data ?? []
 }
 
+export async function fetchColorsByIds(ids) {
+  const uniq = [...new Set((ids ?? []).filter(Boolean))]
+  if (uniq.length === 0) return new Map()
+  const { data, error } = await supabase
+    .from('colors')
+    .select('id,yarn_id,color_number,color_name,hex_code,barcode,image_url')
+    .in('id', uniq)
+  if (error) {
+    console.error('fetchColorsByIds:', error.message)
+    return new Map()
+  }
+  const map = new Map()
+  for (const row of data ?? []) map.set(row.id, row)
+  return map
+}
+
 /**
  * Resolve barcode to catalog color + yarn; returns { yarn, color } or null.
  */

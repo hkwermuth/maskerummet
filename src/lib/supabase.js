@@ -52,6 +52,7 @@ export function toDb(yarn) {
 
 export function toUsageDb(u) {
   return {
+    project_id:        u.projectId      ?? null,
     yarn_item_id:      u.yarnItemId      ?? null,
     yarn_name:         u.yarnName        ?? null,
     yarn_brand:        u.yarnBrand       ?? null,
@@ -74,6 +75,7 @@ export function toUsageDb(u) {
 export function fromUsageDb(row) {
   return {
     id:              row.id,
+    projectId:       row.project_id ?? null,
     yarnItemId:      row.yarn_item_id,
     yarnName:        row.yarn_name,
     yarnBrand:       row.yarn_brand,
