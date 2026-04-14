@@ -43,6 +43,10 @@ for each row execute function public.tg_set_updated_at();
 
 alter table public.projects enable row level security;
 
+-- Supabase: RLS policies are not enough by themselves. The API roles also need
+-- SQL privileges on the table, otherwise you'll get "permission denied".
+grant select, insert, update, delete on table public.projects to authenticated;
+
 drop policy if exists projects_select_own on public.projects;
 create policy projects_select_own
 on public.projects for select
