@@ -11,9 +11,13 @@ export default function LoginPage() {
     e.preventDefault()
     setErr(null)
     const supabase = createSupabaseBrowserClient()
+    const canonicalOrigin =
+      window.location.hostname === 'garn-katalog.vercel.app'
+        ? 'https://maskerummet.vercel.app'
+        : window.location.origin
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/garn/auth/callback` },
+      options: { emailRedirectTo: `${canonicalOrigin}/garn/auth/callback` },
     })
     if (error) setErr(error.message)
     else setSent(true)
