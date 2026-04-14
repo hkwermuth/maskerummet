@@ -1,6 +1,6 @@
 import './globals.css'
 import type { Metadata } from 'next'
-import Link from 'next/link'
+import { SiteTopNav } from '@/components/SiteTopNav'
 
 export const metadata: Metadata = {
   title: {
@@ -18,17 +18,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="da">
       <body>
-        <header className="bg-forest text-cream">
-          <div className="max-w-5xl mx-auto px-5 py-4 flex items-center gap-6">
-            <Link href="/" className="font-serif text-2xl font-semibold tracking-wide">
-              Maskerummet · Garn
-            </Link>
-            <nav className="flex gap-4 text-sm text-moss">
-              <Link href="/" className="hover:text-cream">Katalog</Link>
-              <Link href="/faq" className="hover:text-cream">FAQ</Link>
-              <Link href="/admin" className="hover:text-cream">Editor</Link>
-            </nav>
-          </div>
+        <header>
+          <SiteTopNav />
         </header>
         <main className="max-w-5xl mx-auto px-5 py-8">{children}</main>
         <footer className="max-w-5xl mx-auto px-5 py-10 text-xs text-bark">

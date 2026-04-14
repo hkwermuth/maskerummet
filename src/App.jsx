@@ -273,7 +273,15 @@ export default function App() {
             )
           }
           return (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={tabStyle}>
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id)
+                // Keep URL shareable (/#tab) without breaking SPA navigation
+                try { window.location.hash = `#${tab.id}` } catch {}
+              }}
+              style={tabStyle}
+            >
               {tab.label}
             </button>
           )
