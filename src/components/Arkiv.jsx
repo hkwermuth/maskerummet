@@ -730,16 +730,42 @@ export default function Arkiv({ user }) {
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase
+      // Fetch projects and yarn lines separately.
+      // This avoids PostgREST embed/relationship issues (schema cache) that can
+      // otherwise make the entire UI appear empty even though data exists.
+      const { data: pData, error: pErr } = await supabase
         .from('projects')
-        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,created_at,updated_at,yarn_usage(*)')
+        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,created_at,updated_at')
         .order('used_at', { ascending: false })
         .order('created_at', { ascending: false })
-      if (error) console.error(error)
-      const rows = (data ?? []).map(p => ({
+      if (pErr) console.error(pErr)
+
+      const projects = pData ?? []
+      const ids = projects.map(p => p.id).filter(Boolean)
+
+      let yarnByProjectId = new Map()
+      if (ids.length > 0) {
+        const { data: yData, error: yErr } = await supabase
+          .from('yarn_usage')
+          .select('*')
+          .in('project_id', ids)
+          .order('created_at', { ascending: false })
+        if (yErr) console.error(yErr)
+        for (const row of (yData ?? [])) {
+          const y = fromUsageDb(row)
+          const pid = row.project_id
+          if (!pid) continue
+          const arr = yarnByProjectId.get(pid) ?? []
+          arr.push(y)
+          yarnByProjectId.set(pid, arr)
+        }
+      }
+
+      const rows = projects.map(p => ({
         ...p,
-        yarnLines: (p.yarn_usage ?? []).map(fromUsageDb),
+        yarnLines: yarnByProjectId.get(p.id) ?? [],
       }))
+
       setProjects(rows)
       setLoaded(true)
     }
