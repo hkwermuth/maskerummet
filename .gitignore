@@ -10,3 +10,6 @@ dist
 
 # Cursor/Claude — shared launch config only; not machine-local settings
 .claude/settings.local.json
+
+# Vite transient timestamp files
+vite.config.js.timestamp-*.mjs

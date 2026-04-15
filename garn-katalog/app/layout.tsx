@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <header>
             <SiteTopNav />
           </header>
-          <main className="max-w-5xl mx-auto px-5 py-8">{children}</main>
+          <main className="max-w-5xl mx-auto px-5 py-10">{children}</main>
           <footer className="max-w-5xl mx-auto px-5 py-10 text-xs text-bark">
             © Maskerummet
           </footer>

@@ -9,405 +9,284 @@ import Auth from './components/Auth'
 import ResetPassword from './components/ResetPassword'
 import Faq from './components/Faq'
 import BackgroundCarousel from './components/BackgroundCarousel'
+import Strikkeskolen from './components/Strikkeskolen'
+import Opskrifter from './components/Opskrifter'
+import Kalender from './components/Kalender'
+import OmStriq from './components/OmStriq'
 
-const TABS = [
-  { id: 'hjem',       label: 'Hjem' },
-  { id: 'garnlager',  label: 'Garnlager' },
-  { id: 'arkiv',      label: 'Færdige projekter' },
-  { id: 'findgarn',   label: 'Find garn' },
-  { id: 'visualizer', label: 'Prøv garn' },
-  { id: 'faq',        label: 'FAQ' },
-  { id: 'garnkatalog', label: 'Garn-katalog', href: import.meta.env.DEV ? 'http://localhost:3210/garn' : '/garn', external: true },
+// Design tokens (Lovable / Smuksak-paletten)
+const C = {
+  bg:        '#F8F3EE',
+  cardBg:    '#FFFFFF',
+  navBg:     '#D4ADB6',
+  navText:   '#302218',
+  text:      '#302218',
+  textMuted: '#8C7E74',
+  sage:      '#61846D',
+  dustyPink: '#D4ADB6',
+  accent:    '#D9BFC3',
+  border:    '#E5DDD9',
+  link:      '#9B6272',
+  footerBg:  '#E8DADC',
+}
+
+const NAV_TABS = [
+  { id: 'hjem',          label: 'Hjem' },
+  { id: 'garnlager',     label: 'Garnlager' },
+  { id: 'opskrifter',    label: 'Opskrifter' },
+  { id: 'strikkeskolen', label: 'Strikkeskolen' },
+  { id: 'findgarn',      label: 'Find forhandler' },
+  { id: 'om-striq',      label: 'Om STRIQ' },
+]
+
+const ALL_TABS = [
+  'hjem','garnlager','arkiv','findgarn','visualizer',
+  'opskrifter','strikkeskolen','kalender','om-striq','ideer','faq',
 ]
 
 const FEATURES = [
   {
-    id: 'garnlager',
-    title: 'Garnlager',
-    desc: 'Hold styr på hele dit garnlager. Scan stregkoder, søg på farve og fiber, og se hvad du har på lager.',
-    icon: (
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-        <ellipse cx="24" cy="28" rx="16" ry="12" fill="#D0E8D4" />
-        <ellipse cx="24" cy="24" rx="14" ry="10" fill="#E8E0D4" />
-        <path d="M10 24c0-5.5 6.3-10 14-10s14 4.5 14 10" stroke="#2C4A3E" strokeWidth="2" fill="none"/>
-        <path d="M14 20c2-3 5.5-5 10-5s8 2 10 5" stroke="#C16B47" strokeWidth="1.5" fill="none"/>
-        <path d="M16 17c2-2 4.5-3.5 8-3.5s6 1.5 8 3.5" stroke="#8B7D6B" strokeWidth="1" fill="none"/>
-        <ellipse cx="24" cy="24" rx="3" ry="2" fill="#FFFCF7" stroke="#C0B8A8" strokeWidth="1"/>
-      </svg>
-    ),
+    id: 'garnlager', title: 'Mit garnlager', accent: '#61846D',
+    desc: 'Hold styr på hele dit garnlager — søg på farve, fiber og se hvad du har på lager.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#61846D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="15" rx="9" ry="5"/><path d="M3 10c0-2.8 4-5 9-5s9 2.2 9 5"/><path d="M3 10v5M21 10v5"/><circle cx="12" cy="10" r="1.2" fill="#61846D" stroke="none"/></svg>,
   },
   {
-    id: 'arkiv',
-    title: 'Færdige projekter',
-    desc: 'Gem dine færdige strikkeprojekter med billeder, garnforbrug og opskrifter — dit personlige arkiv.',
-    icon: (
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-        <rect x="8" y="10" width="32" height="28" rx="4" fill="#E8E0D4" stroke="#2C4A3E" strokeWidth="2"/>
-        <rect x="12" y="14" width="24" height="14" rx="2" fill="#D0E8D4"/>
-        <path d="M12 14l12 8 12-8" stroke="#2C4A3E" strokeWidth="1.5" fill="none"/>
-        <line x1="16" y1="32" x2="32" y2="32" stroke="#C0B8A8" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="20" y1="36" x2="28" y2="36" stroke="#C0B8A8" strokeWidth="1.5" strokeLinecap="round"/>
-      </svg>
-    ),
+    id: 'arkiv', title: 'Mine projekter', accent: '#D4ADB6',
+    desc: 'Gem dine strikkeprojekter med billeder, noter og opskrifter — dit personlige arkiv.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>,
   },
   {
-    id: 'findgarn',
-    title: 'Find garn',
-    desc: 'Find butikker i nærheden der sælger dit yndlingsgarn. Søg på mærke og se dem på et kort.',
-    icon: (
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-        <circle cx="24" cy="20" r="10" fill="#D0E8D4" stroke="#2C4A3E" strokeWidth="2"/>
-        <circle cx="24" cy="20" r="4" fill="#FFFCF7" stroke="#C16B47" strokeWidth="2"/>
-        <path d="M24 30l-6 12h12l-6-12z" fill="#E8E0D4" stroke="#2C4A3E" strokeWidth="1.5"/>
-      </svg>
-    ),
+    id: 'kalender', title: 'Kalender', accent: '#D9BFC3',
+    desc: 'Find kommende strikke-events, workshops og meetups i dit område.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8" cy="15" r="0.8" fill="#9B6272"/><circle cx="12" cy="15" r="0.8" fill="#9B6272"/><circle cx="16" cy="15" r="0.8" fill="#9B6272"/></svg>,
   },
   {
-    id: 'visualizer',
-    title: 'Prøv garn',
-    desc: 'Upload et foto af et strikkeprojekt og se hvordan det ser ud i nye farver — AI-drevet visualisering.',
-    icon: (
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-        <rect x="6" y="10" width="36" height="28" rx="4" fill="#E8E0D4" stroke="#2C4A3E" strokeWidth="2"/>
-        <rect x="10" y="14" width="12" height="10" rx="2" fill="#D0E8D4"/>
-        <rect x="26" y="14" width="12" height="10" rx="2" fill="#F0A0B0" opacity=".6"/>
-        <path d="M22 19l4 0" stroke="#C16B47" strokeWidth="2" strokeLinecap="round"/>
-        <path d="M23 17l2 2-2 2" stroke="#C16B47" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-        <circle cx="16" cy="32" r="3" fill="#C16B47"/>
-        <circle cx="24" cy="32" r="3" fill="#8B7D6B"/>
-        <circle cx="32" cy="32" r="3" fill="#D8D0E8"/>
-      </svg>
-    ),
-  },
-  {
-    id: 'garnkatalog',
-    title: 'Garn-katalog',
+    id: 'garnkatalog', title: 'Find garn', accent: '#61846D',
     href: import.meta.env.DEV ? 'http://localhost:3210/garn' : '/garn',
     external: true,
-    desc: 'Udforsk vores katalog over garner med fibre, tykkelse, pleje, pinde og farver.',
-    icon: (
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-        <rect x="6" y="8" width="10" height="32" rx="1.5" fill="#E8E0D4" stroke="#2C4A3E" strokeWidth="1.5"/>
-        <rect x="18" y="8" width="10" height="32" rx="1.5" fill="#D0E8D4" stroke="#2C4A3E" strokeWidth="1.5"/>
-        <rect x="30" y="8" width="10" height="32" rx="1.5" fill="#FFE0C4" stroke="#2C4A3E" strokeWidth="1.5"/>
-        <line x1="8" y1="14" x2="14" y2="14" stroke="#C16B47" strokeWidth="1.2"/>
-        <line x1="8" y1="18" x2="14" y2="18" stroke="#8B7D6B" strokeWidth="1"/>
-        <line x1="20" y1="14" x2="26" y2="14" stroke="#C16B47" strokeWidth="1.2"/>
-        <line x1="20" y1="18" x2="26" y2="18" stroke="#8B7D6B" strokeWidth="1"/>
-        <line x1="32" y1="14" x2="38" y2="14" stroke="#C16B47" strokeWidth="1.2"/>
-        <line x1="32" y1="18" x2="38" y2="18" stroke="#8B7D6B" strokeWidth="1"/>
-      </svg>
-    ),
+    desc: 'Udforsk vores garnkatalog — søg på fiber, tykkelse, farve og mærke.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#61846D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/><line x1="11" y1="8" x2="11" y2="14"/></svg>,
   },
   {
-    id: 'faq',
-    title: 'FAQ',
-    desc: 'De mest stillede spørgsmål om strik og garn — med korte svar og video-links.',
-    icon: (
-      <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-        <rect x="8" y="10" width="32" height="28" rx="6" fill="#FFFCF7" stroke="#2C4A3E" strokeWidth="1.5"/>
-        <path d="M16 18h16" stroke="#C16B47" strokeWidth="2" strokeLinecap="round"/>
-        <path d="M16 24h12" stroke="#8B7D6B" strokeWidth="2" strokeLinecap="round"/>
-        <path d="M16 30h14" stroke="#C0B8A8" strokeWidth="2" strokeLinecap="round"/>
-        <circle cx="34" cy="30" r="5" fill="#D0E8D4" stroke="#2C4A3E" strokeWidth="1.5"/>
-        <path d="M32.8 30a1.2 1.2 0 1 1 1.8 1.05c-.7.4-1 .7-1 1.45" stroke="#2C4A3E" strokeWidth="1.6" strokeLinecap="round" fill="none"/>
-        <circle cx="34" cy="34.2" r="1" fill="#2C4A3E"/>
-      </svg>
-    ),
+    id: 'visualizer', title: 'Prøv farven med AI', accent: '#D4ADB6',
+    desc: 'Upload et foto og se hvordan dit projekt ser ud i nye farver — AI-drevet visualisering.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/><path d="M19 3v4M17 5h4"/></svg>,
+  },
+  {
+    id: 'strikkeskolen', title: 'Strikkeskolen', accent: '#D9BFC3',
+    desc: 'Lær nye teknikker med videoguides, FAQ og trin-for-trin instruktioner.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,
+  },
+  {
+    id: 'opskrifter', title: 'Opskrifter', accent: '#61846D',
+    desc: 'Browse vores samling af strikkeopskrifter — fra begynder til avanceret.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#61846D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="12" y2="15"/></svg>,
+  },
+  {
+    id: 'findgarn', title: 'Find forhandler', accent: '#D4ADB6',
+    desc: 'Find butikker i nærheden der sælger dit yndlingsgarn — se dem på et kort.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
   },
 ]
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('hjem')
-  const [session, setSession] = useState(undefined) // undefined = loading
+  const [session, setSession] = useState(undefined)
   const [isResetPasswordPage, setIsResetPasswordPage] = useState(false)
 
   useEffect(() => {
-    // Check if we're on reset password page
-    const checkResetPasswordHash = () => {
+    const check = () => {
       const hash = window.location.hash
       const search = window.location.search
-
-      // Check for reset password route or recovery token in URL
-      const isResetPasswordRoute = hash.includes('/reset-password')
-      const isRecoveryToken = hash.includes('type=recovery') || search.includes('type=recovery')
-
-      if (isResetPasswordRoute || isRecoveryToken) {
-        setIsResetPasswordPage(true)
-        console.log('✓ Reset password page detected')
-      } else {
-        setIsResetPasswordPage(false)
-      }
+      const isReset = hash.includes('/reset-password') || hash.includes('type=recovery') || search.includes('type=recovery')
+      setIsResetPasswordPage(isReset)
     }
-
-    // Check immediately on mount
-    checkResetPasswordHash()
-
-    // Listen for hash changes
-    window.addEventListener('hashchange', checkResetPasswordHash)
-    window.addEventListener('popstate', checkResetPasswordHash)
-
-    return () => {
-      window.removeEventListener('hashchange', checkResetPasswordHash)
-      window.removeEventListener('popstate', checkResetPasswordHash)
-    }
+    check()
+    window.addEventListener('hashchange', check)
+    window.addEventListener('popstate', check)
+    return () => { window.removeEventListener('hashchange', check); window.removeEventListener('popstate', check) }
   }, [])
 
   useEffect(() => {
-    const applyTabFromUrl = () => {
-      // Don't hijack the reset-password UX.
+    const sync = () => {
       if (isResetPasswordPage) return
-
       const hash = (window.location.hash ?? '').toLowerCase()
       const params = new URLSearchParams(window.location.search ?? '')
-      const tabParam = (params.get('tab') ?? '').toLowerCase()
-
-      const tab =
-        tabParam ||
-        (hash.startsWith('#') ? hash.slice(1) : '')
-
-      // "ideer" is intentionally hidden from the top nav, but still accessible by URL.
-      if (tab === 'ideer' || tab === 'faq' || tab === 'garnlager' || tab === 'arkiv' || tab === 'findgarn' || tab === 'visualizer' || tab === 'hjem') {
-        setActiveTab(tab)
-      }
+      const tab = params.get('tab')?.toLowerCase() || (hash.startsWith('#') ? hash.slice(1) : '')
+      if (ALL_TABS.includes(tab)) setActiveTab(tab)
     }
-
-    applyTabFromUrl()
-    window.addEventListener('hashchange', applyTabFromUrl)
-    window.addEventListener('popstate', applyTabFromUrl)
-    return () => {
-      window.removeEventListener('hashchange', applyTabFromUrl)
-      window.removeEventListener('popstate', applyTabFromUrl)
-    }
+    sync()
+    window.addEventListener('hashchange', sync)
+    window.addEventListener('popstate', sync)
+    return () => { window.removeEventListener('hashchange', sync); window.removeEventListener('popstate', sync) }
   }, [isResetPasswordPage])
 
   useEffect(() => {
-    // Get current session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-    })
-
-    // Listen for auth state changes (magic link callback, logout, etc.)
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session))
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
-      // Supabase fires PASSWORD_RECOVERY when user clicks reset email link
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsResetPasswordPage(true)
-      }
+      if (event === 'PASSWORD_RECOVERY') setIsResetPasswordPage(true)
     })
-
     return () => subscription.unsubscribe()
   }, [])
 
-  // Reset password page — show password reset screen (before checking session)
-  // This ensures password reset is shown even if a session was auto-established
-  if (isResetPasswordPage) {
-    return <ResetPassword onBack={() => {
-      setIsResetPasswordPage(false)
-      window.location.hash = ''
-    }} />
+  const navigate = (id) => {
+    setActiveTab(id)
+    try { window.location.hash = '#' + id } catch {}
   }
 
-  // Loading state while Supabase resolves the session
+  if (isResetPasswordPage) {
+    return <ResetPassword onBack={() => { setIsResetPasswordPage(false); window.location.hash = '' }} />
+  }
   if (session === undefined) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: "'DM Sans', sans-serif", color: '#8B7D6B', fontSize: '14px',
-      }}>
-        <span>Indlæser...</span>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Sans, sans-serif', color: '#8C7E74', fontSize: 14 }}>
+        Indlaerer...
       </div>
     )
   }
-
-  // Not logged in — show login screen
-  if (!session) {
-    return <Auth />
-  }
+  if (!session) return <Auth />
 
   const user = session.user
-
   const bgBase = import.meta.env.DEV ? 'https://maskerummet.vercel.app' : ''
 
   return (
-    <div style={{ position: 'relative', fontFamily: "'DM Sans', sans-serif", minHeight: '100vh' }}>
-      <BackgroundCarousel
-        images={[
-          `${bgBase}/garn/backgrounds/baggrund_1.JPG`,
-          `${bgBase}/garn/backgrounds/baggrund_2.JPEG.JPG`,
-          `${bgBase}/garn/backgrounds/baggrund_3.JPG`,
-        ]}
-      />
+    <div style={{ position: 'relative', fontFamily: 'DM Sans, sans-serif', minHeight: '100vh', background: '#F8F3EE' }}>
+
+      {activeTab === 'hjem' && (
+        <BackgroundCarousel
+          images={[
+            bgBase + '/garn/backgrounds/baggrund_1.JPG',
+            bgBase + '/garn/backgrounds/baggrund_2.JPEG.JPG',
+            bgBase + '/garn/backgrounds/baggrund_3.JPG',
+          ]}
+          overlay="linear-gradient(180deg, rgba(30,18,12,0.38) 0%, rgba(30,18,12,0.52) 100%)"
+        />
+      )}
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        {/* Top nav */}
-        <nav style={{
-          background: '#2C4A3E',
-          padding: '0 20px',
-          display: 'flex',
-          alignItems: 'flex-end',
-          gap: '4px',
-          height: '60px',
-        }}>
-          <div style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: '22px', fontWeight: 600, color: '#EDF5F0',
-            letterSpacing: '.02em', marginRight: '20px', paddingBottom: '14px',
-            flexShrink: 0,
-          }}>
-            STRIQ
-          </div>
 
-        {TABS.map(tab => {
-          const isActive = activeTab === tab.id
-          const tabStyle = {
-            background: isActive ? '#F4EFE6' : 'transparent',
-            color: isActive ? '#2C4A3E' : '#C9E6DA',
-            border: 'none',
-            borderRadius: '6px 6px 0 0',
-            padding: '8px 16px',
-            fontSize: '13px',
-            fontWeight: isActive ? 500 : 400,
-            fontFamily: "'DM Sans', sans-serif",
-            cursor: 'pointer',
-            letterSpacing: '.02em',
-            transition: 'background .15s, color .15s',
-            textDecoration: 'none',
-            display: 'inline-block',
-          }
-          if (tab.external) {
-            return (
-              <a key={tab.id} href={tab.href} target="_blank" rel="noopener noreferrer" style={tabStyle}>
-                {tab.label}
-              </a>
-            )
-          }
-          return (
-            <button
-              key={tab.id}
-              onClick={() => {
-                setActiveTab(tab.id)
-                // Keep URL shareable (/#tab) without breaking SPA navigation
-                try { window.location.hash = `#${tab.id}` } catch {}
-              }}
-              style={tabStyle}
-            >
-              {tab.label}
-            </button>
-          )
-        })}
-
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
-
-        {/* User info + logout */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '10px', flexShrink: 0 }}>
-          <span style={{ fontSize: '11px', color: '#C9E6DA', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {user.email}
-          </span>
+        {/* Navigation */}
+        <nav style={{ background: '#D4ADB6', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '2px', height: '58px', boxShadow: '0 1px 6px rgba(48,34,24,.10)' }}>
           <button
-            onClick={() => supabase.auth.signOut()}
-            style={{
-              background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.15)',
-              borderRadius: '5px', padding: '4px 10px', fontSize: '11px',
-              color: '#C9E6DA', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-            }}
+            onClick={() => navigate('hjem')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 16px 0 0', flexShrink: 0, display: 'flex', alignItems: 'center' }}
           >
-            Log ud
+            <img src="/brand/striq-logo.png" alt="STRIQ" style={{ height: 24, width: 'auto' }} />
           </button>
-        </div>
+
+          {NAV_TABS.map(tab => {
+            const isActive = activeTab === tab.id
+            return (
+              <button key={tab.id} onClick={() => navigate(tab.id)} style={{
+                background: isActive ? 'rgba(255,255,255,0.28)' : 'transparent',
+                color: isActive ? '#302218' : 'rgba(48,34,24,0.72)',
+                border: 'none', borderRadius: '6px', padding: '7px 14px',
+                fontSize: '13.5px', fontWeight: isActive ? 500 : 400,
+                fontFamily: 'DM Sans, sans-serif', cursor: 'pointer',
+                letterSpacing: '.01em', transition: 'background .15s, color .15s', whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.16)' }}
+              onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
+              >{tab.label}</button>
+            )
+          })}
+
+          <div style={{ flex: 1 }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            <span style={{ fontSize: '12px', color: 'rgba(48,34,24,0.60)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user.email}
+            </span>
+            <button onClick={() => supabase.auth.signOut()} style={{
+              background: 'rgba(255,255,255,0.35)', border: '1px solid rgba(48,34,24,0.15)',
+              borderRadius: '20px', padding: '5px 14px', fontSize: '12.5px',
+              color: '#302218', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.55)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.35)' }}
+            >Log ud</button>
+          </div>
         </nav>
 
-        {/* Content */}
+        {/* Forside */}
         {activeTab === 'hjem' && (
-          <div style={{ minHeight: 'calc(100vh - 60px)' }}>
-            {/* Hero */}
-            <div style={{
-              textAlign: 'center', padding: '56px 20px 40px',
-              background: 'linear-gradient(180deg, #E8F0EB 0%, #F4EFE6 100%)',
-            }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🧶</div>
-            <h1 style={{
-              fontFamily: "'Cormorant Garamond', serif",
-              fontSize: 36, fontWeight: 600, color: '#2C4A3E',
-              margin: '0 0 8px', letterSpacing: '.01em',
-            }}>
-              Velkommen til STRIQ
-            </h1>
-            <p style={{
-              fontSize: 15, color: '#5A4E42', margin: 0,
-              maxWidth: 420, marginLeft: 'auto', marginRight: 'auto',
-              lineHeight: 1.5,
-            }}>
-              Dit personlige garnunivers — hold styr på dit lager, find inspiration og prøv nye farver
-            </p>
-          </div>
+          <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', flexDirection: 'column' }}>
 
-          {/* Feature cards */}
-          <div style={{
-            maxWidth: 900, margin: '0 auto', padding: '0 20px 60px',
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-            gap: 16,
-          }}>
-            {FEATURES.map(f => {
-              const cardStyle = {
-                background: '#FFFCF7', border: '1px solid #E8E0D4',
-                borderRadius: 16, padding: '28px 24px',
-                textAlign: 'left', cursor: 'pointer',
-                transition: 'transform .15s, box-shadow .15s',
-                boxShadow: '0 1px 4px rgba(44,32,24,.06)',
-                fontFamily: "'DM Sans', sans-serif",
-                display: 'flex', flexDirection: 'column', gap: 12,
-                textDecoration: 'none', color: 'inherit',
-              }
-              const hoverProps = {
-                onMouseEnter: e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(44,32,24,.12)' },
-                onMouseLeave: e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.06)' },
-              }
-              const Tag = f.external ? 'a' : 'button'
-              const tagProps = f.external
-                ? { href: f.href, target: '_blank', rel: 'noopener noreferrer' }
-                : { onClick: () => setActiveTab(f.id) }
-              return (
-              <Tag
-                key={f.id}
-                {...tagProps}
-                style={cardStyle}
-                {...hoverProps}
-              >
-                <div>{f.icon}</div>
-                <h3 style={{
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontSize: 20, fontWeight: 600, color: '#2C4A3E',
-                  margin: 0,
-                }}>
-                  {f.title}
-                </h3>
-                <p style={{
-                  fontSize: 13, color: '#5A4E42', margin: 0,
-                  lineHeight: 1.5,
-                }}>
-                  {f.desc}
-                </p>
-                <span style={{
-                  fontSize: 12, color: '#C16B47', fontWeight: 500,
-                  marginTop: 'auto', paddingTop: 4,
-                }}>
-                  Åbn →
-                </span>
-              </Tag>
-            )})}
+            {/* Hero */}
+            <div style={{ textAlign: 'center', padding: '80px 20px 72px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <img src="/brand/striq-logo-hvid.png" alt="STRIQ" style={{ height: 64, width: 'auto', filter: 'drop-shadow(0 2px 12px rgba(0,0,0,0.25))' }} />
+              <h1 style={{
+                fontFamily: 'Cormorant Garamond, serif',
+                fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: 600,
+                color: '#FFFCF7', margin: 0, letterSpacing: '.02em',
+                textShadow: '0 2px 16px rgba(0,0,0,0.30)',
+              }}>
+                Dit strikke-univers
+              </h1>
+              <p style={{ fontSize: 16, color: 'rgba(255,252,247,0.88)', margin: 0, maxWidth: 520, lineHeight: 1.65, textShadow: '0 1px 8px rgba(0,0,0,0.20)' }}>
+                Hold styr på dit garnlager, gem dine projekter, find inspiration og prøv nye farver — alt samlet et sted.
+              </p>
             </div>
+
+            {/* Kort-grid */}
+            <div style={{ background: '#F8F3EE', flex: 1, padding: '40px 24px 64px' }}>
+              <div style={{ maxWidth: 1080, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 18 }}>
+                {FEATURES.map(f => {
+                  const Tag = f.external ? 'a' : 'button'
+                  const tagProps = f.external
+                    ? { href: f.href, target: '_blank', rel: 'noopener noreferrer' }
+                    : { onClick: () => navigate(f.id) }
+                  return (
+                    <Tag key={f.id} {...tagProps} style={{
+                      background: '#FFFFFF', border: '1px solid #E5DDD9',
+                      borderLeft: '4px solid ' + f.accent,
+                      borderRadius: '12px', padding: '24px 20px 20px',
+                      textAlign: 'left', cursor: 'pointer',
+                      transition: 'transform .15s, box-shadow .15s',
+                      boxShadow: '0 1px 4px rgba(48,34,24,.06)',
+                      fontFamily: 'DM Sans, sans-serif',
+                      display: 'flex', flexDirection: 'column', gap: 10,
+                      textDecoration: 'none', color: 'inherit',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(48,34,24,.11)' }}
+                    onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(48,34,24,.06)' }}
+                    >
+                      <div style={{ width: 44, height: 44, borderRadius: 10, background: '#F8F3EE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {f.icon}
+                      </div>
+                      <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: 19, fontWeight: 600, color: '#302218', margin: 0 }}>
+                        {f.title}
+                      </h3>
+                      <p style={{ fontSize: 13, color: '#8C7E74', margin: 0, lineHeight: 1.55 }}>
+                        {f.desc}
+                      </p>
+                      <span style={{ fontSize: 12.5, color: '#9B6272', fontWeight: 500, marginTop: 'auto', paddingTop: 4 }}>
+                        Abn &rarr;
+                      </span>
+                    </Tag>
+                  )
+                })}
+              </div>
+            </div>
+
+            <footer style={{ background: '#E8DADC', textAlign: 'center', padding: '18px 20px', fontSize: 12.5, color: '#8C7E74', borderTop: '1px solid #E5DDD9' }}>
+              &copy; 2026 STRIQ &mdash; Dit personlige garnunivers
+            </footer>
           </div>
         )}
-        {activeTab === 'garnlager' && <Garnlager user={user} />}
-        {activeTab === 'arkiv'     && <Arkiv user={user} />}
-        {activeTab === 'findgarn'  && <FindGarn />}
-        {activeTab === 'visualizer' && <YarnVisualizer user={user} />}
-        {activeTab === 'faq'       && <Faq />}
-        {activeTab === 'ideer'     && <Ideeboard user={user} />}
+
+        {activeTab === 'garnlager'     && <Garnlager user={user} />}
+        {activeTab === 'arkiv'         && <Arkiv user={user} />}
+        {activeTab === 'findgarn'      && <FindGarn />}
+        {activeTab === 'visualizer'    && <YarnVisualizer user={user} />}
+        {activeTab === 'faq'           && <Faq />}
+        {activeTab === 'ideer'         && <Ideeboard user={user} />}
+        {activeTab === 'opskrifter'    && <Opskrifter onNavigate={navigate} />}
+        {activeTab === 'strikkeskolen' && <Strikkeskolen onNavigate={navigate} />}
+        {activeTab === 'kalender'      && <Kalender onNavigate={navigate} />}
+        {activeTab === 'om-striq'      && <OmStriq onNavigate={navigate} />}
+
       </div>
     </div>
   )

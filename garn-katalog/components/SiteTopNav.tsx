@@ -1,5 +1,6 @@
  'use client'
  
+import Image from 'next/image'
  import Link from 'next/link'
  
  const MAIN_TABS: { id: string; label: string; href: string }[] = [
@@ -13,20 +14,27 @@
  
  export function SiteTopNav() {
    return (
-     <nav className="bg-forest text-cream">
+    <nav className="bg-oldrose text-cream">
        <div className="max-w-5xl mx-auto px-5 h-[60px] flex items-end gap-1">
          <Link
            href="/"
-           className="font-serif text-[22px] font-semibold tracking-wide pb-[14px] mr-4 flex-shrink-0"
+          className="pb-[12px] mr-4 flex-shrink-0 inline-flex items-end"
          >
-           STRIQ
+          <Image
+            src="/brand/striq-logo-hvid.png"
+            alt="STRIQ"
+            width={140}
+            height={32}
+            style={{ height: 26, width: 'auto' }}
+            priority
+          />
          </Link>
  
          {MAIN_TABS.map((t) => (
            <a
              key={t.id}
              href={t.href}
-             className="bg-transparent text-moss hover:text-cream rounded-t-md px-4 py-2 text-[13px] font-normal tracking-wide transition-colors inline-block"
+            className="bg-transparent text-cream/85 hover:text-cream rounded-t-md px-4 py-2 text-[13px] font-normal tracking-wide transition-colors inline-block"
            >
              {t.label}
            </a>

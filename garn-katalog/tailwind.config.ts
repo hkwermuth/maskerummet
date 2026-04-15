@@ -8,6 +8,7 @@ const config: Config = {
         forest: '#2C4A3E',
         sand: '#F4EFE6',
         terracotta: '#C16B47',
+        oldrose: '#736051',
         stone: '#E8E0D4',
         cream: '#FFFCF7',
         moss: '#C9E6DA',
