@@ -5,7 +5,7 @@
 }
 
 body {
-  background: #F4EFE6;
+  background: transparent;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
 }

@@ -8,6 +8,7 @@ import YarnVisualizer from './components/YarnVisualizer'
 import Auth from './components/Auth'
 import ResetPassword from './components/ResetPassword'
 import Faq from './components/Faq'
+import BackgroundCarousel from './components/BackgroundCarousel'
 
 const TABS = [
   { id: 'hjem',       label: 'Hjem' },
@@ -211,7 +212,7 @@ export default function App() {
   if (session === undefined) {
     return (
       <div style={{
-        minHeight: '100vh', background: '#F4EFE6',
+        minHeight: '100vh',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: "'DM Sans', sans-serif", color: '#8B7D6B', fontSize: '14px',
       }}>
@@ -227,8 +228,17 @@ export default function App() {
 
   const user = session.user
 
+  const bgBase = import.meta.env.DEV ? 'https://maskerummet.vercel.app' : ''
+
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", minHeight: '100vh' }}>
+    <div style={{ position: 'relative', zIndex: 1, fontFamily: "'DM Sans', sans-serif", minHeight: '100vh' }}>
+      <BackgroundCarousel
+        images={[
+          `${bgBase}/garn/backgrounds/baggrund_1.JPG`,
+          `${bgBase}/garn/backgrounds/baggrund_2.JPEG.JPG`,
+          `${bgBase}/garn/backgrounds/baggrund_3.JPG`,
+        ]}
+      />
 
       {/* Top nav */}
       <nav style={{
@@ -310,7 +320,7 @@ export default function App() {
 
       {/* Content */}
       {activeTab === 'hjem' && (
-        <div style={{ background: '#F4EFE6', minHeight: 'calc(100vh - 60px)' }}>
+        <div style={{ minHeight: 'calc(100vh - 60px)' }}>
           {/* Hero */}
           <div style={{
             textAlign: 'center', padding: '56px 20px 40px',

@@ -811,7 +811,7 @@ export default function Arkiv({ user }) {
   )
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#F4EFE6', minHeight: '100vh' }}>
+    <div style={{ fontFamily: "'DM Sans', sans-serif", background: 'transparent', minHeight: '100vh' }}>
 
       {selected && (
         <DetailModal

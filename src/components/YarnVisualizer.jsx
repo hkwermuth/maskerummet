@@ -462,7 +462,7 @@ export default function YarnVisualizer({ user }) {
   // ── Render ──
 
   return (
-    <div style={{ background: '#F4EFE6', minHeight: 'calc(100vh - 60px)' }}>
+    <div style={{ background: 'transparent', minHeight: 'calc(100vh - 60px)' }}>
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '32px 16px' }}>
 
         {/* Header */}

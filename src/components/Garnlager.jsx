@@ -486,7 +486,7 @@ export default function Garnlager({ user }) {
   )
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#F4EFE6', minHeight: '100vh' }}>
+    <div style={{ fontFamily: "'DM Sans', sans-serif", background: 'transparent', minHeight: '100vh' }}>
 
       {showGuide && <FiveSGuide onClose={() => setShowGuide(false)} />}
       {showScanner && <BarcodeScanner onClose={() => setShowScanner(false)} onAddToLager={handleScanResult} />}

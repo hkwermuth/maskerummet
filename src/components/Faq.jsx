@@ -19,7 +19,7 @@ const slugToLoader = Object.fromEntries(
 )
 
 const containerStyle = {
-  background: '#F4EFE6',
+  background: 'transparent',
   minHeight: 'calc(100vh - 60px)',
   padding: '26px 16px 60px',
   fontFamily: "'DM Sans', sans-serif",

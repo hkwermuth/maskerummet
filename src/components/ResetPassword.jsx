@@ -142,7 +142,7 @@ export default function ResetPassword({ onBack }) {
   if (initializing) {
     return (
       <div style={{
-        minHeight: '100vh', background: '#F4EFE6',
+        minHeight: '100vh', background: 'transparent',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: "'DM Sans', sans-serif", padding: '20px',
       }}>
@@ -169,7 +169,7 @@ export default function ResetPassword({ onBack }) {
   if (success) {
     return (
       <div style={{
-        minHeight: '100vh', background: '#F4EFE6',
+        minHeight: '100vh', background: 'transparent',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontFamily: "'DM Sans', sans-serif", padding: '20px',
       }}>
@@ -208,7 +208,7 @@ export default function ResetPassword({ onBack }) {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#F4EFE6',
+      minHeight: '100vh', background: 'transparent',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontFamily: "'DM Sans', sans-serif", padding: '20px',
     }}>

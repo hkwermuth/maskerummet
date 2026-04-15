@@ -94,7 +94,7 @@ export default function FindGarn() {
   const brandLabel = slug => BRANDS.find(b => b.slug === slug)?.name ?? slug
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#F4EFE6', minHeight: '100vh' }}>
+    <div style={{ fontFamily: "'DM Sans', sans-serif", background: 'transparent', minHeight: '100vh' }}>
 
       {/* Search panel */}
       <div style={{ background: '#2C4A3E', padding: '20px 24px 24px' }}>
