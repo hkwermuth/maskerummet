@@ -10,7 +10,7 @@ const config: Config = {
         terracotta: '#C16B47',
         stone: '#E8E0D4',
         cream: '#FFFCF7',
-        moss: '#9ABFB0',
+        moss: '#C9E6DA',
         bark: '#5A4E42',
       },
       fontFamily: {

@@ -231,7 +231,7 @@ export default function App() {
   const bgBase = import.meta.env.DEV ? 'https://maskerummet.vercel.app' : ''
 
   return (
-    <div style={{ position: 'relative', zIndex: 1, fontFamily: "'DM Sans', sans-serif", minHeight: '100vh' }}>
+    <div style={{ position: 'relative', fontFamily: "'DM Sans', sans-serif", minHeight: '100vh' }}>
       <BackgroundCarousel
         images={[
           `${bgBase}/garn/backgrounds/baggrund_1.JPG`,
@@ -240,29 +240,30 @@ export default function App() {
         ]}
       />
 
-      {/* Top nav */}
-      <nav style={{
-        background: '#2C4A3E',
-        padding: '0 20px',
-        display: 'flex',
-        alignItems: 'flex-end',
-        gap: '4px',
-        height: '60px',
-      }}>
-        <div style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: '22px', fontWeight: 600, color: '#EDF5F0',
-          letterSpacing: '.02em', marginRight: '20px', paddingBottom: '14px',
-          flexShrink: 0,
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        {/* Top nav */}
+        <nav style={{
+          background: '#2C4A3E',
+          padding: '0 20px',
+          display: 'flex',
+          alignItems: 'flex-end',
+          gap: '4px',
+          height: '60px',
         }}>
-          STRIQ
-        </div>
+          <div style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: '22px', fontWeight: 600, color: '#EDF5F0',
+            letterSpacing: '.02em', marginRight: '20px', paddingBottom: '14px',
+            flexShrink: 0,
+          }}>
+            STRIQ
+          </div>
 
         {TABS.map(tab => {
           const isActive = activeTab === tab.id
           const tabStyle = {
             background: isActive ? '#F4EFE6' : 'transparent',
-            color: isActive ? '#2C4A3E' : '#9ABFB0',
+            color: isActive ? '#2C4A3E' : '#C9E6DA',
             border: 'none',
             borderRadius: '6px 6px 0 0',
             padding: '8px 16px',
@@ -302,7 +303,7 @@ export default function App() {
 
         {/* User info + logout */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '10px', flexShrink: 0 }}>
-          <span style={{ fontSize: '11px', color: '#7ABDA0', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: '11px', color: '#C9E6DA', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {user.email}
           </span>
           <button
@@ -310,22 +311,22 @@ export default function App() {
             style={{
               background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.15)',
               borderRadius: '5px', padding: '4px 10px', fontSize: '11px',
-              color: '#9ABFB0', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              color: '#C9E6DA', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
             }}
           >
             Log ud
           </button>
         </div>
-      </nav>
+        </nav>
 
-      {/* Content */}
-      {activeTab === 'hjem' && (
-        <div style={{ minHeight: 'calc(100vh - 60px)' }}>
-          {/* Hero */}
-          <div style={{
-            textAlign: 'center', padding: '56px 20px 40px',
-            background: 'linear-gradient(180deg, #E8F0EB 0%, #F4EFE6 100%)',
-          }}>
+        {/* Content */}
+        {activeTab === 'hjem' && (
+          <div style={{ minHeight: 'calc(100vh - 60px)' }}>
+            {/* Hero */}
+            <div style={{
+              textAlign: 'center', padding: '56px 20px 40px',
+              background: 'linear-gradient(180deg, #E8F0EB 0%, #F4EFE6 100%)',
+            }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🧶</div>
             <h1 style={{
               fontFamily: "'Cormorant Garamond', serif",
@@ -398,15 +399,16 @@ export default function App() {
                 </span>
               </Tag>
             )})}
+            </div>
           </div>
-        </div>
-      )}
-      {activeTab === 'garnlager' && <Garnlager user={user} />}
-      {activeTab === 'arkiv'     && <Arkiv user={user} />}
-      {activeTab === 'findgarn'  && <FindGarn />}
-      {activeTab === 'visualizer' && <YarnVisualizer user={user} />}
-      {activeTab === 'faq'       && <Faq />}
-      {activeTab === 'ideer'     && <Ideeboard user={user} />}
+        )}
+        {activeTab === 'garnlager' && <Garnlager user={user} />}
+        {activeTab === 'arkiv'     && <Arkiv user={user} />}
+        {activeTab === 'findgarn'  && <FindGarn />}
+        {activeTab === 'visualizer' && <YarnVisualizer user={user} />}
+        {activeTab === 'faq'       && <Faq />}
+        {activeTab === 'ideer'     && <Ideeboard user={user} />}
+      </div>
     </div>
   )
 }

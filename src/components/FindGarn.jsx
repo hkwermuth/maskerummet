@@ -121,7 +121,7 @@ export default function FindGarn() {
             type="button"
             onClick={useMyLocation}
             disabled={geoLoading}
-            style={{ padding: '10px 14px', background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.2)', borderRadius: '8px', color: '#9ABFB0', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}
+            style={{ padding: '10px 14px', background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.2)', borderRadius: '8px', color: '#C9E6DA', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}
           >
             {geoLoading ? '...' : '📍 Min placering'}
           </button>
@@ -149,7 +149,7 @@ export default function FindGarn() {
                   style={{
                     ...pillBase,
                     background:   active ? '#EDF5F0' : 'rgba(255,255,255,.08)',
-                    color:        active ? '#2C4A3E' : '#9ABFB0',
+                    color:        active ? '#2C4A3E' : '#C9E6DA',
                     borderColor:  active ? '#EDF5F0' : 'rgba(255,255,255,.2)',
                     fontWeight:   active ? 600 : 400,
                   }}
@@ -172,7 +172,7 @@ export default function FindGarn() {
                 ...pillBase,
                 padding: '3px 12px',
                 background:  radius === r ? '#EDF5F0' : 'rgba(255,255,255,.08)',
-                color:       radius === r ? '#2C4A3E' : '#9ABFB0',
+                color:       radius === r ? '#2C4A3E' : '#C9E6DA',
                 borderColor: radius === r ? '#EDF5F0' : 'rgba(255,255,255,.2)',
                 fontWeight:  radius === r ? 600 : 400,
               }}
