@@ -35,7 +35,22 @@ const inputStyle = {
   background: '#FFFCF7', color: '#2C2018', outline: 'none', boxSizing: 'border-box',
 }
 
-export default function Ideeboard({ user }) {
+export default function Ideeboard({ user, onRequestLogin }) {
+  if (!user) {
+    return (
+      <div style={{ minHeight: 'calc(100vh - 74px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8F3EE' }}>
+        <div style={{ textAlign: 'center', maxWidth: 400, padding: '48px 24px' }}>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 600, color: '#2C4A3E', margin: '0 0 8px' }}>Ideer</h2>
+          <p style={{ fontSize: 14, color: '#8C7E74', lineHeight: 1.6, margin: '0 0 24px' }}>Log ind for at se og tilføje ideer.</p>
+          <button onClick={onRequestLogin} style={{
+            background: '#61846D', color: '#fff', border: 'none', borderRadius: 24,
+            padding: '10px 28px', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+            fontFamily: "'DM Sans', sans-serif",
+          }}>Log ind</button>
+        </div>
+      </div>
+    )
+  }
   const [cards, setCards] = useState({})
   const [loaded, setLoaded] = useState(false)
   const [adding, setAdding] = useState(null)    // colId or null

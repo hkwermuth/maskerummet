@@ -720,7 +720,27 @@ function NytProjektModal({ user, onClose, onSaved }) {
   )
 }
 
-export default function Arkiv({ user }) {
+export default function Arkiv({ user, onRequestLogin }) {
+  if (!user) {
+    return (
+      <div style={{ minHeight: 'calc(100vh - 74px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8F3EE' }}>
+        <div style={{ textAlign: 'center', maxWidth: 400, padding: '48px 24px' }}>
+          <div style={{ width: 64, height: 64, borderRadius: 16, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', border: '1px solid #E5DDD9' }}>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+          </div>
+          <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 600, color: '#2C4A3E', margin: '0 0 8px' }}>Mine projekter</h2>
+          <p style={{ fontSize: 14, color: '#8C7E74', lineHeight: 1.6, margin: '0 0 24px' }}>
+            Gem dine strikkeprojekter med billeder, noter og opskrifter — dit personlige arkiv. Log ind for at komme i gang.
+          </p>
+          <button onClick={onRequestLogin} style={{
+            background: '#61846D', color: '#fff', border: 'none', borderRadius: 24,
+            padding: '10px 28px', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+            fontFamily: "'DM Sans', sans-serif",
+          }}>Log ind</button>
+        </div>
+      </div>
+    )
+  }
   const [projects, setProjects] = useState([])
   const [loaded, setLoaded]   = useState(false)
   const [q, setQ]             = useState('')

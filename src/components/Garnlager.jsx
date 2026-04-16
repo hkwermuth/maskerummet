@@ -272,7 +272,33 @@ const inputStyle = {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function Garnlager({ user }) {
+function LoginPrompt({ onRequestLogin, title, desc, icon }) {
+  return (
+    <div style={{ minHeight: 'calc(100vh - 74px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F8F3EE' }}>
+      <div style={{ textAlign: 'center', maxWidth: 400, padding: '48px 24px' }}>
+        <div style={{ width: 64, height: 64, borderRadius: 16, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', border: '1px solid #E5DDD9' }}>
+          {icon}
+        </div>
+        <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 600, color: '#2C4A3E', margin: '0 0 8px' }}>{title}</h2>
+        <p style={{ fontSize: 14, color: '#8C7E74', lineHeight: 1.6, margin: '0 0 24px' }}>{desc}</p>
+        <button onClick={onRequestLogin} style={{
+          background: '#61846D', color: '#fff', border: 'none', borderRadius: 24,
+          padding: '10px 28px', fontSize: 14, fontWeight: 500, cursor: 'pointer',
+          fontFamily: "'DM Sans', sans-serif",
+        }}>Log ind</button>
+      </div>
+    </div>
+  )
+}
+
+export default function Garnlager({ user, onRequestLogin }) {
+  if (!user) {
+    return <LoginPrompt onRequestLogin={onRequestLogin}
+      title="Mit garnlager"
+      desc="Hold styr på hele dit garnlager — søg på farve, fiber og se hvad du har på lager. Log ind for at komme i gang."
+      icon={<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#61846D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="15" rx="9" ry="5"/><path d="M3 10c0-2.8 4-5 9-5s9 2.2 9 5"/><path d="M3 10v5M21 10v5"/><circle cx="12" cy="10" r="1.2" fill="#61846D" stroke="none"/></svg>}
+    />
+  }
   const [yarns, setYarns] = useState([])
   const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)

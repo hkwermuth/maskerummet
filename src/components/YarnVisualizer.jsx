@@ -230,7 +230,7 @@ function ColorSlot({ slot, index, brandFilter, onUpdate, onRemove, canRemove }) 
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export default function YarnVisualizer({ user }) {
+export default function YarnVisualizer({ user, onRequestLogin }) {
   const [step, setStep] = useState(1)
 
   // Step 1 — upload
@@ -258,8 +258,10 @@ export default function YarnVisualizer({ user }) {
 
   // Gallery
   const [savedViz, setSavedViz] = useState([])
+  const [exampleViz, setExampleViz] = useState([])
   const [detailViz, setDetailViz] = useState(null)
 
+  // Fetch user's own saved visualizations
   useEffect(() => {
     if (!user) return
     supabase
@@ -269,6 +271,16 @@ export default function YarnVisualizer({ user }) {
       .order('created_at', { ascending: false })
       .then(({ data }) => { if (data) setSavedViz(data) })
   }, [user])
+
+  // Fetch public example visualizations (visible to everyone)
+  useEffect(() => {
+    supabase
+      .from('visualizations')
+      .select('*')
+      .eq('is_example', true)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setExampleViz(data) })
+  }, [])
 
   // ── Handlers ──
 
@@ -350,6 +362,7 @@ export default function YarnVisualizer({ user }) {
   }
 
   async function handleGenerate() {
+    if (!user) { onRequestLogin(); return }
     const yarns = getSelectedYarns()
     if (!uploadedFile || yarns.length === 0) return
     setGenerating(true)
@@ -474,7 +487,8 @@ export default function YarnVisualizer({ user }) {
           Prøv garn
         </h2>
         <p style={{ fontSize: 13, color: '#8B7D6B', margin: '0 0 24px' }}>
-          Upload et foto og se hvordan det ser ud i dit yndlingsgarn
+          Upload et foto og se hvordan det ser ud i dit yndlingsgarn.
+          {!user && <>{' '}<button onClick={onRequestLogin} style={{ background: 'none', border: 'none', color: '#9B6272', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', padding: 0, textDecoration: 'underline' }}>Log ind</button> for at generere dine egne.</>}
         </p>
 
         {/* Step indicator */}
@@ -803,12 +817,10 @@ export default function YarnVisualizer({ user }) {
         )}
       </div>
 
-      {/* ─── Inspiration gallery ─── */}
-      {savedViz.length > 0 && (
+      {/* ─── Personal inspiration gallery (logged-in, shown first) ─── */}
+      {user && savedViz.length > 0 && (
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 16px 48px' }}>
-          <div style={{
-            borderTop: '1px solid #D0C8BA', paddingTop: 32, marginTop: 12,
-          }}>
+          <div style={{ borderTop: '1px solid #D0C8BA', paddingTop: 32, marginTop: 12 }}>
             <h3 style={{
               fontFamily: "'Cormorant Garamond', serif",
               fontSize: 22, fontWeight: 600, color: '#2C4A3E',
@@ -819,59 +831,26 @@ export default function YarnVisualizer({ user }) {
             <p style={{ fontSize: 12, color: '#8B7D6B', margin: '0 0 20px' }}>
               Dine gemte visualiseringer — klik for at se detaljer
             </p>
+            <VizGrid items={savedViz} onSelect={setDetailViz} />
+          </div>
+        </div>
+      )}
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: 14,
+      {/* ─── Example gallery (visible to everyone, below personal if any) ─── */}
+      {exampleViz.length > 0 && (
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 16px 48px' }}>
+          <div style={{ borderTop: '1px solid #D0C8BA', paddingTop: 32, marginTop: 12 }}>
+            <h3 style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: 22, fontWeight: 600, color: '#2C4A3E',
+              margin: '0 0 4px',
             }}>
-              {savedViz.map(viz => (
-                <div
-                  key={viz.id}
-                  onClick={() => setDetailViz(viz)}
-                  style={{
-                    background: '#FFFCF7', borderRadius: 14,
-                    border: '1px solid #E8E0D4', overflow: 'hidden',
-                    cursor: 'pointer', transition: 'transform .15s, box-shadow .15s',
-                    boxShadow: '0 1px 4px rgba(44,32,24,.08)',
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(44,32,24,.13)' }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
-                >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                    <img src={viz.original_url} alt="Original" style={{
-                      width: '100%', height: 140, objectFit: 'cover',
-                    }} />
-                    <img src={viz.result_url} alt="Resultat" style={{
-                      width: '100%', height: 140, objectFit: 'cover',
-                    }} />
-                  </div>
-                  <div style={{ padding: '10px 14px' }}>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-                      {viz.yarn_info?.colors?.map((c, i) => (
-                        <span key={i} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          fontSize: 11, background: '#F4EFE6', borderRadius: 20,
-                          padding: '2px 10px 2px 4px',
-                        }}>
-                          <span style={{
-                            width: 14, height: 14, borderRadius: 4,
-                            background: c.hex, border: '1px solid rgba(0,0,0,.1)',
-                            display: 'inline-block', flexShrink: 0,
-                          }} />
-                          {c.colorNameDa || c.colorName}
-                        </span>
-                      ))}
-                    </div>
-                    <div style={{ fontSize: 10, color: '#8B7D6B' }}>
-                      {new Date(viz.created_at).toLocaleDateString('da-DK', {
-                        day: 'numeric', month: 'short', year: 'numeric',
-                      })}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+              Eksempler
+            </h3>
+            <p style={{ fontSize: 12, color: '#8B7D6B', margin: '0 0 20px' }}>
+              Se hvad AI-visualiseringen kan — klik for detaljer
+            </p>
+            <VizGrid items={exampleViz} onSelect={setDetailViz} />
           </div>
         </div>
       )}
@@ -956,12 +935,14 @@ export default function YarnVisualizer({ user }) {
                 >
                   Download original
                 </button>
-                <button
-                  onClick={() => { if (confirm('Slet denne inspiration?')) handleDeleteViz(detailViz.id) }}
-                  style={{ ...secondaryBtnStyle, color: '#8B3A3A', borderColor: '#D4A0A0' }}
-                >
-                  Slet
-                </button>
+                {user && detailViz.user_id === user.id && (
+                  <button
+                    onClick={() => { if (confirm('Slet denne inspiration?')) handleDeleteViz(detailViz.id) }}
+                    style={{ ...secondaryBtnStyle, color: '#8B3A3A', borderColor: '#D4A0A0' }}
+                  >
+                    Slet
+                  </button>
+                )}
                 <button
                   onClick={() => setDetailViz(null)}
                   style={{ ...linkBtnStyle, marginLeft: 'auto', alignSelf: 'center' }}
@@ -973,6 +954,61 @@ export default function YarnVisualizer({ user }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Shared gallery grid ─────────────────────────────────────────────────────
+
+function VizGrid({ items, onSelect }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+      gap: 14,
+    }}>
+      {items.map(viz => (
+        <div
+          key={viz.id}
+          onClick={() => onSelect(viz)}
+          style={{
+            background: '#FFFCF7', borderRadius: 14,
+            border: '1px solid #E8E0D4', overflow: 'hidden',
+            cursor: 'pointer', transition: 'transform .15s, box-shadow .15s',
+            boxShadow: '0 1px 4px rgba(44,32,24,.08)',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(44,32,24,.13)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+            <img src={viz.original_url} alt="Original" style={{ width: '100%', height: 140, objectFit: 'cover' }} />
+            <img src={viz.result_url} alt="Resultat" style={{ width: '100%', height: 140, objectFit: 'cover' }} />
+          </div>
+          <div style={{ padding: '10px 14px' }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+              {viz.yarn_info?.colors?.map((c, i) => (
+                <span key={i} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  fontSize: 11, background: '#F4EFE6', borderRadius: 20,
+                  padding: '2px 10px 2px 4px',
+                }}>
+                  <span style={{
+                    width: 14, height: 14, borderRadius: 4,
+                    background: c.hex, border: '1px solid rgba(0,0,0,.1)',
+                    display: 'inline-block', flexShrink: 0,
+                  }} />
+                  {c.colorNameDa || c.colorName}
+                </span>
+              ))}
+            </div>
+            <div style={{ fontSize: 10, color: '#8B7D6B' }}>
+              {new Date(viz.created_at).toLocaleDateString('da-DK', {
+                day: 'numeric', month: 'short', year: 'numeric',
+              })}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

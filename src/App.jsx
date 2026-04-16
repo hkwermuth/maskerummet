@@ -93,6 +93,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('hjem')
   const [session, setSession] = useState(undefined)
   const [isResetPasswordPage, setIsResetPasswordPage] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
 
   useEffect(() => {
     const check = () => {
@@ -130,6 +131,11 @@ export default function App() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Close auth modal when user logs in
+  useEffect(() => {
+    if (session?.user) setShowAuth(false)
+  }, [session])
+
   const navigate = (id) => {
     setActiveTab(id)
     try { window.location.hash = '#' + id } catch {}
@@ -145,29 +151,69 @@ export default function App() {
       </div>
     )
   }
-  if (!session) return <Auth />
-
-  const user = session.user
+  const user = session?.user ?? null
   const bgBase = import.meta.env.DEV ? 'https://maskerummet.vercel.app' : ''
+
+  const onRequestLogin = () => setShowAuth(true)
 
   return (
     <div style={{ position: 'relative', fontFamily: 'DM Sans, sans-serif', minHeight: '100vh', background: '#F8F3EE' }}>
 
-      {activeTab === 'hjem' && (
-        <BackgroundCarousel
-          images={[
-            bgBase + '/garn/backgrounds/baggrund_1.JPG',
-            bgBase + '/garn/backgrounds/baggrund_2.JPEG.JPG',
-            bgBase + '/garn/backgrounds/baggrund_3.JPG',
-          ]}
-          overlay="linear-gradient(180deg, rgba(30,18,12,0.38) 0%, rgba(30,18,12,0.52) 100%)"
-        />
+      {/* Login modal overlay */}
+      {showAuth && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(30,18,12,0.55)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+        }}
+        onClick={e => { if (e.target === e.currentTarget) setShowAuth(false) }}
+        >
+          <div style={{ position: 'relative', maxWidth: 440, width: '90%' }}>
+            <button
+              onClick={() => setShowAuth(false)}
+              style={{
+                position: 'absolute', top: -12, right: -12, zIndex: 1,
+                width: 32, height: 32, borderRadius: '50%',
+                background: '#fff', border: '1px solid #E5DDD9',
+                cursor: 'pointer', fontSize: 18, color: '#8C7E74',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,.12)',
+              }}
+            >&times;</button>
+            <Auth />
+          </div>
+        </div>
       )}
+
+      <BackgroundCarousel
+        images={[
+          bgBase + '/garn/backgrounds/baggrund_1.JPG',
+          bgBase + '/garn/backgrounds/baggrund_2.JPEG.JPG',
+          bgBase + '/garn/backgrounds/baggrund_3.JPG',
+        ]}
+        overlay={
+          activeTab === 'hjem'
+            ? 'linear-gradient(180deg, rgba(30,18,12,0.38) 0%, rgba(30,18,12,0.52) 100%)'
+            : 'linear-gradient(180deg, rgba(30,18,12,0.18) 0%, rgba(30,18,12,0.28) 100%)'
+        }
+      />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Navigation */}
-        <nav style={{ background: '#D4ADB6', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '2px', height: '74px', boxShadow: '0 1px 6px rgba(48,34,24,.10)', overflow: 'visible' }}>
+        <nav style={{
+          background: 'rgba(244, 239, 230, 0.78)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(48,34,24,0.08)',
+          padding: '0 24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '2px',
+          height: '58px',
+          boxShadow: '0 1px 10px rgba(48,34,24,.08)',
+          overflow: 'visible',
+        }}>
           <button
             onClick={() => navigate('hjem')}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 18px 0 0', flexShrink: 0, display: 'flex', alignItems: 'center', overflow: 'visible' }}
@@ -188,14 +234,18 @@ export default function App() {
             const isActive = activeTab === tab.id
             return (
               <button key={tab.id} onClick={() => navigate(tab.id)} style={{
-                background: isActive ? 'rgba(255,255,255,0.28)' : 'transparent',
+                background: isActive ? 'rgba(244, 239, 230, 0.72)' : 'transparent',
+                backdropFilter: isActive ? 'blur(10px)' : 'none',
+                WebkitBackdropFilter: isActive ? 'blur(10px)' : 'none',
                 color: isActive ? '#302218' : 'rgba(48,34,24,0.72)',
-                border: 'none', borderRadius: '6px', padding: '7px 14px',
+                border: isActive ? '1px solid rgba(48,34,24,0.08)' : '1px solid transparent',
+                borderRadius: '999px',
+                padding: '7px 14px',
                 fontSize: '13.5px', fontWeight: isActive ? 500 : 400,
                 fontFamily: 'DM Sans, sans-serif', cursor: 'pointer',
                 letterSpacing: '.01em', transition: 'background .15s, color .15s', whiteSpace: 'nowrap',
               }}
-              onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.16)' }}
+              onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(244, 239, 230, 0.42)' }}
               onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent' }}
               >{tab.label}</button>
             )
@@ -204,23 +254,36 @@ export default function App() {
           <div style={{ flex: 1 }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-            <span style={{ fontSize: '12px', color: 'rgba(48,34,24,0.60)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user.email}
-            </span>
-            <button onClick={() => supabase.auth.signOut()} style={{
-              background: 'rgba(255,255,255,0.35)', border: '1px solid rgba(48,34,24,0.15)',
-              borderRadius: '20px', padding: '5px 14px', fontSize: '12.5px',
-              color: '#302218', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.55)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.35)' }}
-            >Log ud</button>
+            {user ? (
+              <>
+                <span style={{ fontSize: '12px', color: 'rgba(48,34,24,0.60)', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.email}
+                </span>
+                <button onClick={() => supabase.auth.signOut()} style={{
+                  background: 'rgba(255,255,255,0.35)', border: '1px solid rgba(48,34,24,0.15)',
+                  borderRadius: '20px', padding: '5px 14px', fontSize: '12.5px',
+                  color: '#302218', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.55)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.35)' }}
+                >Log ud</button>
+              </>
+            ) : (
+              <button onClick={onRequestLogin} style={{
+                background: 'rgba(255,255,255,0.35)', border: '1px solid rgba(48,34,24,0.15)',
+                borderRadius: '20px', padding: '5px 14px', fontSize: '12.5px',
+                color: '#302218', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 500,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.55)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.35)' }}
+              >Log ind</button>
+            )}
           </div>
         </nav>
 
         {/* Forside */}
         {activeTab === 'hjem' && (
-          <div style={{ minHeight: 'calc(100vh - 74px)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', flexDirection: 'column' }}>
 
             {/* Hero */}
             <div style={{ textAlign: 'center', padding: '54px 20px 50px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
@@ -294,12 +357,12 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'garnlager'     && <Garnlager user={user} />}
-        {activeTab === 'arkiv'         && <Arkiv user={user} />}
+        {activeTab === 'garnlager'     && <Garnlager user={user} onRequestLogin={onRequestLogin} />}
+        {activeTab === 'arkiv'         && <Arkiv user={user} onRequestLogin={onRequestLogin} />}
         {activeTab === 'findgarn'      && <FindGarn />}
-        {activeTab === 'visualizer'    && <YarnVisualizer user={user} />}
+        {activeTab === 'visualizer'    && <YarnVisualizer user={user} onRequestLogin={onRequestLogin} />}
         {activeTab === 'faq'           && <Faq />}
-        {activeTab === 'ideer'         && <Ideeboard user={user} />}
+        {activeTab === 'ideer'         && <Ideeboard user={user} onRequestLogin={onRequestLogin} />}
         {activeTab === 'opskrifter'    && <Opskrifter onNavigate={navigate} />}
         {activeTab === 'strikkeskolen' && <Strikkeskolen onNavigate={navigate} />}
         {activeTab === 'kalender'      && <Kalender onNavigate={navigate} />}
