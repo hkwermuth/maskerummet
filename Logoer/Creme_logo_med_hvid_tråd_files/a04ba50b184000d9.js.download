@@ -1,0 +1,120 @@
+;!function(){try { var e="undefined"!=typeof globalThis?globalThis:"undefined"!=typeof global?global:"undefined"!=typeof window?window:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&((e._debugIds|| (e._debugIds={}))[n]="e6c05690-59b0-d13c-d4a5-f0d4b182ad01")}catch(e){}}();
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,185143,r=>{"use strict";var e=r.i(141901),o=r.i(524299),a=r.i(702235);function t({error:r}){let[t,n]=(0,o.useState)((0,a.isDev)()),[s,i]=(0,o.useState)(!1),[l,c]=(0,o.useState)(0);(0,o.useEffect)(()=>{o11y.captureException(r,{location:"GlobalError",level:"fatal"});try{window.rudderanalytics?.track("react_fatal_error",{location:"GlobalError",level:"fatal",error_message:r.message,error_stack:r.stack})}catch{}},[r]);let d=async()=>{let e=`Error Details:
+Message: ${r.message||"No error message"}
+Name: ${r.name||"Unknown"}
+${r.digest?`Digest: ${r.digest}
+`:""}
+Stack Trace:
+${r.stack||"No stack trace available"}`;try{await navigator.clipboard.writeText(e),i(!0),setTimeout(()=>i(!1),2e3)}catch(r){console.error("Failed to copy to clipboard:",r)}};return(0,e.jsxs)("html",{lang:"en",children:[(0,e.jsxs)("head",{children:[(0,e.jsx)("title",{children:"500 - Houston, We Have a Problem"}),(0,e.jsx)("style",{children:`
+          @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+          }
+          body {
+            font-family: 'Arial', sans-serif;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+          }
+          h1 {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+          }
+          p {
+            font-size: 1.2rem;
+            max-width: 600px;
+            margin: 1rem 0;
+          }
+          .floating-icon {
+            animation: float 3s ease-in-out infinite;
+          }
+          .button {
+            display: inline-block;
+            background-color: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+            padding: 10px 20px;
+            margin-top: 1rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            cursor: pointer;
+            border: none;
+          }
+          .button:hover {
+            background-color: hsl(var(--warning-primary));
+            color: hsl(var(--warning-primary-foreground));
+          }
+          .error-details {
+            margin-top: 2rem;
+            padding: 1rem;
+            background-color: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 8px;
+            max-width: 800px;
+            width: 100%;
+            text-align: left;
+          }
+          .error-details pre {
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 0.9rem;
+            background-color: hsl(var(--muted));
+            padding: 1rem;
+            border-radius: 4px;
+            color: hsl(var(--destructive-foreground));
+          }
+          .error-field {
+            margin-bottom: 1rem;
+          }
+          .error-label {
+            color: hsl(var(--muted-foreground));
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+          }
+          .copy-button {
+            background-color: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+            padding: 8px 16px;
+            border-radius: 5px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-bottom: 1rem;
+          }
+          .copy-button:hover {
+            background-color: hsl(var(--warning-primary));
+            color: hsl(var(--warning-primary-foreground));
+          }
+          .copy-button.success {
+            background-color: hsl(var(--success-primary));
+            color: hsl(var(--success-primary-foreground));
+          }
+          .button-container {
+            display: grid;
+            grid-template-columns: repeat(4, auto);
+            gap: 1rem;
+            justify-content: center;
+          }
+          @media (max-width: 600px) {
+            .button-container {
+              grid-template-columns: repeat(3, 1fr);
+            }
+            .button-container .status-button {
+              grid-column: 1 / -1;
+            }
+          }
+        `})]}),(0,e.jsxs)("body",{children:[(0,e.jsx)("h1",{children:"Houston, We Have a Problem"}),(0,e.jsxs)("p",{children:["We apologize for the inconvenience. Our team is working quickly to"," ",(0,e.jsx)("span",{onClick:()=>{(0,a.isDev)()?n(r=>!r):c(r=>{let e=r+1;return 7===e?(n(r=>!r),0):e})},style:{cursor:"pointer"},children:"resolve"})," ","the issue."]}),(0,e.jsx)("p",{children:"We understand this disruption may impact your work, and we're doing our best to minimize downtime."}),(0,e.jsx)("p",{children:"Please try again in a few moments."}),(0,e.jsxs)("div",{className:"button-container",children:[(0,e.jsx)("button",{onClick:()=>window.history.back(),className:"button",children:"Back"}),(0,e.jsx)("button",{onClick:()=>window.location.href="/",className:"button",children:"Return to Homepage"}),(0,e.jsx)("button",{onClick:()=>window.location.reload(),className:"button",children:"Refresh Page"}),(0,e.jsx)("a",{href:"https://status.lovable.dev/",target:"_blank",rel:"noopener noreferrer",className:"button status-button",children:"View status page"})]}),t&&(0,e.jsxs)("div",{className:"error-details",children:[(0,e.jsx)("button",{onClick:d,className:`copy-button ${s?"success":""}`,children:s?"✓ Copied!":"Copy to clipboard"}),(0,e.jsxs)("div",{className:"error-field",children:[(0,e.jsx)("div",{className:"error-label",children:"Message:"}),(0,e.jsx)("pre",{children:r.message||"No error message"})]}),(0,e.jsxs)("div",{className:"error-field",children:[(0,e.jsx)("div",{className:"error-label",children:"Error Name:"}),(0,e.jsx)("pre",{children:r.name||"Unknown"})]}),r.digest&&(0,e.jsxs)("div",{className:"error-field",children:[(0,e.jsx)("div",{className:"error-label",children:"Error Digest:"}),(0,e.jsx)("pre",{children:r.digest})]}),(0,e.jsxs)("div",{className:"error-field",children:[(0,e.jsx)("div",{className:"error-label",children:"Stack Trace:"}),(0,e.jsx)("pre",{children:r.stack||"No stack trace available"})]})]}),(0,e.jsxs)("p",{style:{marginTop:"2rem",marginBottom:"2rem"},children:["If the problem persists, contact us at"," ",(0,e.jsx)("a",{href:"https://lovable.dev/support",style:{color:"inherit",textDecoration:"underline"},children:"lovable.dev/support"}),"."]}),(0,e.jsx)("div",{style:{marginTop:"1rem",padding:"1rem 1.5rem",border:"1px solid hsl(var(--border))",borderRadius:"8px",backgroundColor:"hsl(var(--muted))",textAlign:"center"},children:(0,e.jsxs)("p",{style:{margin:0,fontSize:"0.9rem",color:"hsl(var(--muted-foreground))"},children:["This one's on us. Think you could do better?"," ",(0,e.jsx)("a",{href:"/dashboard#prompt=Build%20me%20a%20Lovable%20clone",style:{color:"hsl(var(--foreground))",fontWeight:500,textDecoration:"underline",textUnderlineOffset:"4px"},children:"Build it on Lovable"})]})})]})]})}r.s(["default",()=>t])}]);
+
+//# debugId=e6c05690-59b0-d13c-d4a5-f0d4b182ad01
+//# sourceMappingURL=a067955cf2217b9d.js.map

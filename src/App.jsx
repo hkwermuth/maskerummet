@@ -167,12 +167,21 @@ export default function App() {
       <div style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Navigation */}
-        <nav style={{ background: '#D4ADB6', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '2px', height: '58px', boxShadow: '0 1px 6px rgba(48,34,24,.10)' }}>
+        <nav style={{ background: '#D4ADB6', padding: '0 24px', display: 'flex', alignItems: 'center', gap: '2px', height: '74px', boxShadow: '0 1px 6px rgba(48,34,24,.10)', overflow: 'visible' }}>
           <button
             onClick={() => navigate('hjem')}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 16px 0 0', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 18px 0 0', flexShrink: 0, display: 'flex', alignItems: 'center', overflow: 'visible' }}
           >
-            <img src="/brand/striq-logo.png" alt="STRIQ" style={{ height: 24, width: 'auto' }} />
+            <img
+              src="/brand/striq-logo-sort-rosa-beskaaret.png"
+              alt="STRIQ"
+              style={{
+                height: 'clamp(16px, 3.7vw, 32px)',
+                width: 'auto',
+                display: 'block',
+                marginTop: 0,
+              }}
+            />
           </button>
 
           {NAV_TABS.map(tab => {
@@ -211,11 +220,20 @@ export default function App() {
 
         {/* Forside */}
         {activeTab === 'hjem' && (
-          <div style={{ minHeight: 'calc(100vh - 58px)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ minHeight: 'calc(100vh - 74px)', display: 'flex', flexDirection: 'column' }}>
 
             {/* Hero */}
-            <div style={{ textAlign: 'center', padding: '80px 20px 72px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-              <img src="/brand/striq-logo-hvid.png" alt="STRIQ" style={{ height: 64, width: 'auto', filter: 'drop-shadow(0 2px 12px rgba(0,0,0,0.25))' }} />
+            <div style={{ textAlign: 'center', padding: '54px 20px 50px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+              <img
+                src="/brand/striq-logo-creme-rosa-traad-3d-transparent.png"
+                alt="STRIQ"
+                style={{
+                  height: 'clamp(96px, 22vw, 170px)',
+                  width: 'auto',
+                  maxWidth: '92vw',
+                  filter: 'drop-shadow(0 3px 18px rgba(0,0,0,0.28))',
+                }}
+              />
               <h1 style={{
                 fontFamily: 'Cormorant Garamond, serif',
                 fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: 600,
