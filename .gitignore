@@ -1,6 +1,7 @@
 .vercel
 node_modules
 dist
+.next
 .env
 .env.local
 .env.*.local
@@ -10,6 +11,7 @@ dist
 
 # Cursor/Claude — shared launch config only; not machine-local settings
 .claude/settings.local.json
+.claude/worktrees
 
 # Vite transient timestamp files
 vite.config.js.timestamp-*.mjs
