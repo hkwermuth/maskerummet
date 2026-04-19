@@ -1,123 +1,130 @@
-'use client'
+import type { Metadata } from 'next'
 
-import { useState } from 'react'
+export const metadata: Metadata = {
+  title: 'Opskrifter — Striq',
+  description: 'Strikkeopskrifter fra begynder til avanceret — kommer snart.',
+}
 
-const LEVELS = ['Alle', 'Begynder', 'Øvet', 'Avanceret']
+const C = {
+  bg:        '#F8F3EE',
+  text:      '#302218',
+  textMuted: '#8C7E74',
+  sage:      '#61846D',
+  dustyPink: '#D4ADB6',
+  accent:    '#D9BFC3',
+  border:    '#E5DDD9',
+}
 
-const OPSKRIFTER = [
-  { titel: 'Enkel ribhue', niveau: 'Begynder', fiber: 'Merinould', tid: '4–6 timer', emoji: '🧢', farve: '#61846D' },
-  { titel: 'Stripet tørklæde', niveau: 'Begynder', fiber: 'Alpaka/uld', tid: '6–10 timer', emoji: '🧣', farve: '#D4ADB6' },
-  { titel: 'Sæsonvanter', niveau: 'Begynder', fiber: 'Ekstra fin merino', tid: '8–12 timer', emoji: '🧤', farve: '#D9BFC3' },
-  { titel: 'Klassisk raglantrøje', niveau: 'Øvet', fiber: 'Lamsuld', tid: '3–5 uger', emoji: '🧥', farve: '#61846D' },
-  { titel: 'Boblechek-bluse', niveau: 'Øvet', fiber: 'Bomuldsgarn', tid: '2–4 uger', emoji: '👕', farve: '#D4ADB6' },
-  { titel: 'Kabelstrikket cardigan', niveau: 'Øvet', fiber: 'Merino DK', tid: '4–7 uger', emoji: '🧶', farve: '#D9BFC3' },
-  { titel: 'Fairisle-sweater', niveau: 'Avanceret', fiber: 'Shetlandsuld', tid: '6–10 uger', emoji: '❄️', farve: '#61846D' },
-  { titel: 'Lacesjal med bladmønster', niveau: 'Avanceret', fiber: 'Kidsilke', tid: '3–6 uger', emoji: '🍃', farve: '#D4ADB6' },
+const PLANLAGT = [
+  { emoji: '🧢', tekst: 'Begynderprojekter — huer, klude og enkle tørklæder' },
+  { emoji: '🧥', tekst: 'Øvet-niveau — raglantrøjer, cardigans og vanter' },
+  { emoji: '❄️', tekst: 'Avanceret — fairisle, lace og kabelmønstre' },
+  { emoji: '🔄', tekst: 'Garnalternativer til hver opskrift fra vores katalog' },
 ]
 
 export default function OpskrifterPage() {
-  const [aktivtNiveau, setAktivtNiveau] = useState('Alle')
-  const [søgning, setSøgning] = useState('')
-
-  const filtrerede = OPSKRIFTER.filter(o => {
-    const niveauMatch = aktivtNiveau === 'Alle' || o.niveau === aktivtNiveau
-    const søgMatch = o.titel.toLowerCase().includes(søgning.toLowerCase()) || o.fiber.toLowerCase().includes(søgning.toLowerCase())
-    return niveauMatch && søgMatch
-  })
-
   return (
-    <div className="font-sans">
+    <div style={{ background: C.bg, minHeight: 'calc(100vh - 58px)', fontFamily: "'DM Sans', sans-serif" }}>
       {/* Hero */}
-      <div style={{ background: 'linear-gradient(135deg, rgba(97,132,109,.2) 0%, #D9BFC3 100%)', padding: '48px 24px 40px', textAlign: 'center' }}>
+      <div style={{
+        background: `linear-gradient(135deg, rgba(97,132,109,.2) 0%, ${C.accent} 100%)`,
+        padding: '56px 24px 48px',
+        textAlign: 'center',
+      }}>
         <div style={{ fontSize: 40, marginBottom: 12 }}>📖</div>
-        <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 600, color: '#302218', margin: '0 0 10px' }}>
+        <h1 style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: 'clamp(28px, 4vw, 42px)',
+          fontWeight: 600,
+          color: C.text,
+          margin: '0 0 10px',
+        }}>
           Opskrifter
         </h1>
-        <p style={{ fontSize: 15, color: '#8C7E74', margin: '0 auto', maxWidth: 480, lineHeight: 1.65 }}>
-          Browse vores samling af strikkeopskrifter — fra enkle begynderprojekter til avancerede mønstre.
+        <p style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: 'clamp(16px, 2vw, 20px)',
+          fontStyle: 'italic',
+          color: C.text,
+          margin: '0 auto', maxWidth: 500, lineHeight: 1.55,
+          opacity: 0.85,
+        }}>
+          Vi arbejder på en samling af strikkeopskrifter — fra enkle begynderprojekter til avancerede mønstre.
         </p>
       </div>
 
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '36px 24px 64px' }}>
-        {/* Filter + søg */}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginBottom: 28 }}>
-          <input
-            type="text"
-            placeholder="Søg på opskrift eller fiber…"
-            value={søgning}
-            onChange={e => setSøgning(e.target.value)}
+      <div style={{ maxWidth: 620, margin: '0 auto', padding: '48px 24px 72px' }}>
+        {/* Kommer snart kort */}
+        <div style={{
+          background: '#FFFFFF',
+          border: `1px solid ${C.border}`,
+          borderRadius: 16,
+          padding: '36px 32px',
+          textAlign: 'center',
+          boxShadow: '0 2px 10px rgba(48,34,24,.05)',
+          marginBottom: 32,
+        }}>
+          <div style={{
+            display: 'inline-block',
+            background: `${C.sage}18`,
+            color: C.sage,
+            fontSize: 13,
+            fontWeight: 600,
+            padding: '5px 14px',
+            borderRadius: 20,
+            marginBottom: 20,
+            letterSpacing: '.03em',
+          }}>
+            Kommer snart
+          </div>
+          <h2 style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: 24, fontWeight: 600,
+            color: C.text, margin: '0 0 12px',
+          }}>
+            Opskrifter er på vej
+          </h2>
+          <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.7, margin: '0 0 28px' }}>
+            Vi samler og kvalitetstjekker opskrifter, så du snart kan finde inspiration
+            direkte i STRIQ — med garnforslag fra vores katalog.
+          </p>
+
+          <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {PLANLAGT.map((p, i) => (
+              <div key={i} style={{
+                background: C.bg,
+                border: `1px solid ${C.border}`,
+                borderRadius: 10,
+                padding: '12px 16px',
+                display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+                <span style={{ fontSize: 22, flexShrink: 0 }}>{p.emoji}</span>
+                <span style={{ fontSize: 13.5, color: C.text, lineHeight: 1.5 }}>{p.tekst}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{
+          background: `linear-gradient(135deg, ${C.accent} 0%, ${C.dustyPink}66 100%)`,
+          borderRadius: 12,
+          padding: '24px 28px',
+          textAlign: 'center',
+        }}>
+          <p style={{ fontSize: 14, color: C.text, margin: '0 0 8px', lineHeight: 1.6 }}>
+            Har du ønsker til opskrifter eller vil bidrage?
+          </p>
+          <a
+            href="mailto:hej@striq.dk"
             style={{
-              flex: '1 1 220px', padding: '9px 14px',
-              border: '1px solid #E5DDD9', borderRadius: 8,
-              fontSize: 13.5, fontFamily: "'DM Sans', sans-serif",
-              color: '#302218', background: '#FFFFFF', outline: 'none',
+              fontSize: 14, fontWeight: 500, color: C.sage,
+              textDecoration: 'underline',
             }}
-          />
-          <div style={{ display: 'flex', gap: 6 }}>
-            {LEVELS.map(l => (
-              <button key={l} onClick={() => setAktivtNiveau(l)} style={{
-                padding: '8px 16px', borderRadius: 20,
-                border: `1px solid ${aktivtNiveau === l ? '#9B6272' : '#E5DDD9'}`,
-                background: aktivtNiveau === l ? '#9B6272' : '#FFFFFF',
-                color: aktivtNiveau === l ? '#fff' : '#8C7E74',
-                fontSize: 13, fontFamily: "'DM Sans', sans-serif",
-                cursor: 'pointer', fontWeight: aktivtNiveau === l ? 500 : 400,
-                transition: 'all .15s',
-              }}>{l}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* Opskrift-kort */}
-        {filtrerede.length === 0 ? (
-          <p style={{ color: '#8C7E74', textAlign: 'center', padding: '40px 0', fontSize: 14 }}>
-            Ingen opskrifter matcher din søgning.
-          </p>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
-            {filtrerede.map((o, i) => (
-              <OpskriftKort key={i} o={o} />
-            ))}
-          </div>
-        )}
-
-        <div style={{ marginTop: 48, background: '#FFFFFF', border: '1px dashed #E5DDD9', borderRadius: 12, padding: '28px 24px', textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: '#8C7E74', margin: '0 0 6px' }}>Mangler du en bestemt opskrift?</p>
-          <p style={{ fontSize: 13, color: '#8C7E74', margin: 0 }}>
-            Vi udvider løbende samlingen — skriv til os hvis du har ønsker eller vil bidrage med egne opskrifter.
-          </p>
+          >
+            Skriv til os på hej@striq.dk
+          </a>
         </div>
       </div>
-    </div>
-  )
-}
-
-function OpskriftKort({ o }: { o: typeof OPSKRIFTER[0] }) {
-  const [hovered, setHovered] = useState(false)
-  return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: '#FFFFFF', border: '1px solid #E5DDD9',
-        borderTop: `3px solid ${o.farve}`, borderRadius: 12,
-        padding: '22px 20px', display: 'flex', flexDirection: 'column', gap: 8,
-        boxShadow: hovered ? '0 6px 20px rgba(48,34,24,.10)' : '0 1px 4px rgba(48,34,24,.05)',
-        transform: hovered ? 'translateY(-2px)' : 'none',
-        cursor: 'pointer', transition: 'transform .15s, box-shadow .15s',
-      }}
-    >
-      <span style={{ fontSize: 32 }}>{o.emoji}</span>
-      <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 19, fontWeight: 600, color: '#302218', margin: 0 }}>
-        {o.titel}
-      </h3>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11.5, color: '#fff', background: o.farve, borderRadius: 20, padding: '2px 9px', fontWeight: 500 }}>
-          {o.niveau}
-        </span>
-      </div>
-      <p style={{ fontSize: 12.5, color: '#8C7E74', margin: 0 }}>🪡 {o.fiber} · ⏱ {o.tid}</p>
-      <span style={{ fontSize: 12.5, color: '#9B6272', fontWeight: 500, marginTop: 4 }}>Se opskrift →</span>
     </div>
   )
 }

@@ -82,7 +82,13 @@ export default function LoginPage() {
         <button onClick={() => setShowForgot(true)} style={{ marginTop: 16, width: '100%', background: 'transparent', border: 'none', color: '#8C7E74', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", textDecoration: 'underline' }}>
           Glemt adgangskode?
         </button>
-        <div style={{ marginTop: 16, textAlign: 'center', fontSize: 11, color: '#8C7E74' }}>
+        <div style={{ marginTop: 20, textAlign: 'center', fontSize: 13, color: '#8C7E74' }}>
+          Ny bruger?{' '}
+          <Link href="/signup" style={{ color: '#61846D', textDecoration: 'underline', fontWeight: 500 }}>
+            Opret konto
+          </Link>
+        </div>
+        <div style={{ marginTop: 10, textAlign: 'center', fontSize: 11, color: '#8C7E74' }}>
           Din e-mail huskes automatisk til næste gang
         </div>
       </div>

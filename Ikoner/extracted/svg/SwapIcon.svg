@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="16" cy="24" r="9" fill="hsl(350, 30%, 75%)" />
+    <circle cx="32" cy="24" r="9" fill="hsl(180, 28%, 38%)" />
+    <path
+      d="M14 20c2-1 4-1 6 0M28 28c2 1 4 1 6 0"
+      stroke="hsl(30, 25%, 97%)"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      opacity="0.7"
+    />
+    <path
+      d="M21 16l3 3-3 3M27 32l-3-3 3-3"
+      stroke="hsl(30, 25%, 97%)"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>

@@ -39,6 +39,11 @@ export default async function AdminPage() {
         </div>
       </div>
       <div className="bg-cream border border-striq-border rounded-xl divide-y divide-striq-border">
+        {(!yarns || yarns.length === 0) && (
+          <div className="text-center py-12 text-striq-muted text-sm">
+            Ingen garner i kataloget endnu. Klik &quot;+ Nyt garn&quot; for at tilføje det første.
+          </div>
+        )}
         {(yarns ?? []).map((y) => (
           <Link
             key={y.id}

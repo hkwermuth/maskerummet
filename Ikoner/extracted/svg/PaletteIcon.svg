@@ -1,0 +1,12 @@
+<svg width="512" height="512" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M24 7c-9 0-16 6.5-16 14.5 0 5 3 8 7 8h2.5c1.5 0 2.5 1 2.5 2.5 0 1-.5 2-.5 3 0 3 2 5 5 5 9 0 15.5-7 15.5-16C40 13 33 7 24 7z"
+      fill="hsl(30, 25%, 97%)"
+      stroke="hsl(180, 28%, 38%)"
+      strokeWidth="1.6"
+    />
+    <circle cx="15" cy="20" r="2.5" fill="hsl(350, 30%, 75%)" />
+    <circle cx="22" cy="14" r="2.5" fill="hsl(180, 28%, 38%)" />
+    <circle cx="30" cy="14" r="2.5" fill="hsl(350, 35%, 60%)" />
+    <circle cx="34" cy="22" r="2.5" fill="hsl(180, 24%, 70%)" />
+  </svg>

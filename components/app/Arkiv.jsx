@@ -4,6 +4,7 @@ import { useSupabase } from '@/lib/supabase/client'
 import { fromUsageDb, toUsageDb } from '@/lib/supabase/mappers'
 import { uploadFile as uploadFileRaw } from '@/lib/supabase/storage'
 import { displayYarnName, fetchColorsByIds, fetchColorsForYarn, searchYarnsFull } from '@/lib/catalog'
+import { exportProjekter } from '@/lib/export/exportProjekter'
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
@@ -850,12 +851,24 @@ export default function Arkiv({ user, onRequestLogin }) {
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '14px', color: 'rgba(255,255,255,.6)' }}>
             {projectCountLabel}
           </div>
-          <button
-            onClick={() => setShowNew(true)}
-            style={{ padding: '7px 14px', background: '#C16B47', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}
-          >
-            + Nyt projekt
-          </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              onClick={async () => {
+                const result = await exportProjekter(supabase)
+                if (!result.success) alert(result.error)
+              }}
+              style={{ padding: '7px 12px', background: 'rgba(255,255,255,.12)', color: 'rgba(255,255,255,.8)', border: '1px solid rgba(255,255,255,.2)', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}
+              aria-label="Eksporter projekter som CSV"
+            >
+              📥 Eksporter
+            </button>
+            <button
+              onClick={() => setShowNew(true)}
+              style={{ padding: '7px 14px', background: '#C16B47', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}
+            >
+              + Nyt projekt
+            </button>
+          </div>
         </div>
         <input
           value={q}

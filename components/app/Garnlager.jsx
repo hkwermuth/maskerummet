@@ -15,6 +15,7 @@ import {
 import BarcodeScanner from './BarcodeScanner'
 import BrugNoeglerModal from './BrugNoeglerModal'
 import { detectColorFamily, COLOR_FAMILY_LABELS, COLOR_FAMILY_DEFAULT_HEX, yarnMatchesStashSearch } from '@/lib/data/colorFamilies'
+import { exportGarnlager } from '@/lib/export/exportGarnlager'
 
 const WEIGHTS  = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
 const STATUSES = ['På lager', 'I brug', 'Brugt op', 'Ønskeliste']
@@ -150,95 +151,78 @@ function YarnCatalogSearch({ value, onChange, onSelectYarn, placeholder }) {
   )
 }
 
-// ─── 5S Guide ─────────────────────────────────────────────────────────────────
+// ─── Kom godt i gang (quick-start popup) ──────────────────────────────────────
 
-const FIVE_S_STEPS = [
-  {
-    num: 1, title: 'Sortér', sub: 'Seiri', emoji: '🧹', color: '#C16B47',
-    intro: 'Start med at tømme hele garnskuffen. Hvert nøgle skal i én af tre bunker:',
-    tips: ['Beholder — garn du aktivt vil strikke med', 'Giver væk — fint garn, bare ikke til dig (garn-swap!)', 'Kassér — mølædt, muggen eller mystisk fiber du aldrig rører'],
-    nudge: 'Vær ærlig med "en dag"-købene. Hvis du ikke har rørt det i to år, er det nok tid til at give det videre.',
-  },
-  {
-    num: 2, title: 'Systematisér', sub: 'Seiton', emoji: '🗂️', color: '#2C4A3E',
-    intro: 'Nu skal det garn, du beholder, have faste pladser:',
-    tips: ['Gruppér efter det der giver mening for dig — fiber, vægt eller projekt', 'Mærk kasser og kurve så du finder garnet uden at rode', 'Igangværende projekter i gennemsigtige poser med opskriften'],
-    nudge: 'Hæng løse nøgler over en stang eller rul dem op, så de ikke filtrer sig ind i hinanden.',
-  },
-  {
-    num: 3, title: 'Rengør', sub: 'Seiso', emoji: '✨', color: '#4A7A62',
-    intro: 'Rent garn på rene hylder — enkelt princip, stor effekt:',
-    tips: ['Tjek for møl og larveæg — frys mistænkeligt garn i 72 timer', 'Tør hylder og kasser af inden garnet lægges tilbage', 'Giv uld og mohair lidt plads til at ånde'],
-    nudge: 'Et lavendel-pose eller cedertræ-klods i garnkassen holder møllen væk.',
-  },
-  {
-    num: 4, title: 'Standardisér', sub: 'Seiketsu', emoji: '📋', color: '#6A5638',
-    intro: 'Lav én fast rutine for nyt garn — så forbliver systemet intakt:',
-    tips: ['Nyt garn registreres med det samme: fiber, metrage, farvenummer', 'Her hjælper dit digitale garnlager — det er præcis dét denne app er til!', 'Sæt en "kapacitetsgrænse" pr. kategori, fx én kasse fingering-garn'],
-    nudge: 'Registrér garnet inden det ryger i kurven. Ellers glemmer du det — vi kender det alle.',
-  },
-  {
-    num: 5, title: 'Vedligehold', sub: 'Shitsuke', emoji: '🔄', color: '#3A2C4A',
-    intro: 'Det svære er ikke at rydde op — det er at holde det ved lige:',
-    tips: ['Én gang om året (efterår = mølsæson): mini-sortering', 'Reglen "ind med ét, ud med ét" holder lageret stabilt', 'Afhold garn-swap med strikkevenner for at omsætte overskuddet'],
-    nudge: 'Det handler ikke om perfektion. Bare om at vide hvad du har, og kunne finde det.',
-  },
+const QUICK_START_STEPS = [
+  { title: 'Opret garn', body: 'Find garnet i Garn-kataloget når du opretter, eller tilføj garnet manuelt.' },
+  { title: 'Filtrér', body: 'Filtrér på fiber, vægt eller farve, når du vil finde noget bestemt.' },
+  { title: 'Print', body: 'Print en oversigt, hvis du også ønsker at have overblikket på papir.' },
 ]
 
-function FiveSGuide({ onClose }) {
-  const [step, setStep] = useState(0)
-  const s = FIVE_S_STEPS[step]
+function QuickStartModal({ onClose }) {
   return (
     <div
-      onClick={e => e.target === e.currentTarget && onClose()}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(44,32,24,.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(30,18,12,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '20px',
+      }}
     >
-      <div style={{ background: '#FFFCF7', borderRadius: '14px', width: '480px', maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 60px rgba(44,32,24,.25)' }}>
-        <div style={{ background: s.color, borderRadius: '14px 14px 0 0', padding: '24px 28px 20px', position: 'relative' }}>
-          <button onClick={onClose} style={{ position: 'absolute', top: '12px', right: '16px', background: 'none', border: 'none', color: 'rgba(255,255,255,.6)', fontSize: '18px', cursor: 'pointer', lineHeight: 1 }}>✕</button>
-          {step === 0 && (
-            <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '14px', color: 'rgba(255,255,255,.7)', marginBottom: '6px', letterSpacing: '.05em' }}>
-              5S-metoden til dit garnlager
-            </div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '32px' }}>{s.emoji}</span>
-            <div>
-              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '24px', fontWeight: 600, color: '#fff' }}>Trin {s.num}: {s.title}</div>
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.5)', letterSpacing: '.08em', marginTop: '2px' }}>{s.sub}</div>
-            </div>
-          </div>
-        </div>
-        <div style={{ padding: '24px 28px' }}>
-          <p style={{ fontSize: '14px', color: '#2C2018', lineHeight: '1.6', margin: '0 0 16px' }}>{s.intro}</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-            {s.tips.map((tip, i) => (
-              <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                <span style={{ background: s.color, color: '#fff', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 600, flexShrink: 0, marginTop: '1px' }}>{i + 1}</span>
-                <span style={{ fontSize: '13px', color: '#3A2E22', lineHeight: '1.5' }}>{tip}</span>
+      <div style={{
+        position: 'relative', maxWidth: 520, width: '100%',
+        background: '#FFFCF7', borderRadius: 16,
+        padding: '36px 32px 32px',
+        boxShadow: '0 20px 60px rgba(48,34,24,.25)',
+        maxHeight: '88vh', overflowY: 'auto',
+      }}>
+        <button
+          onClick={onClose}
+          aria-label="Luk"
+          style={{
+            position: 'absolute', top: 12, right: 12,
+            width: 32, height: 32, borderRadius: '50%',
+            background: 'rgba(48,34,24,0.06)', border: 'none',
+            cursor: 'pointer', fontSize: 18, color: '#5A4E42',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >×</button>
+        <h2 style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: 28, fontWeight: 600, color: '#302218',
+          margin: '0 0 6px',
+        }}>
+          Kom godt i gang med din garnsamling
+        </h2>
+        <p style={{ fontSize: 13.5, color: '#8C7E74', margin: '0 0 22px' }}>
+          Tre enkle skridt til et godt overblik.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {QUICK_START_STEPS.map((s, i) => (
+            <div key={i} style={{
+              display: 'flex', gap: 14, alignItems: 'flex-start',
+              border: '1px solid #E5DDD9', borderRadius: 12,
+              padding: '14px 16px', background: '#FFFFFF',
+            }}>
+              <span style={{
+                flexShrink: 0,
+                width: 30, height: 30, borderRadius: '50%',
+                background: '#61846D', color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: "'Cormorant Garamond', serif",
+                fontSize: 16, fontWeight: 600,
+              }}>{i + 1}</span>
+              <div>
+                <div style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: 18, fontWeight: 600, color: '#302218',
+                  margin: '0 0 4px',
+                }}>{s.title}</div>
+                <div style={{ fontSize: 13.5, color: '#5A4E42', lineHeight: 1.6 }}>{s.body}</div>
               </div>
-            ))}
-          </div>
-          <div style={{ background: '#F4EFE6', borderRadius: '8px', padding: '12px 14px', borderLeft: `3px solid ${s.color}` }}>
-            <span style={{ fontSize: '12px', color: '#5A4E42', lineHeight: '1.5', fontStyle: 'italic' }}>{s.nudge}</span>
-          </div>
-        </div>
-        <div style={{ padding: '0 28px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {FIVE_S_STEPS.map((_, i) => (
-              <button key={i} onClick={() => setStep(i)} style={{ width: i === step ? '20px' : '8px', height: '8px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: i === step ? s.color : '#D8D0C0', transition: 'all .2s' }} />
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {step > 0 && (
-              <button onClick={() => setStep(step - 1)} style={{ padding: '8px 14px', border: '1px solid #D0C8BA', borderRadius: '6px', background: 'transparent', fontSize: '13px', cursor: 'pointer', color: '#6B5D4F', fontFamily: "'DM Sans', sans-serif" }}>Tilbage</button>
-            )}
-            {step < FIVE_S_STEPS.length - 1 ? (
-              <button onClick={() => setStep(step + 1)} style={{ padding: '8px 18px', background: s.color, color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Næste</button>
-            ) : (
-              <button onClick={onClose} style={{ padding: '8px 18px', background: '#2C4A3E', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Kom i gang!</button>
-            )}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -315,10 +299,17 @@ export default function Garnlager({ user, onRequestLogin }) {
   const [modal, setModal] = useState(null) // null | 'add' | yarn.id
   const [form, setForm] = useState(EMPTY_FORM)
 
-  const [showGuide, setShowGuide] = useState(false)
+  const [showQuickStart, setShowQuickStart] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
   const [brugModal, setBrugModal] = useState(null) // yarn object or null
   const [saveError, setSaveError] = useState(null)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    setConfirmDel(false)
+    setDeleting(false)
+  }, [modal])
 
   const [catalogQuery, setCatalogQuery] = useState('')
   const [selectedYarn, setSelectedYarn] = useState(null)
@@ -406,10 +397,22 @@ export default function Garnlager({ user, onRequestLogin }) {
   }
 
   async function del() {
-    const { error } = await supabase.from('yarn_items').delete().eq('id', modal)
-    if (!error) setYarns(prev => prev.filter(y => y.id !== modal))
-    setModal(null)
-    flashSave()
+    setSaveError(null)
+    setDeleting(true)
+    try {
+      const { error } = await supabase.from('yarn_items').delete().eq('id', modal)
+      if (error) {
+        setSaveError(`Kunne ikke slette: ${error.message}`)
+        setDeleting(false)
+        return
+      }
+      setYarns(prev => prev.filter(y => y.id !== modal))
+      setModal(null)
+      flashSave()
+    } catch (e) {
+      setSaveError('Fejl: ' + e.message)
+      setDeleting(false)
+    }
   }
 
   function openAdd() {
@@ -514,7 +517,7 @@ export default function Garnlager({ user, onRequestLogin }) {
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: 'transparent', minHeight: '100vh' }}>
 
-      {showGuide && <FiveSGuide onClose={() => setShowGuide(false)} />}
+      {showQuickStart && <QuickStartModal onClose={() => setShowQuickStart(false)} />}
       {showScanner && <BarcodeScanner onClose={() => setShowScanner(false)} onAddToLager={handleScanResult} />}
       {brugModal && (
         <BrugNoeglerModal
@@ -533,50 +536,107 @@ export default function Garnlager({ user, onRequestLogin }) {
         />
       )}
 
-      {/* Sub-header */}
-      <div style={{ background: '#2C4A3E', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #1E3828', flexWrap: 'wrap' }}>
+      {/* Hero banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(97,132,109,0.33) 0%, #C9E6DA 100%)',
+        padding: '56px 24px 48px',
+        textAlign: 'center',
+      }}>
+        <h1 style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: 'clamp(32px, 4.5vw, 48px)',
+          fontWeight: 600,
+          color: '#302218',
+          margin: '0 0 12px',
+          letterSpacing: '.01em',
+        }}>
+          Mit garn
+        </h1>
+        <p style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: 'clamp(16px, 2vw, 20px)',
+          fontStyle: 'italic',
+          color: '#302218',
+          margin: '0 auto 22px', maxWidth: 600, lineHeight: 1.55,
+          opacity: 0.85,
+        }}>
+          Hele din garnsamling ét sted.
+        </p>
         <button
-          onClick={() => setShowGuide(true)}
-          title="Åbn 5S guide til dit garnlager"
-          style={{ background: 'none', border: 'none', padding: '4px 0', fontSize: '12px', color: '#7ABDA0', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", textDecoration: 'underline', textUnderlineOffset: '3px' }}
+          onClick={() => setShowQuickStart(true)}
+          style={{
+            background: '#FFFFFF',
+            border: '1px solid #E5DDD9',
+            borderRadius: 999,
+            padding: '10px 22px',
+            fontSize: 13.5, fontWeight: 500,
+            color: '#302218', cursor: 'pointer',
+            fontFamily: "'DM Sans', sans-serif",
+            boxShadow: '0 2px 8px rgba(48,34,24,.06)',
+            transition: 'transform .15s, box-shadow .15s',
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(48,34,24,.10)' }}
+          onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(48,34,24,.06)' }}
         >
-          5S Guide
-        </button>
-
-        <div style={{ flex: 1 }} />
-
-        {saveMsg && (
-          <span style={{ fontSize: '11px', color: saving ? '#7ABDA0' : '#4A8A6A' }}>{saveMsg}</span>
-        )}
-
-        <button
-          onClick={() => setShowScanner(true)}
-          style={{ background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.2)', borderRadius: '6px', padding: '7px 13px', fontSize: '12px', color: '#EDF5F0', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '6px' }}
-        >
-          <span>📷</span> Skann garn
-        </button>
-
-        <button
-          onClick={openAdd}
-          style={{ background: '#C16B47', color: '#fff', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", fontWeight: 500, cursor: 'pointer' }}
-        >
-          + Tilføj garn
+          <span style={{ fontSize: 10, lineHeight: 1 }}>▾</span>
+          Kom godt i gang med din garnsamling
         </button>
       </div>
 
-      {/* Stats */}
-      <div style={{ background: '#EDE7D8', borderBottom: '1px solid #D8D0C0', padding: '12px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '12px' }}>
-        {[
-          [yarns.length, 'Garntyper'],
-          [totalNgl, 'Nøgler i alt'],
-          [yarns.filter(y => y.status === 'I brug').length, 'I brug'],
-          [yarns.filter(y => y.status === 'På lager').length, 'På lager'],
-        ].map(([n, l]) => (
-          <div key={l} style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-            <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: 600, color: '#2C4A3E' }}>{n}</span>
-            <span style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.1em' }}>{l}</span>
-          </div>
-        ))}
+      {/* Stats + handlinger (smal) */}
+      <div style={{
+        background: '#EDE7D8',
+        borderBottom: '1px solid #D8D0C0',
+        padding: '8px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        flexWrap: 'wrap',
+      }}>
+        <div style={{
+          display: 'flex', flex: '1 1 auto', gap: '18px',
+          minWidth: 0, flexWrap: 'wrap',
+        }}>
+          {[
+            [yarns.length, 'Garntyper'],
+            [totalNgl, 'Nøgler i alt'],
+            [yarns.filter(y => y.status === 'I brug').length, 'I brug'],
+            [yarns.filter(y => y.status === 'På lager').length, 'På lager'],
+          ].map(([n, l]) => (
+            <div key={l} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '18px', fontWeight: 600, color: '#2C4A3E', lineHeight: 1.1 }}>{n}</span>
+              <span style={{ fontSize: '9px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.1em' }}>{l}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {saveMsg && (
+            <span style={{ fontSize: '11px', color: saving ? '#61846D' : '#4A8A6A', marginRight: 4 }}>{saveMsg}</span>
+          )}
+          <button
+            onClick={() => setShowScanner(true)}
+            style={{ background: '#FFFFFF', border: '1px solid #61846D', borderRadius: '6px', padding: '6px 11px', fontSize: '12px', color: '#2C4A3E', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px' }}
+          >
+            <span>📷</span> Skann garn
+          </button>
+          <button
+            onClick={async () => {
+              const result = await exportGarnlager(supabase)
+              if (!result.success) alert(result.error)
+            }}
+            style={{ background: '#FFFFFF', border: '1px solid #D0C8BA', borderRadius: '6px', padding: '6px 11px', fontSize: '12px', color: '#5A4E42', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px' }}
+            aria-label="Eksporter garnlager som CSV"
+          >
+            <span>📥</span> Eksporter
+          </button>
+          <button
+            onClick={openAdd}
+            style={{ background: '#61846D', color: '#fff', border: 'none', borderRadius: '6px', padding: '7px 14px', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", fontWeight: 500, cursor: 'pointer' }}
+          >
+            + Tilføj garn
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -1004,9 +1064,19 @@ export default function Garnlager({ user, onRequestLogin }) {
 
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px', alignItems: 'center' }}>
               {modal !== 'add' && (
-                <button onClick={del} style={{ padding: '8px 14px', background: '#F0E8E0', color: '#8B3A2A', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', marginRight: 'auto', fontFamily: "'DM Sans', sans-serif" }}>
-                  Slet
-                </button>
+                confirmDel ? (
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginRight: 'auto' }}>
+                    <span style={{ fontSize: '13px', color: '#8B3A2A' }}>Er du sikker?</span>
+                    <button onClick={() => setConfirmDel(false)} disabled={deleting} style={{ padding: '8px 12px', border: '1px solid #D0C8BA', borderRadius: '6px', background: 'transparent', fontSize: '13px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: '#6B5D4F' }}>Annuller</button>
+                    <button onClick={del} disabled={deleting} style={{ padding: '8px 14px', background: '#8B3A2A', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: deleting ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                      {deleting ? 'Sletter...' : 'Ja, slet'}
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDel(true)} style={{ padding: '8px 14px', background: '#F0E8E0', color: '#8B3A2A', border: 'none', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', marginRight: 'auto', fontFamily: "'DM Sans', sans-serif" }}>
+                    Slet
+                  </button>
+                )
               )}
               {modal !== 'add' && Number(form.antal) > 0 && (
                 <button

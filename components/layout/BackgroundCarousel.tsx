@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 
 type BackgroundCarouselProps = {
@@ -9,7 +10,12 @@ type BackgroundCarouselProps = {
   overlay?: string
   intervalMs?: number
   fadeMs?: number
+  /** Hvor meget baggrunden sløres (px) på input-tunge sider. */
+  blurPx?: number
 }
+
+// Sider hvor brugerens eget indhold skal være tydeligt — baggrunden sløres der.
+const BLUR_PATH_PREFIXES = ['/garnlager', '/projekter', '/visualizer', '/garn']
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false)
@@ -41,10 +47,14 @@ export function BackgroundCarousel({
   overlay = 'linear-gradient(180deg, rgba(244,239,230,0.68) 0%, rgba(244,239,230,0.78) 100%)',
   intervalMs = 14000,
   fadeMs = 1600,
+  blurPx,
 }: BackgroundCarouselProps) {
   const prefersReducedMotion = usePrefersReducedMotion()
   const safeImages = useMemo(() => images.filter(Boolean), [images])
   const [idx, setIdx] = useState(0)
+  const pathname = usePathname()
+  const resolvedBlur =
+    blurPx ?? (BLUR_PATH_PREFIXES.some((p) => pathname?.startsWith(p)) ? 18 : 0)
 
   useEffect(() => {
     if (prefersReducedMotion) return
@@ -61,8 +71,13 @@ export function BackgroundCarousel({
   if (safeImages.length === 0) return null
 
   return (
-    <div className="fixed inset-0 z-0 pointer-events-none">
-      <div className="absolute inset-0">
+    <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+      <div
+        className="absolute"
+        style={{
+          inset: resolvedBlur ? `-${resolvedBlur * 2}px` : 0,
+        }}
+      >
         {safeImages.map((img, i) => {
           const isActive = i === idx
           return (
@@ -76,6 +91,7 @@ export function BackgroundCarousel({
               className="object-cover"
               style={{
                 opacity: prefersReducedMotion ? (i === 0 ? 1 : 0) : isActive ? 1 : 0,
+                filter: resolvedBlur ? `blur(${resolvedBlur}px)` : undefined,
                 transition: prefersReducedMotion ? undefined : `opacity ${fadeMs}ms ease-in-out`,
               }}
             />

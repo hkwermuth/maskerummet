@@ -129,7 +129,7 @@ export default async function YarnDetailPage(
   }
 
   return (
-    <article className="max-w-3xl">
+    <article className="max-w-3xl bg-cream border border-striq-border rounded-2xl shadow-sm p-6 sm:p-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <Link href="/garn" className="text-sm text-striq-link">← Tilbage til katalog</Link>
       <div className="mt-3 text-xs uppercase tracking-wider text-striq-link">{yarn.producer}</div>
