@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import EksempelGrid from './EksempelGrid'
+import { HeroIllustration } from '@/components/layout/HeroIllustration'
 
 export const metadata: Metadata = {
   title: 'Opskrifter — Striq',
@@ -45,45 +46,43 @@ export default function OpskrifterPage() {
   return (
     <div style={{ background: C.bg, minHeight: 'calc(100vh - 58px)', fontFamily: "'DM Sans', sans-serif" }}>
       {/* Hero */}
-      <div style={{
+      <section style={{
         background: `linear-gradient(135deg, rgba(97,132,109,.2) 0%, ${C.accent} 100%)`,
-        padding: '56px 24px 48px',
-        textAlign: 'center',
+        padding: '36px 0 32px',
       }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>📖</div>
-        <h1 style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 'clamp(28px, 4vw, 42px)',
-          fontWeight: 600,
-          color: C.text,
-          margin: '0 0 10px',
-        }}>
-          Opskrifter
-        </h1>
-        <p style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 'clamp(16px, 2vw, 20px)',
-          fontStyle: 'italic',
-          color: C.text,
-          margin: '0 auto 6px', maxWidth: 620, lineHeight: 1.55,
-          opacity: 0.9,
-        }}>
-          Find inspiration, se hvilket garn du skal bruge fra dit lager — og start dit næste projekt med ét klik.
-        </p>
         <div style={{
-          display: 'inline-block',
-          marginTop: 14,
-          background: `${C.white}CC`,
-          color: C.text,
-          fontSize: 12.5,
-          fontWeight: 500,
-          padding: '6px 14px',
-          borderRadius: 20,
-          letterSpacing: '.02em',
+          maxWidth: 1080, margin: '0 auto', padding: '0 24px',
+          display: 'flex', gap: 28,
+          alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap',
         }}>
-          Demo — eksempel-opskrifter vist nedenfor
+          <div style={{ flex: '1 1 420px', minWidth: 260 }}>
+            <h1 style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: 'clamp(28px, 4.2vw, 38px)',
+              fontWeight: 600, color: C.text, margin: 0, letterSpacing: '.01em',
+            }}>
+              Opskrifter
+            </h1>
+            <p style={{
+              fontSize: 14.5, color: '#6B5D4F',
+              margin: '6px 0 0', maxWidth: 640, lineHeight: 1.55,
+            }}>
+              Find inspiration, se hvilket garn du skal bruge fra dit lager — og start dit næste projekt med ét klik.
+            </p>
+          </div>
+          <div className="opskrifter-hero-art" style={{
+            flexShrink: 0, width: 220, maxWidth: '100%',
+          }}>
+            <HeroIllustration variant="opskrift-kop-strik" />
+          </div>
         </div>
-      </div>
+        <style>{`
+          @media (max-width: 640px) {
+            .opskrifter-hero-art { display: none !important; }
+          }
+        `}</style>
+      </section>
 
       {/* Eksempel-kort (client-komponent — håndterer favoritter) */}
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '48px 24px 24px' }}>
@@ -193,7 +192,7 @@ export default function OpskrifterPage() {
             Vil du gerne sælge eller dele dine opskrifter gennem STRIQ, kan vi også det.
           </p>
           <a
-            href="mailto:hej@striq.dk?subject=Samarbejde%20om%20opskrifter%20i%20STRIQ"
+            href="mailto:kontakt@striq.dk?subject=Samarbejde%20om%20opskrifter%20i%20STRIQ"
             style={{
               display: 'inline-block',
               background: C.white,
@@ -205,7 +204,7 @@ export default function OpskrifterPage() {
               textDecoration: 'none',
             }}
           >
-            Skriv til os på hej@striq.dk
+            Skriv til os på kontakt@striq.dk
           </a>
         </div>
       </div>
@@ -222,13 +221,13 @@ export default function OpskrifterPage() {
             Har du en opskrift-favorit, vi bør kende? Eller en idé til hvad du savner?
           </p>
           <a
-            href="mailto:hej@striq.dk"
+            href="mailto:kontakt@striq.dk"
             style={{
               fontSize: 14, fontWeight: 500, color: C.sage,
               textDecoration: 'underline',
             }}
           >
-            Skriv til os på hej@striq.dk
+            Skriv til os på kontakt@striq.dk
           </a>
         </div>
       </div>
