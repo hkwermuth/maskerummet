@@ -178,6 +178,9 @@ Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
 - **AI-substitutions-strategi** — pre-compute ved yarn-insert + nightly refresh vs. on-demand. Arkitekturel beslutning, udskudt til efter launch.
 - **Code hardening fase 2** — bredere audit: CSP-tuning, dependency-scanning i CI, secrets-scanner
 
+**Fra Hannah (nye ønsker, 2026-04-20):**
+- **Søgning på konkrete garntyper pr. garnbutik** — brugeren vælger én eller flere specifikke garner fra katalog, finder butikker der fører netop dem. Kræver fuld mapping af butik↔garn i DB (brug/udvid `stores`-tabel og katalog-relation). Erstatning for den gamle brand-pill-filtrering der blev fjernet i Find garnbutikker-redesignet.
+
 **Fra Hannah (egne ønsker, 2026-04-19):**
 - **AI-validering af substitutioner** (Claude API) — AI der ved om fibre/vægt/metrage faktisk matcher. M-estimat
 - **Garnproducent-kontaktliste** — Excel med producentnavne, kontaktoplysninger, hvilke garner de fører. Research-task, ikke kode. Kan hjælpe separat.
