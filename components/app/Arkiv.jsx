@@ -5,6 +5,7 @@ import { fromUsageDb, toUsageDb } from '@/lib/supabase/mappers'
 import { uploadFile as uploadFileRaw } from '@/lib/supabase/storage'
 import { displayYarnName, fetchColorsByIds, fetchColorsForYarn, searchYarnsFull } from '@/lib/catalog'
 import { exportProjekter } from '@/lib/export/exportProjekter'
+import { DelMedFaellesskabetModal } from '@/components/app/DelMedFaellesskabetModal'
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
@@ -139,7 +140,7 @@ function FileUploadField({ label, accept, preview, isImage, onChange, onRemove, 
   )
 }
 
-function DetailModal({ entry, user, onClose, onDelete, onSaved }) {
+function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
   const supabase = useSupabase()
   const uploadFile = (bucket, path, file) => uploadFileRaw(supabase, bucket, path, file)
   const [editing, setEditing]         = useState(false)
@@ -204,7 +205,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved }) {
         .from('projects')
         .update(updates)
         .eq('id', entry.id)
-        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,created_at,updated_at')
+        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,created_at,updated_at')
         .single()
       if (error) throw error
 
@@ -367,7 +368,14 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved }) {
                 </a>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => onShare?.(entry)}
+                  style={{ padding: '7px 14px', background: entry.is_shared ? '#E4EEE4' : '#F0E5D8', color: entry.is_shared ? '#2A4A2A' : '#6A5638', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  aria-label={entry.is_shared ? 'Rediger deling med fællesskabet' : 'Del med fællesskabet'}
+                >
+                  {entry.is_shared ? '✓ Delt med fællesskabet' : 'Del med fællesskabet'}
+                </button>
                 {confirmDel ? (
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <span style={{ fontSize: '12px', color: '#8B3A2A' }}>Er du sikker?</span>
@@ -736,8 +744,14 @@ export default function Arkiv({ user, onRequestLogin }) {
   const [loaded, setLoaded]   = useState(false)
   const [q, setQ]             = useState('')
   const [selected, setSelected] = useState(null)
+  const [sharing, setSharing]   = useState(null)
   const [showNew, setShowNew] = useState(false)
   const [colorMap, setColorMap] = useState(new Map())
+
+  function applyShareUpdate(updated) {
+    setProjects(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p))
+    if (selected?.id === updated.id) setSelected(prev => prev ? { ...prev, ...updated } : prev)
+  }
 
   useEffect(() => {
     async function load() {
@@ -746,7 +760,7 @@ export default function Arkiv({ user, onRequestLogin }) {
       // otherwise make the entire UI appear empty even though data exists.
       const { data: pData, error: pErr } = await supabase
         .from('projects')
-        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,created_at,updated_at')
+        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,created_at,updated_at')
         .order('used_at', { ascending: false })
         .order('created_at', { ascending: false })
       if (pErr) console.error(pErr)
@@ -834,6 +848,17 @@ export default function Arkiv({ user, onRequestLogin }) {
             setProjects(prev => prev.map(p => p.id === updated.id ? updated : p))
             setSelected(updated)
           }}
+          onShare={entry => setSharing(entry)}
+        />
+      )}
+
+      {sharing && (
+        <DelMedFaellesskabetModal
+          project={sharing}
+          user={user}
+          onClose={() => setSharing(null)}
+          onShared={applyShareUpdate}
+          onUnshared={applyShareUpdate}
         />
       )}
 
@@ -947,6 +972,7 @@ export default function Arkiv({ user, onRequestLogin }) {
                   </span>
                   {p.needle_size && <span style={{ fontSize: '11px', background: '#E4EEE4', color: '#2A4A2A', borderRadius: '20px', padding: '2px 8px' }}>Pind {p.needle_size}</span>}
                   {p.pattern_pdf_url && <span style={{ fontSize: '11px', background: '#D8D0E8', color: '#3C2A5C', borderRadius: '20px', padding: '2px 8px' }}>📄 PDF</span>}
+                  {p.is_shared && <span style={{ fontSize: '11px', background: '#EAD9DE', color: '#6A3A52', borderRadius: '20px', padding: '2px 8px' }}>✦ Delt</span>}
                 </div>
                 <div style={{ fontSize: '11px', color: '#B0A090', marginTop: '8px' }}>{formatDate(p.used_at)}</div>
               </div>

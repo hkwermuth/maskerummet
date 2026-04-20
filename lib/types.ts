@@ -87,3 +87,58 @@ export type Color = {
   status: string | null
   image_url: string | null
 }
+
+// ── Fællesskabet (delte projekter) ───────────────────────────────────────────
+
+export const PROJECT_TYPES = [
+  'cardigan', 'sweater', 'top', 'hue', 'sjal',
+  'stroemper', 'vest', 'troeje', 'toerklaede', 'taeppe', 'andet',
+] as const
+
+export type ProjectType = typeof PROJECT_TYPES[number]
+
+export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
+  cardigan:   'Cardigan',
+  sweater:    'Sweater',
+  top:        'Top',
+  hue:        'Hue',
+  sjal:       'Sjal',
+  stroemper:  'Strømper',
+  vest:       'Vest',
+  troeje:     'Trøje',
+  toerklaede: 'Tørklæde',
+  taeppe:     'Tæppe',
+  andet:      'Andet',
+}
+
+export type Profile = {
+  id: string
+  display_name: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type SharedProjectYarn = {
+  id: string
+  project_id: string
+  yarn_name: string | null
+  yarn_brand: string | null
+  color_name: string | null
+  color_code: string | null
+  hex_color: string | null
+  catalog_yarn_id: string | null
+  catalog_color_id: string | null
+}
+
+export type SharedProjectPublic = {
+  id: string
+  title: string | null
+  project_image_url: string | null
+  project_type: ProjectType | null
+  community_description: string | null
+  pattern_name: string | null
+  pattern_designer: string | null
+  shared_at: string
+  display_name: string | null
+  yarns: SharedProjectYarn[]
+}

@@ -14,7 +14,7 @@ const NAV_LINKS = [
   { href: '/garn',           label: 'Garn-katalog' },
   { href: '/find-forhandler',label: 'Find forhandler' },
   { href: '/opskrifter',     label: 'Opskrifter' },
-  { href: '/strikkeskolen',  label: 'Strikkeskolen' },
+  { href: '/faellesskabet',  label: 'Fællesskabet' },
   { href: '/om-striq',       label: 'Om Striq' },
 ]
 

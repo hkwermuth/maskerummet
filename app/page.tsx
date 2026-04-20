@@ -77,14 +77,16 @@ const FEATURES = [
     ),
   },
   {
-    href: '/strikkeskolen',
-    title: 'Strikkeskolen',
-    desc: 'Lær nye teknikker med videoguides, FAQ og trin-for-trin instruktioner.',
+    href: '/faellesskabet',
+    title: 'Fællesskabet',
+    desc: 'Se andre strikkeres færdige projekter — hent inspiration til dit næste projekt.',
     accent: '#D9BFC3',
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-        <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+        <rect x="3.5" y="3.5" width="17" height="17" rx="2"/>
+        <line x1="12" y1="3.5" x2="12" y2="20.5"/>
+        <line x1="8.5" y1="11.5" x2="8.5" y2="13.5"/>
+        <line x1="15.5" y1="11.5" x2="15.5" y2="13.5"/>
       </svg>
     ),
   },
