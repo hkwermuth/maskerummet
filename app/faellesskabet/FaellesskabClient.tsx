@@ -6,6 +6,7 @@ import {
   type ProjectType,
   type SharedProjectPublic,
 } from '@/lib/types'
+import { HeroIllustration } from '@/components/layout/HeroIllustration'
 
 const AUTHOR_FALLBACK = 'Anonym strikker'
 
@@ -69,15 +70,15 @@ export function FaellesskabClient({
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#F8F3EE', minHeight: 'calc(100vh - 58px - 57px)' }}>
       <section style={{
         background: 'linear-gradient(135deg, #FFFCF7 0%, #F4EFE6 55%, #EAD9DE 100%)',
-        padding: '42px 24px 36px',
+        padding: '36px 0 32px',
       }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-          <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 4 }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6F9582" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>
-            </svg>
-          </span>
-          <div>
+        <div style={{
+          maxWidth: 1080, margin: '0 auto', padding: '0 24px',
+          display: 'flex', gap: 28,
+          alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ flex: '1 1 420px', minWidth: 260 }}>
             <h1 style={{
               fontFamily: "'Cormorant Garamond', serif",
               fontSize: 'clamp(28px, 4.2vw, 38px)',
@@ -88,6 +89,11 @@ export function FaellesskabClient({
             <p style={{ fontSize: 14.5, color: '#6B5D4F', margin: '6px 0 0', maxWidth: 640, lineHeight: 1.55 }}>
               Se andre strikkeres færdige projekter — søg på type, opskrift eller garn, og find dit næste projekt.
             </p>
+          </div>
+          <div className="faellesskab-hero-art" style={{
+            flexShrink: 0, width: 220, maxWidth: '100%',
+          }}>
+            <HeroIllustration variant="skab-bloed" />
           </div>
         </div>
       </section>
@@ -156,6 +162,9 @@ export function FaellesskabClient({
           }
           .faellesskab-filter-bar > :first-child {
             grid-column: 1 / -1;
+          }
+          .faellesskab-hero-art {
+            display: none !important;
           }
         }
       `}</style>
