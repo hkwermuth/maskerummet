@@ -11,6 +11,8 @@ import {
   labelThickness, labelSpin, labelFinish, labelWash, labelStatus,
   da, joinDa,
 } from '@/lib/labels'
+import { YarnHeroImage } from '@/components/catalog/YarnHeroImage'
+import { KeyFact } from '@/components/catalog/KeyFact'
 
 export const revalidate = 3600
 export const dynamicParams = true
@@ -103,6 +105,9 @@ export async function generateMetadata(
       title: `${yarn.producer} ${yarn.name} — Striq`,
       description,
       type: 'website',
+      images: yarn.hero_image_url
+        ? [{ url: yarn.hero_image_url, width: 1200, height: 1600, alt: `${yarn.producer} ${yarn.name}` }]
+        : undefined,
     },
     alternates: { canonical: `/garn/${slug}` },
   }
@@ -119,6 +124,9 @@ export default async function YarnDetailPage(
   const { yarn, colors } = result
   const substitutions = await getSubstitutions(yarn.id, 8)
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://maskerummet.vercel.app'
+  const absoluteHeroImage = yarn.hero_image_url ? `${siteUrl}${yarn.hero_image_url}` : undefined
+
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -126,17 +134,50 @@ export default async function YarnDetailPage(
     brand: { '@type': 'Brand', name: yarn.producer },
     description: yarn.description ?? undefined,
     category: yarn.thickness_category ?? undefined,
+    image: absoluteHeroImage ? [absoluteHeroImage] : undefined,
   }
 
-  return (
-    <article className="max-w-3xl bg-cream border border-striq-border rounded-2xl shadow-sm p-6 sm:p-8">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <Link href="/garn" className="text-sm text-striq-link">← Tilbage til katalog</Link>
-      <div className="mt-3 text-xs uppercase tracking-wider text-striq-link">{yarn.producer}</div>
-      <h1 className="font-serif text-4xl text-striq-sage">{yarn.name}</h1>
-      {yarn.series && <div className="text-striq-muted italic mt-1">{yarn.series}</div>}
+  const pindestrValue =
+    yarn.needle_min_mm && yarn.needle_max_mm
+      ? `${da(yarn.needle_min_mm)}–${da(yarn.needle_max_mm)} mm`
+      : yarn.needle_min_mm ? `${da(yarn.needle_min_mm)} mm` : null
 
-      <section className="mt-6">
+  const strikkefasthedValue = yarn.gauge_stitches_10cm
+    ? `${da(yarn.gauge_stitches_10cm)} m / ${da(yarn.gauge_rows_10cm) ?? '?'} p på 10 cm${yarn.gauge_needle_mm ? ` (pind ${da(yarn.gauge_needle_mm)} mm)` : ''}`
+    : null
+
+  return (
+    <article className="max-w-5xl bg-cream border border-striq-border rounded-2xl shadow-sm p-6 sm:p-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+
+      <Link href="/garn" className="text-sm text-striq-link">← Tilbage til katalog</Link>
+
+      {/* Hero: billede-venstre, titel + nøgle-specs til højre */}
+      <div className="mt-4 grid md:grid-cols-2 gap-6 md:gap-8">
+        <YarnHeroImage yarn={yarn} />
+
+        <div className="flex flex-col">
+          <div className="text-xs uppercase tracking-wider text-striq-link">{yarn.producer}</div>
+          <h1 className="font-serif text-3xl sm:text-4xl text-striq-sage mt-1">{yarn.name}</h1>
+          {yarn.series && <div className="text-striq-muted italic mt-1">{yarn.series}</div>}
+
+          <dl className="mt-5 space-y-2.5 text-sm">
+            <KeyFact label="Indhold" value={yarn.fiber_main} />
+            <KeyFact label="Vægt / længde" value={
+              yarn.ball_weight_g && yarn.length_per_100g_m
+                ? `${da(yarn.ball_weight_g)} g = ca. ${da(Math.round((yarn.ball_weight_g * yarn.length_per_100g_m) / 100))} meter`
+                : null
+            } />
+            <KeyFact label="Anbefalede pinde" value={pindestrValue} />
+            <KeyFact label="Strikkefasthed" value={strikkefasthedValue} />
+            <KeyFact label="Vaskeanvisning" value={labelWash(yarn.wash_care)} />
+            <KeyFact label="Tykkelse" value={labelThickness(yarn.thickness_category)} />
+          </dl>
+        </div>
+      </div>
+
+      {/* Fiberbar — full width under hero */}
+      <section className="mt-8">
         <h2 className="font-serif text-xl text-striq-sage mb-2">Materiale</h2>
         <FiberBar fibers={yarn.fibers} />
       </section>
@@ -149,30 +190,11 @@ export default async function YarnDetailPage(
         </section>
       )}
 
+      {/* Øvrige specs */}
       <section className="mt-6 grid sm:grid-cols-2 gap-x-8 gap-y-3 text-sm">
-        <Field label="Tykkelse" value={labelThickness(yarn.thickness_category)} />
-        <Field label="Løbelængde pr. 100 g" value={yarn.length_per_100g_m ? `${da(yarn.length_per_100g_m)} m` : null} />
-        <Field label="Nøglevægt" value={yarn.ball_weight_g ? `${da(yarn.ball_weight_g)} g` : null} />
-        <Field
-          label="Pindestørrelse"
-          value={
-            yarn.needle_min_mm && yarn.needle_max_mm
-              ? `${da(yarn.needle_min_mm)}–${da(yarn.needle_max_mm)} mm`
-              : yarn.needle_min_mm ? `${da(yarn.needle_min_mm)} mm` : null
-          }
-        />
-        <Field
-          label="Strikkefasthed"
-          value={
-            yarn.gauge_stitches_10cm
-              ? `${da(yarn.gauge_stitches_10cm)} m / ${da(yarn.gauge_rows_10cm) ?? '?'} p på 10 cm${yarn.gauge_needle_mm ? ` (pind ${da(yarn.gauge_needle_mm)} mm)` : ''}`
-              : null
-          }
-        />
         <Field label="Spinding" value={labelSpin(yarn.spin_type)} />
         <Field label="Tråd" value={yarn.twist_structure} />
         <Field label="Finish" value={labelFinish(yarn.finish)} />
-        <Field label="Vaskeanvisning" value={labelWash(yarn.wash_care)} />
         <Field label="Spundet i" value={yarn.origin_country} />
         <Field label="Fiberoprindelse" value={yarn.fiber_origin_country} />
         <Field label="Status" value={labelStatus(yarn.status)} />
@@ -220,6 +242,7 @@ export default async function YarnDetailPage(
     </article>
   )
 }
+
 
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null

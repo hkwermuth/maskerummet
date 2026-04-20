@@ -12,6 +12,14 @@ dist
 # Cursor/Claude — shared launch config only; not machine-local settings
 .claude/settings.local.json
 .claude/worktrees
+.claude/scheduled_tasks.lock
+
+# TypeScript incremental build info
+tsconfig.tsbuildinfo
 
 # Vite transient timestamp files
 vite.config.js.timestamp-*.mjs
+
+# Rå foto-kilder (ikke serverede; originaler i OneDrive, serveringsfiler i public/garn-eksempler/)
+app/garn/Hannahs fotoeksempler af garn/
+

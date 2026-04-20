@@ -32,6 +32,7 @@ export type Yarn = {
   description: string | null
   fibers: FiberComponent[] | null
   color_count: number | null
+  hero_image_url: string | null
 }
 
 export type SubstitutionCandidate = {

@@ -43,6 +43,7 @@ export function YarnForm({ initial }: Props) {
   const [needleMax, setNeedleMax] = useState(initial?.needle_max_mm?.toString() ?? '')
   const [gaugeSt, setGaugeSt] = useState(initial?.gauge_stitches_10cm?.toString() ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
+  const [heroImageUrl, setHeroImageUrl] = useState(initial?.hero_image_url ?? '')
   const [fibers, setFibers] = useState<FiberComponent[]>(initial?.fibers ?? [])
 
   function setFiber(i: number, key: 'fiber' | 'percentage', v: string) {
@@ -73,6 +74,7 @@ export function YarnForm({ initial }: Props) {
       needle_max_mm: needleMax ? parseFloat(needleMax) : null,
       gauge_stitches_10cm: gaugeSt ? parseFloat(gaugeSt) : null,
       description: description || null,
+      hero_image_url: heroImageUrl.trim() || null,
     }
 
     let yarnId = initial?.id
@@ -129,6 +131,34 @@ export function YarnForm({ initial }: Props) {
       <Field label="Beskrivelse">
         <textarea value={description ?? ''} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputCls} />
       </Field>
+
+      <div>
+        <Field label="Produktbillede (URL)">
+          <input
+            type="text"
+            value={heroImageUrl}
+            onChange={(e) => setHeroImageUrl(e.target.value)}
+            placeholder="/garn-eksempler/mit-garn.jpg"
+            className={inputCls}
+          />
+        </Field>
+        <div className="text-xs text-striq-muted mt-1">
+          Intern sti (fx <code>/garn-eksempler/drops-baby-merino.jpg</code>) eller fuld URL. 3:4 portræt-format anbefales.
+          Kræver tilladelse fra producenten eller skal være eget foto.
+        </div>
+        {heroImageUrl.trim() && (
+          <div className="mt-3">
+            <div className="text-xs uppercase tracking-wider text-striq-link mb-1">Forhåndsvisning</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={heroImageUrl.trim()}
+              alt="Forhåndsvisning af produktbillede"
+              className="w-32 aspect-[3/4] object-cover rounded-lg border border-striq-border bg-white"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+            />
+          </div>
+        )}
+      </div>
 
       <div>
         <div className="flex items-center justify-between mb-2">

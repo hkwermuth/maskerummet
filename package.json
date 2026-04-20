@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "migrate:stash-catalog": "node scripts/migrate-stash-to-catalog.mjs",
+    "import:yarns": "node scripts/import-yarns.mjs",
+    "import:yarns:dry": "node scripts/import-yarns.mjs --dry",
     "test": "vitest",
     "test:run": "vitest run"
   },

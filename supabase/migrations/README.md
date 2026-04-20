@@ -28,6 +28,7 @@ Alternativt: kør `pg_dump --schema-only` direkte mod dev og ryd outputtet op s�
 6. `20260101000005_substitution_community.sql` — community-votes/suggestions
 7. `20260101000006_fix_permin_bella.sql` — data-fix (hvis katalog kopieres fra dev, er dette allerede anvendt — verificer)
 8. `20260419000001_rls_yarn_items_and_usage.sql` — RLS på yarn_items + yarn_usage
+9. `20260420000001_yarns_hero_image.sql` — hero_image_url på yarns + recreate af yarns_full-view. Seed sker via `npm run import:yarns`
 
 Timestamps er rekonstrueret — præcis historisk dato kendes ikke. Nye migrations fremover: brug `date -u +%Y%m%d%H%M%S` eller `supabase migration new <name>` så tidsstemplerne er ægte.
 
