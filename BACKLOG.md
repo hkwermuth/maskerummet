@@ -2,7 +2,7 @@
 
 Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
-**Sidst synkroniseret:** 2026-04-19 (kodebase-scan + git log + STRIQ_ideer.xlsx + implementering)
+**Sidst synkroniseret:** 2026-04-20 (tilføjet "Prøv garn"-åbning + slank drop-zone)
 
 ---
 
@@ -83,7 +83,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 ### Indhold
 - Kalender med strikke-events april–oktober 2026 (`app/kalender/page.tsx`)
 - FAQ-side (`app/faq/page.tsx`)
-- **Opskrifter** (`app/opskrifter/page.tsx`) — "kommer snart"-side med planlagte emner, ingen falske knapper
+- **Opskrifter** (`app/opskrifter/page.tsx`) — demo-side med eksempel-kort (ekstern/egen × gratis/betalt), "sådan tænker vi opskrifter"-afsnit, designer-pitch. Knapper er disablede og tydeligt mærket EKSEMPEL
 - **Strikkeskolen** (`app/strikkeskolen/page.tsx`) — "kommer snart"-side med planlagte guides, FAQ-link
 - Idéboard / kanban (`app/ideer/page.tsx`) — admin-only
 
@@ -131,6 +131,10 @@ Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
 
 ### BØR-HAVE (giver tillid og værdi til testbrugere)
 
+**"Prøv garn"-side mere indbydende (2026-04-20):**
+- **Prøv garn tilgængelig uden login** — `app/visualizer/page.tsx` er p.t. wrappet i `LoginGate`, så ikke-indloggede kun ser login-skærm. Eksempler skal kunne ses af alle, generering/gem kræver stadig login. Hero-banner øverst i om-striq-stil (gradient dustyPink → sage) med intro + CTA "Log ind for at prøve — og gemme — dine egne visualiseringer".
+- **Slank upload drop-zone i visualizer** — nuværende drop-zone (`YarnVisualizer.jsx:525-555`) er for dominerende (padding 48px, 48px emoji). Omskriv til kompakt horizontal layout: ikon 28px, padding 20px, tekst ved siden af. Bevar drag-drop-affordance.
+
 **UX-review af "Mit Garn"-input (2026-04-19) — quick wins (< 30 min hver):**
 - **QW1 Required-validering ved gem** — `save()` accepterer tomme garn i dag. Kræv minimum `name` + `brand` (eller katalog-link). Vis fejl ved submit. (`Garnlager.jsx:345, 836`)
 - **QW2 Escape-tast lukker modal** — mangler keydown-listener. (`Garnlager.jsx:775`)
@@ -167,7 +171,15 @@ Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
 **Fra Hannah (egne ønsker, 2026-04-19):**
 - **AI-validering af substitutioner** (Claude API) — AI der ved om fibre/vægt/metrage faktisk matcher. M-estimat
 - **Garnproducent-kontaktliste** — Excel med producentnavne, kontaktoplysninger, hvilke garner de fører. Research-task, ikke kode. Kan hjælpe separat.
-- **Deling af andres opskrifter + monetisering** — juridisk og forretningsmæssig overvejelse før teknisk. Stor.
+- **Opskrifts-katalog (fuld feature, post-launch)** — juridisk og forretningsmæssig overvejelse før teknisk. Består af:
+  - **Ny tabel `patterns`** i Supabase (titel, designer, billede, garn, pind, sværhedsgrad, pris, kilde-URL, `is_own`, `owner_user_id`) + RLS
+  - **Tabel `pattern_favorites`** (user_id, pattern_id) — erstatter den nuværende localStorage-løsning på demo-siden
+  - **Tabel `user_pattern_filters`** — gemmer brugerens sidste søgekriterier/filtre, så de huskes på tværs af sessioner
+  - **Kolonne `pattern_id` på `projects`** — knyt opskrift → projekt når opskriften ligger i STRIQ
+  - **UI**: favorit-hjerte på kort, "Mine favoritter"-filter, filter-persistens, "Knyt opskrift"-vælger i Mine projekter
+  - **Admin-flow** til at oprette opskrifter (både egne og efter tilladelse fra eksterne designere)
+  - **Forudsætning**: tilladelser fra designere/fabrikanter indhentes via `content/fabrikanter.md`-processen
+- **Salg af opskrifter gennem STRIQ (monetisering)** — kræver betalings-integration, royalty-aftaler, moms-håndtering. Stor, senere.
 - **Bredere UI/UX-audit af hele appen** — overlap med "Mit Garn"-review (3.2). Efter launch.
 - **PWA + app-store** — PWA realistisk tidligt, native app-store kræver Capacitor/separat build (måneder). PWA anbefales som næste skridt.
 

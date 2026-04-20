@@ -1,16 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSupabase } from '@/lib/supabase/client'
-import type { Metadata } from 'next'
 import Link from 'next/link'
+import { resolveNext } from '@/lib/auth/resolveNext'
 
 const REMEMBERED_EMAIL_KEY = 'striq-email'
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
+  )
+}
+
+function LoginPageInner() {
   const supabase = useSupabase()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const rawNext = searchParams.get('next')
+  const nextPath = resolveNext(rawNext)
+  // Bevar ?next= på kryds-link til signup hvis stien faktisk blev accepteret af whitelisten.
+  const signupHref = rawNext && nextPath === rawNext ? `/signup?next=${encodeURIComponent(rawNext)}` : '/signup'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -20,11 +33,10 @@ export default function LoginPage() {
   useEffect(() => {
     const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY)
     if (saved) setEmail(saved)
-    // If already logged in, redirect to garnlager
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) router.replace('/garnlager')
+      if (user) router.replace(nextPath)
     })
-  }, [])
+  }, [nextPath]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault()
@@ -37,7 +49,7 @@ export default function LoginPage() {
       return
     }
     localStorage.setItem(REMEMBERED_EMAIL_KEY, email)
-    router.push('/garnlager')
+    router.push(nextPath)
   }
 
   const inputStyle: React.CSSProperties = {
@@ -84,7 +96,7 @@ export default function LoginPage() {
         </button>
         <div style={{ marginTop: 20, textAlign: 'center', fontSize: 13, color: '#8C7E74' }}>
           Ny bruger?{' '}
-          <Link href="/signup" style={{ color: '#61846D', textDecoration: 'underline', fontWeight: 500 }}>
+          <Link href={signupHref} style={{ color: '#61846D', textDecoration: 'underline', fontWeight: 500 }}>
             Opret konto
           </Link>
         </div>

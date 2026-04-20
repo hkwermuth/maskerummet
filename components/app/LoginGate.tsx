@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useSupabase } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
+import { buildLoginHref } from '@/lib/auth/buildLoginHref'
 
 type Props = {
   title: string
@@ -15,6 +16,7 @@ type Props = {
 export function LoginGate({ title, desc, icon, children }: Props) {
   const supabase = useSupabase()
   const router = useRouter()
+  const pathname = usePathname()
   const [user, setUser] = useState<User | null>(null)
   const [loaded, setLoaded] = useState(false)
 
@@ -39,7 +41,7 @@ export function LoginGate({ title, desc, icon, children }: Props) {
           </div>
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 600, color: '#61846D', margin: '0 0 8px' }}>{title}</h2>
           <p style={{ fontSize: 14, color: '#8C7E74', lineHeight: 1.6, margin: '0 0 24px' }}>{desc}</p>
-          <button onClick={() => router.push('/login')} style={{
+          <button onClick={() => router.push(buildLoginHref(pathname))} style={{
             background: '#61846D', color: '#fff', border: 'none', borderRadius: 24,
             padding: '10px 28px', fontSize: 14, fontWeight: 500, cursor: 'pointer',
             fontFamily: "'DM Sans', sans-serif",

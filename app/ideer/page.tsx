@@ -73,7 +73,7 @@ export default function IdeerPage() {
         <div style={{ textAlign: 'center', maxWidth: 400, padding: '48px 24px' }}>
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 600, color: '#61846D', margin: '0 0 8px' }}>Ideer</h2>
           <p style={{ fontSize: 14, color: '#8C7E74', lineHeight: 1.6, margin: '0 0 24px' }}>Log ind for at se og tilføje ideer.</p>
-          <Link href="/login" style={{ background: '#61846D', color: '#fff', borderRadius: 24, padding: '10px 28px', fontSize: 14, fontWeight: 500, textDecoration: 'none', fontFamily: "'DM Sans', sans-serif" }}>
+          <Link href="/login?next=/ideer" style={{ background: '#61846D', color: '#fff', borderRadius: 24, padding: '10px 28px', fontSize: 14, fontWeight: 500, textDecoration: 'none', fontFamily: "'DM Sans', sans-serif" }}>
             Log ind
           </Link>
         </div>

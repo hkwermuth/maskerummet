@@ -304,14 +304,7 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
 
   function handleSingleYarnSelect(yarn) {
     setSelectedYarn(yarn)
-    setStep(3)
-  }
-
-  function handleMultiConfirm() {
-    // Validate: at least one slot has both replaces and yarn
-    const filled = colorSlots.filter(s => s.yarn && s.replaces.trim())
-    if (filled.length === 0) return
-    setStep(3)
+    // Bliver på step 2 — preview + Generér vises inline
   }
 
   function updateSlot(index, updated) {
@@ -371,7 +364,7 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
     if (!uploadedFile || yarns.length === 0) return
     setGenerating(true)
     setError(null)
-    setStep(4)
+    setStep(3)
 
     try {
       const base64 = await fileToBase64(uploadedFile)
@@ -474,50 +467,130 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
   }
 
   const filledSlots = colorSlots.filter(s => s.yarn && s.replaces.trim())
-  const canConfirmMulti = filledSlots.length >= 1
+  const hasYarnSelection = (!multiColor && !!selectedYarn) || (multiColor && filledSlots.length >= 1)
+
+  const stepsMeta = [
+    {
+      n: 1,
+      label: 'Upload foto',
+      emoji: '📷',
+      done: !!uploadedFile,
+      badge: preview
+        ? <img src={preview} alt="" aria-hidden="true" style={stepBadgeImgStyle} />
+        : null,
+      badgeLabel: preview ? 'foto uploadet' : null,
+    },
+    {
+      n: 2,
+      label: 'Vælg farve',
+      emoji: '🎨',
+      done: hasYarnSelection,
+      badge: !multiColor && selectedYarn
+        ? <span aria-hidden="true" style={{ ...stepBadgeDotStyle, background: selectedYarn.hex }} />
+        : multiColor && filledSlots.length > 0
+        ? <span aria-hidden="true" style={{ display: 'inline-flex', gap: 2 }}>
+            {filledSlots.slice(0, 3).map((s, i) => (
+              <span key={i} style={{ ...stepBadgeDotStyle, background: s.yarn.hex, width: 10, height: 10 }} />
+            ))}
+          </span>
+        : null,
+      badgeLabel: !multiColor && selectedYarn
+        ? `farve valgt: ${selectedYarn.colorNameDa ?? selectedYarn.colorName}`
+        : multiColor && filledSlots.length > 0
+        ? `${filledSlots.length} farver valgt`
+        : null,
+    },
+    {
+      n: 3,
+      label: 'Resultat',
+      emoji: '✨',
+      done: !!resultImage,
+      badge: generating
+        ? <span aria-hidden="true" style={stepBadgeSpinnerStyle} />
+        : resultImage
+        ? <span aria-hidden="true" style={stepBadgeCheckStyle}>✓</span>
+        : null,
+      badgeLabel: generating ? 'genererer' : resultImage ? 'færdig' : null,
+    },
+  ]
 
   // ── Render ──
 
   return (
     <div style={{ background: 'transparent', minHeight: 'calc(100vh - 60px)' }}>
+
+      {/* ─── Eksempel-galleri øverst — kun når ikke logget ind ─── */}
+      {!user && exampleViz.length > 0 && (
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 16px 8px' }}>
+          <h3 style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: 22, fontWeight: 600, color: '#2C4A3E',
+            margin: '0 0 4px',
+          }}>
+            Se hvad AI kan
+          </h3>
+          <p style={{ fontSize: 12, color: '#8B7D6B', margin: '0 0 16px' }}>
+            Eksempler på visualiseringer — klik for detaljer
+          </p>
+          <VizGrid items={exampleViz} onSelect={setDetailViz} showDate={false} />
+        </div>
+      )}
+
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '32px 16px' }}>
 
-        {/* Header */}
-        <h2 style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 28, fontWeight: 600, color: '#2C4A3E',
-          margin: '0 0 4px',
-        }}>
-          Prøv garn
-        </h2>
-        <p style={{ fontSize: 13, color: '#8B7D6B', margin: '0 0 24px' }}>
-          Upload et foto og se hvordan det ser ud i dit yndlingsgarn.
-          {!user && <>{' '}<button onClick={onRequestLogin} style={{ background: 'none', border: 'none', color: '#9B6272', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', padding: 0, textDecoration: 'underline' }}>Log ind</button> for at generere dine egne.</>}
-        </p>
-
-        {/* Step indicator */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 28 }}>
-          {[
-            { n: 1, label: 'Upload foto' },
-            { n: 2, label: 'Vælg garn' },
-            { n: 3, label: 'Forhåndsvisning' },
-            { n: 4, label: 'Resultat' },
-          ].map(s => (
-            <div key={s.n} style={{
-              flex: 1, textAlign: 'center', padding: '8px 0',
-              borderBottom: `3px solid ${step >= s.n ? '#2C4A3E' : '#D0C8BA'}`,
-              transition: 'border-color .2s',
-            }}>
-              <span style={{
-                fontSize: 11, fontWeight: step === s.n ? 600 : 400,
-                color: step >= s.n ? '#2C4A3E' : '#8B7D6B',
-                letterSpacing: '.03em',
-              }}>
-                {s.label}
-              </span>
-            </div>
-          ))}
-        </div>
+        {/* Step indicator — emoji + tilstand */}
+        <ol
+          role="list"
+          aria-label="Fremgang"
+          style={{
+            display: 'flex', gap: 6, marginBottom: 28,
+            listStyle: 'none', padding: 0, margin: '0 0 28px',
+          }}
+        >
+          {stepsMeta.map(s => {
+            const active = step === s.n
+            const reached = step >= s.n || s.done
+            const status = active ? 'i gang' : s.done ? 'færdig' : 'mangler'
+            const srLabel = s.badgeLabel
+              ? `Trin ${s.n}: ${s.label} — ${s.badgeLabel}`
+              : `Trin ${s.n}: ${s.label} — ${status}`
+            return (
+              <li
+                key={s.n}
+                aria-current={active ? 'step' : undefined}
+                aria-label={srLabel}
+                style={{
+                  flex: 1, textAlign: 'center',
+                  padding: '10px 4px 8px',
+                  borderBottom: `3px solid ${reached ? '#2C4A3E' : '#D0C8BA'}`,
+                  transition: 'border-color .2s',
+                  position: 'relative',
+                }}
+              >
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  marginBottom: 4,
+                }} aria-hidden="true">
+                  <span style={{
+                    fontSize: 20, lineHeight: 1,
+                    opacity: reached ? 1 : 0.4,
+                    transition: 'opacity .2s',
+                  }}>
+                    {s.emoji}
+                  </span>
+                  {s.badge}
+                </div>
+                <span style={{
+                  fontSize: 11, fontWeight: active ? 600 : 400,
+                  color: reached ? '#2C4A3E' : '#8B7D6B',
+                  letterSpacing: '.03em',
+                }} aria-hidden="true">
+                  {s.label}
+                </span>
+              </li>
+            )
+          })}
+        </ol>
 
         {/* ─── Step 1: Upload ─── */}
         {step === 1 && (
@@ -528,22 +601,26 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
               onDragLeave={() => setDragOver(false)}
               style={{
                 border: `2px dashed ${dragOver ? '#2C4A3E' : '#C0B8A8'}`,
-                borderRadius: 16,
-                padding: '48px 24px',
-                textAlign: 'center',
+                borderRadius: 12,
+                padding: '18px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
                 background: dragOver ? '#EDF5F0' : '#FFFCF7',
                 cursor: 'pointer',
                 transition: 'all .2s',
               }}
               onClick={() => document.getElementById('viz-upload').click()}
             >
-              <div style={{ fontSize: 48, marginBottom: 12, opacity: 0.4 }}>📷</div>
-              <p style={{ fontSize: 14, color: '#5A4E42', margin: '0 0 8px', fontWeight: 500 }}>
-                Træk et billede hertil eller klik for at uploade
-              </p>
-              <p style={{ fontSize: 12, color: '#8B7D6B', margin: 0 }}>
-                JPG eller PNG — f.eks. et billede af en sweater, hue eller sjal du gerne vil strikke
-              </p>
+              <div style={{ fontSize: 28, lineHeight: 1, opacity: 0.55, flexShrink: 0 }}>📷</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 14, color: '#5A4E42', margin: 0, fontWeight: 500 }}>
+                  Træk et billede hertil eller klik for at uploade
+                </p>
+                <p style={{ fontSize: 12, color: '#8B7D6B', margin: '2px 0 0' }}>
+                  JPG eller PNG — f.eks. sweater, hue eller sjal
+                </p>
+              </div>
               <input
                 id="viz-upload"
                 type="file"
@@ -632,10 +709,33 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
             {/* ── Single color mode ── */}
             {!multiColor && (
               <div>
-                <label style={labelStyle}>Søg farve</label>
-                <YarnSearch brandFilter={brandFilter} onSelect={handleSingleYarnSelect} />
-                <label style={{ ...labelStyle, marginTop: 20 }}>Eller vælg fra paletten</label>
-                <ColorGrid brandFilter={brandFilter} onSelect={handleSingleYarnSelect} />
+                {!selectedYarn && (
+                  <>
+                    <label style={labelStyle}>Søg farve</label>
+                    <YarnSearch brandFilter={brandFilter} onSelect={handleSingleYarnSelect} />
+                    <label style={{ ...labelStyle, marginTop: 20 }}>Eller vælg fra paletten</label>
+                    <ColorGrid brandFilter={brandFilter} onSelect={handleSingleYarnSelect} />
+                  </>
+                )}
+
+                {selectedYarn && (
+                  <div>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap' }}>
+                      <SwatchBlock yarn={selectedYarn} />
+                      <div style={{ flex: 1, minWidth: 180 }}>
+                        <YarnDetailCard yarn={selectedYarn} compact />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <button onClick={handleGenerate} style={{ ...primaryBtnStyle, flex: 1, minWidth: 200 }}>
+                        Generér visualisering
+                      </button>
+                      <button onClick={() => setSelectedYarn(null)} style={secondaryBtnStyle}>
+                        Vælg anden farve
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -668,75 +768,33 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
                 )}
 
                 <button
-                  onClick={handleMultiConfirm}
-                  disabled={!canConfirmMulti}
+                  onClick={handleGenerate}
+                  disabled={filledSlots.length === 0}
                   style={{
                     ...primaryBtnStyle,
                     width: '100%',
-                    opacity: canConfirmMulti ? 1 : 0.5,
-                    cursor: canConfirmMulti ? 'pointer' : 'not-allowed',
+                    opacity: filledSlots.length > 0 ? 1 : 0.5,
+                    cursor: filledSlots.length > 0 ? 'pointer' : 'not-allowed',
                   }}
                 >
-                  Fortsæt til forhåndsvisning
+                  Generér visualisering
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* ─── Step 3: Yarn preview + confirm ─── */}
+        {/* ─── Step 3: Result ─── */}
         {step === 3 && (
           <div>
-            {/* Photo + swatches */}
-            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap' }}>
-              {preview && (
-                <img src={preview} alt="Uploaded" style={{
-                  width: 140, height: 140, objectFit: 'cover', borderRadius: 14,
-                  border: '1px solid #D0C8BA',
-                }} />
-              )}
-              {!multiColor && selectedYarn && (
-                <SwatchBlock yarn={selectedYarn} />
-              )}
-              {multiColor && filledSlots.map((slot, i) => (
-                <SwatchBlock key={i} yarn={slot.yarn} label={slot.replaces} />
-              ))}
-            </div>
-
-            {/* Yarn details */}
-            {!multiColor && selectedYarn && (
-              <YarnDetailCard yarn={selectedYarn} />
-            )}
-            {multiColor && filledSlots.map((slot, i) => (
-              <div key={i} style={{ marginBottom: 12 }}>
-                <div style={{
-                  fontSize: 11, color: '#8B7D6B', marginBottom: 4,
-                  textTransform: 'uppercase', letterSpacing: '.05em',
-                }}>
-                  Erstatter: {slot.replaces}
-                </div>
-                <YarnDetailCard yarn={slot.yarn} compact />
-              </div>
-            ))}
-
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 12, marginTop: 20 }}>
-              <button onClick={handleGenerate} style={primaryBtnStyle}>
-                Generér visualisering
-              </button>
-              <button onClick={tryAnotherColor} style={secondaryBtnStyle}>
-                Vælg andre farver
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ─── Step 4: Result ─── */}
-        {step === 4 && (
-          <div>
             {generating && (
-              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                <div style={spinnerStyle} />
+              <div
+                role="status"
+                aria-live="polite"
+                aria-label="Genererer visualisering"
+                style={{ textAlign: 'center', padding: '60px 20px' }}
+              >
+                <div style={spinnerStyle} aria-hidden="true" />
                 <p style={{ fontSize: 14, color: '#5A4E42', marginTop: 20 }}>
                   Genererer visualisering…
                 </p>
@@ -747,12 +805,15 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
             )}
 
             {error && !generating && (
-              <div style={{
+              <div role="alert" style={{
                 background: '#FFF0F0', border: '1px solid #E8C0C0', borderRadius: 12,
                 padding: 20, marginBottom: 20, textAlign: 'center',
               }}>
                 <p style={{ fontSize: 14, color: '#8B3A3A', margin: '0 0 12px' }}>{error}</p>
-                <button onClick={handleGenerate} style={primaryBtnStyle}>Prøv igen</button>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <button onClick={handleGenerate} style={primaryBtnStyle}>Prøv igen</button>
+                  <button onClick={tryAnotherColor} style={secondaryBtnStyle}>Vælg andre farver</button>
+                </div>
               </div>
             )}
 
@@ -821,9 +882,9 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
         )}
       </div>
 
-      {/* ─── Personal inspiration gallery (logged-in, shown first) ─── */}
+      {/* ─── Mine inspirationer (logget ind, lige under step-flow) ─── */}
       {user && savedViz.length > 0 && (
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 16px 48px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 16px 32px' }}>
           <div style={{ borderTop: '1px solid #D0C8BA', paddingTop: 32, marginTop: 12 }}>
             <h3 style={{
               fontFamily: "'Cormorant Garamond', serif",
@@ -840,8 +901,8 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
         </div>
       )}
 
-      {/* ─── Example gallery (visible to everyone, below personal if any) ─── */}
-      {exampleViz.length > 0 && (
+      {/* ─── Eksempel-galleri nederst — kun når logget ind ─── */}
+      {user && exampleViz.length > 0 && (
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 16px 48px' }}>
           <div style={{ borderTop: '1px solid #D0C8BA', paddingTop: 32, marginTop: 12 }}>
             <h3 style={{
@@ -849,12 +910,12 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
               fontSize: 22, fontWeight: 600, color: '#2C4A3E',
               margin: '0 0 4px',
             }}>
-              Eksempler
+              Se hvad AI kan
             </h3>
             <p style={{ fontSize: 12, color: '#8B7D6B', margin: '0 0 20px' }}>
-              Se hvad AI-visualiseringen kan — klik for detaljer
+              Eksempler på visualiseringer — klik for detaljer
             </p>
-            <VizGrid items={exampleViz} onSelect={setDetailViz} />
+            <VizGrid items={exampleViz} onSelect={setDetailViz} showDate={false} />
           </div>
         </div>
       )}
@@ -964,7 +1025,7 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
 
 // ─── Shared gallery grid ─────────────────────────────────────────────────────
 
-function VizGrid({ items, onSelect }) {
+function VizGrid({ items, onSelect, showDate = true }) {
   return (
     <div style={{
       display: 'grid',
@@ -1005,11 +1066,13 @@ function VizGrid({ items, onSelect }) {
                 </span>
               ))}
             </div>
-            <div style={{ fontSize: 10, color: '#8B7D6B' }}>
-              {new Date(viz.created_at).toLocaleDateString('da-DK', {
-                day: 'numeric', month: 'short', year: 'numeric',
-              })}
-            </div>
+            {showDate && (
+              <div style={{ fontSize: 10, color: '#8B7D6B' }}>
+                {new Date(viz.created_at).toLocaleDateString('da-DK', {
+                  day: 'numeric', month: 'short', year: 'numeric',
+                })}
+              </div>
+            )}
           </div>
         </div>
       ))}
@@ -1190,6 +1253,33 @@ const spinnerStyle = {
   borderTop: '3px solid #2C4A3E', borderRadius: '50%',
   margin: '0 auto',
   animation: 'spin 1s linear infinite',
+}
+
+const stepBadgeImgStyle = {
+  width: 18, height: 18, borderRadius: 4, objectFit: 'cover',
+  border: '1px solid rgba(0,0,0,.15)',
+}
+
+const stepBadgeDotStyle = {
+  display: 'inline-block',
+  width: 12, height: 12, borderRadius: '50%',
+  border: '1px solid rgba(0,0,0,.15)',
+  verticalAlign: 'middle',
+}
+
+const stepBadgeCheckStyle = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: 16, height: 16, borderRadius: '50%',
+  background: '#2C4A3E', color: '#fff',
+  fontSize: 10, fontWeight: 700, lineHeight: 1,
+}
+
+const stepBadgeSpinnerStyle = {
+  display: 'inline-block',
+  width: 14, height: 14, border: '2px solid #D0C8BA',
+  borderTop: '2px solid #2C4A3E', borderRadius: '50%',
+  animation: 'spin 0.8s linear infinite',
+  verticalAlign: 'middle',
 }
 
 if (typeof document !== 'undefined' && !document.getElementById('viz-spinner-style')) {

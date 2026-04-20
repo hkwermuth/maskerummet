@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
+import { buildLoginHref } from '@/lib/auth/buildLoginHref'
 
 const NAV_LINKS = [
   { href: '/',               label: 'Hjem' },
@@ -23,7 +24,7 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
   const [user, setUser] = useState<User | null>(null)
   const supabase = createSupabaseBrowserClient()
 
-  const handleLoginClick = onRequestLogin ?? (() => router.push('/login'))
+  const handleLoginClick = onRequestLogin ?? (() => router.push(buildLoginHref(pathname)))
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')

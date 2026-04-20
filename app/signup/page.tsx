@@ -1,11 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useSupabase } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { buildLoginHref } from '@/lib/auth/buildLoginHref'
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupPageInner />
+    </Suspense>
+  )
+}
+
+function SignupPageInner() {
   const supabase = useSupabase()
+  const searchParams = useSearchParams()
+  // Bevar ?next= på kryds-link til login hvis stien er whitelistet.
+  const loginHref = buildLoginHref(searchParams.get('next'))
+  // Samme valideringskilde til email-callback så vi ikke forwarder ikke-whitelistet next.
+  const postAuthNext = loginHref.startsWith('/login?next=')
+    ? decodeURIComponent(loginHref.slice('/login?next='.length))
+    : '/garnlager'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -31,7 +48,7 @@ export default function SignupPage() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/garnlager`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(postAuthNext)}`,
       },
     })
     setLoading(false)
@@ -62,7 +79,7 @@ export default function SignupPage() {
           <div style={{ fontSize: 13, color: '#8C7E74', lineHeight: 1.6, marginBottom: 24 }}>
             Vi har sendt en bekræftelse til <strong>{email}</strong>. Klik på linket i mailen for at aktivere din konto.
           </div>
-          <Link href="/login" style={{ display: 'inline-block', padding: '12px 24px', background: '#61846D', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, textDecoration: 'none', fontFamily: "'DM Sans', sans-serif" }}>
+          <Link href={loginHref} style={{ display: 'inline-block', padding: '12px 24px', background: '#61846D', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 500, textDecoration: 'none', fontFamily: "'DM Sans', sans-serif" }}>
             Gå til login
           </Link>
         </div>
@@ -108,7 +125,7 @@ export default function SignupPage() {
 
         <div style={{ marginTop: 20, textAlign: 'center', fontSize: 13, color: '#8C7E74' }}>
           Har du allerede en konto?{' '}
-          <Link href="/login" style={{ color: '#61846D', textDecoration: 'underline', fontWeight: 500 }}>
+          <Link href={loginHref} style={{ color: '#61846D', textDecoration: 'underline', fontWeight: 500 }}>
             Log ind
           </Link>
         </div>
