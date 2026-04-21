@@ -430,7 +430,7 @@ export function FindForhandlerClient({
               <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 600, color: '#302218' }}>
                 {results.stores.length === 0 ? 'Ingen resultater' : `${results.stores.length} butik${results.stores.length !== 1 ? 'ker' : ''}`}
               </span>
-              <span style={{ fontSize: 14, color: '#6B5D4F' }}>
+              <span style={{ fontSize: 15, color: '#302218', fontWeight: 500 }}>
                 inden for {radius} km fra {results.label}
                 {activeBrandName ? ` der fører ${activeBrandName}` : ''}
               </span>
