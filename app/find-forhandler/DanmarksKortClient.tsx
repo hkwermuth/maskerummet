@@ -119,7 +119,7 @@ function StorePopup({ store }: { store: StoreBase }) {
             Åbn website →
           </a>
         )}
-        <a href={mapsHref} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: '#8C7E74', textDecoration: 'none' }}>
+        <a href={mapsHref} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#6B5D4F', textDecoration: 'none' }}>
           Vis på Google Maps ↗
         </a>
       </div>

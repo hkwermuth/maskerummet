@@ -300,7 +300,7 @@ export function FindForhandlerClient({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 11, color: '#8C7E74', textTransform: 'uppercase', letterSpacing: '.1em' }}>Radius:</span>
+            <span style={{ fontSize: 11, color: '#6B5D4F', textTransform: 'uppercase', letterSpacing: '.1em' }}>Radius:</span>
             {RADII.map(r => {
               const active = radius === r
               return (
@@ -343,7 +343,7 @@ export function FindForhandlerClient({
           <div
             style={{
               fontSize: 11,
-              color: '#8C7E74',
+              color: '#6B5D4F',
               textTransform: 'uppercase',
               letterSpacing: '.1em',
               marginBottom: 8,
@@ -419,7 +419,7 @@ export function FindForhandlerClient({
       {/* Resultater */}
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '18px 24px 60px' }}>
         {results === null && !loading && (
-          <div style={{ textAlign: 'center', padding: '24px 20px', color: '#8C7E74', fontSize: 13.5, lineHeight: 1.55 }}>
+          <div style={{ textAlign: 'center', padding: '24px 20px', color: '#6B5D4F', fontSize: 13.5, lineHeight: 1.55 }}>
             Klik på en pin på kortet, eller søg efter en by for at se butikker i nærheden.
           </div>
         )}
@@ -430,14 +430,14 @@ export function FindForhandlerClient({
               <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 600, color: '#302218' }}>
                 {results.stores.length === 0 ? 'Ingen resultater' : `${results.stores.length} butik${results.stores.length !== 1 ? 'ker' : ''}`}
               </span>
-              <span style={{ fontSize: 12.5, color: '#8C7E74' }}>
+              <span style={{ fontSize: 14, color: '#6B5D4F' }}>
                 inden for {radius} km fra {results.label}
                 {activeBrandName ? ` der fører ${activeBrandName}` : ''}
               </span>
             </div>
 
             {results.stores.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 20px', color: '#8C7E74' }}>
+              <div style={{ textAlign: 'center', padding: '32px 20px', color: '#6B5D4F' }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>🔍</div>
                 <div style={{ fontSize: 13 }}>
                   {activeBrandName
@@ -482,7 +482,7 @@ function StoreCard({ store }: { store: StoreResult }) {
             {store.distance_km} km
           </span>
         </div>
-        <div style={{ fontSize: 12.5, color: '#8C7E74' }}>{address}</div>
+        <div style={{ fontSize: 13.5, color: '#6B5D4F' }}>{address}</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
         {store.phone && (
@@ -498,7 +498,7 @@ function StoreCard({ store }: { store: StoreResult }) {
         <a
           href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([store.name, store.address, store.city].filter(Boolean).join(', '))}`}
           target="_blank" rel="noreferrer"
-          style={{ fontSize: 11.5, color: '#8C7E74', textDecoration: 'none', whiteSpace: 'nowrap' }}
+          style={{ fontSize: 11.5, color: '#6B5D4F', textDecoration: 'none', whiteSpace: 'nowrap' }}
         >
           Vis på kort ↗
         </a>
@@ -513,7 +513,7 @@ function KortSkeleton() {
       height: 460, width: '100%', borderRadius: 12,
       background: 'linear-gradient(135deg, #F4EFE6 0%, #E9F0EB 100%)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      color: '#8C7E74', fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+      color: '#6B5D4F', fontSize: 13, fontFamily: "'DM Sans', sans-serif",
     }}>
       Indlæser kort…
     </div>

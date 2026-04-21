@@ -193,7 +193,7 @@ function RetailerCard({
         >
           {retailer.navn}
         </h3>
-        <span style={{ fontSize: 12, color: '#8C7E74' }}>{hostname}</span>
+        <span style={{ fontSize: 13, color: '#6B5D4F' }}>{hostname}</span>
         {retailer.beskrivelse && (
           <p style={{ fontSize: 13, color: '#6B5D4F', margin: '4px 0 0', lineHeight: 1.5 }}>
             {retailer.beskrivelse}
@@ -229,7 +229,7 @@ function RetailerCard({
             )
           })}
           {visibleBrands.length > 6 && (
-            <span style={{ fontSize: 11, color: '#8C7E74', padding: '3px 4px' }}>
+            <span style={{ fontSize: 11, color: '#6B5D4F', padding: '3px 4px' }}>
               +{visibleBrands.length - 6}
             </span>
           )}
@@ -264,7 +264,7 @@ function RetailerCard({
           <span aria-hidden="true" style={{ fontSize: 12 }}>↗</span>
         </a>
       ) : (
-        <span style={{ fontSize: 12, color: '#8C7E74', fontStyle: 'italic' }}>
+        <span style={{ fontSize: 12, color: '#6B5D4F', fontStyle: 'italic' }}>
           Webshop-link utilgængeligt
         </span>
       )}
