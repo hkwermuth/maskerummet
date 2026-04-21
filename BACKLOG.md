@@ -102,6 +102,8 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - **Køb garn online**-sektion under kortet (`app/find-forhandler/OnlineRetailersSection.tsx`) — 28 danske online-forhandlere, brand-filter-chips (Drops/Permin/Filcolana + flere), direkte link til hver webshop. Data i `public.online_retailers` + `retailer_brands`-junction (17 brands, 68 koblinger). RLS offentlig SELECT. `stores.online_retailer_id` FK gør det muligt senere at linke fysiske butikker til deres webshop.
 - **Brand-filter over kortet** styrer både kort-pins, radius-søgeresultater og online-forhandler-sektion samtidigt. Re-kører RPC'en automatisk når brand skiftes efter en søgning. Tom tilstand på kort peger brugeren mod online-sektionen når et mærke ikke har fysiske koblinger.
 - **`store_brands` populeret** for 8 mærker: Permin (188), Filcolana (104), Hjertegarn (53), CaMaRose (18), Isager (18), Knitting for Olive (18), Drops (16), BC Garn (2). Total: 417 store-brand-koblinger.
+- **Brand-filter skjuler mærker uden fysiske butikker** — kun de 8 mærker ovenfor vises som chip-filter over kortet. De resterende 9 mærker (Sandnes, Hobbii, Mayflower, Holst, Önling, Ístex, Rauma, Hillesvåg, Novita) vises stadig i online-sektionens retailer-cards som brand-tags, men kan ikke filtreres på. Når fysiske butikker findes for dem, kommer chipsene tilbage automatisk.
+- **16 fysiske butikker linket til deres webshop** via `stores.online_retailer_id`: Citystoffer (×2 Aarhus), Garnværkstedet, Kreamok, Little Yarn, Maskefabrikken, Netgarn, Rito, Strikkenet (×2), Strikkestedet, Svinninge Garn, Uldfisken, Uldgalleriet, Unigarn, Woolstock. Brand-koblinger kopieret fra `store_brands` til `retailer_brands` så filter virker konsistent på tværs.
 
 ### Visualizer
 - AI farvevisualizer (`app/visualizer/page.tsx`, `YarnVisualizer.jsx`) — kræver login
@@ -144,11 +146,18 @@ Siden er implementeret teknisk, men `find_stores_near` RPC'en forudsætter at bu
   - Primært nordisk marked (Ístex, Rauma, Hillesvåg, Novita)
   - **Anbefaling:** kontakt producenterne direkte via email (striq.dk) eller implementer Playwright-scraping for SPA-sider.
 
-### LLM-crawl af butiks-websites (blokeret)
-Planlagt som automatiseret brand-klassifikation pr. butik via Claude Haiku. **Blokeret** fordi `stores.website` er tom for alle 228 butikker (tabel importeret fra Permin/Filcolana-kort uden website-data). For at låse op:
-- **Option 1:** Beriget `stores.website` via Google Places/Maps API (~$7 for 228 butikker, kræver Google Cloud key).
-- **Option 2:** Manuel registrering af populære butikkers websites.
-- Derefter kan LLM-crawl køres.
+### Google Places-berigelse (POST-TESTLAUNCH)
+`stores`-tabellen mangler websites, åbningstider, og verificeret business-status. Google Places/Maps API kan give:
+- `website` — officielle URLs (låser op for LLM-crawl af brand-info)
+- `opening_hours` — struktureret dag-for-dag
+- `business_status` — fanger permanent lukkede butikker
+- `rating` / `user_ratings_total` — social proof i kort-popup
+- `photos` — officielle butiksbilleder
+
+Pris: ~$0.017/butik × 228 ≈ $4-8. Kræver Google Cloud API key. **Ikke launch-blokerende** — nuværende 8 mærker + 16 fysisk+online-koblinger giver tilstrækkelig funktionalitet. Planlægges post-testlaunch som samlet data-berigelses-sprint.
+
+### LLM-crawl af butiks-websites (afhænger af Google Places)
+Planlagt som automatiseret brand-klassifikation pr. butik via Claude Haiku 4.5. Kan først køres efter `stores.website` er populeret (se ovenfor). Forventet resultat: yderligere 200-500 brand-koblinger + detektion af flere fysisk+online-butikker.
 
 ---
 

@@ -51,7 +51,18 @@ export function FindForhandlerClient({
   const [geoLoading, setGeoLoading] = useState(false)
   const [activeBrand, setActiveBrand] = useState<string | null>(null)
 
-  const orderedBrands = useMemo(() => orderBrands(brands), [brands])
+  // Kun mærker med mindst én fysisk butik vises i chip-listen. Mærker der
+  // kun har online-forhandlere skjules indtil vi har fysiske data for dem
+  // (resterende 9 mærker: Mayflower, Önling, Sandnes, Holst, Ístex, Rauma,
+  // Hillesvåg, Hobbii, Novita). De vises stadig i online-sektionens
+  // retailer-cards som brand-tags.
+  const brandsWithStores = useMemo(() => {
+    const slugsInStores = new Set<string>()
+    initialStores.forEach(s => s.brands.forEach(b => slugsInStores.add(b.slug)))
+    return brands.filter(b => slugsInStores.has(b.slug))
+  }, [brands, initialStores])
+
+  const orderedBrands = useMemo(() => orderBrands(brandsWithStores), [brandsWithStores])
 
   const filteredStores = useMemo(() => {
     if (!activeBrand) return initialStores

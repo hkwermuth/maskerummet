@@ -567,10 +567,16 @@ const brandDrops = makeBrand({ id: 'b-drops', slug: 'drops', name: 'Drops' })
 const brandIsager = makeBrand({ id: 'b-isager', slug: 'isager', name: 'Isager' })
 
 describe('B11 brand-filter chips over kortet', () => {
-  it('chips vises over kortet når brands-prop har værdier', () => {
+  it('chips vises over kortet når brands-prop har værdier og stores fører dem', () => {
+    const storeWithBothBrands = makeStore({
+      brands: [
+        { slug: 'drops', name: 'Drops' },
+        { slug: 'isager', name: 'Isager' },
+      ],
+    })
     render(
       <FindForhandlerClient
-        initialStores={[makeStore()]}
+        initialStores={[storeWithBothBrands]}
         brands={[brandDrops, brandIsager]}
         retailers={[]}
       />
@@ -579,6 +585,22 @@ describe('B11 brand-filter chips over kortet', () => {
     expect(screen.getByRole('button', { name: /^alle$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^drops$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^isager$/i })).toBeInTheDocument()
+  })
+
+  it('kun mærker der føres af mindst én butik vises som chip', () => {
+    // Drops føres af store; Isager gør ikke — Isager-chip skjules.
+    const storeDropsOnly = makeStore({
+      brands: [{ slug: 'drops', name: 'Drops' }],
+    })
+    render(
+      <FindForhandlerClient
+        initialStores={[storeDropsOnly]}
+        brands={[brandDrops, brandIsager]}
+        retailers={[]}
+      />
+    )
+    expect(screen.getByRole('button', { name: /^drops$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^isager$/i })).not.toBeInTheDocument()
   })
 
   it('ingen chips vises når brands-prop er tom', () => {
@@ -621,9 +643,12 @@ describe('B11 brand-filter chips over kortet', () => {
 
   it('klik på Alle-chip efter Drops nulstiller til alle chips inaktive undtagen Alle', async () => {
     const user = userEvent.setup()
+    const storeWithDrops = makeStore({
+      brands: [{ slug: 'drops', name: 'Drops' }],
+    })
     render(
       <FindForhandlerClient
-        initialStores={[makeStore()]}
+        initialStores={[storeWithDrops]}
         brands={[brandDrops, brandIsager]}
         retailers={[]}
       />
@@ -637,25 +662,4 @@ describe('B11 brand-filter chips over kortet', () => {
     expect(screen.getByRole('button', { name: /^drops$/i })).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('valg af brand hvor ingen stores → tom tilstand på kort med "vis alle butikker"-knap', async () => {
-    const user = userEvent.setup()
-    // Store har ingen brands → vil forsvinde fra kortet ved Drops-filter
-    const storeNoBrands = makeStore({ id: 'store-nobrand', brands: [] })
-
-    render(
-      <FindForhandlerClient
-        initialStores={[storeNoBrands]}
-        brands={[brandDrops]}
-        retailers={[]}
-      />
-    )
-
-    await user.click(screen.getByRole('button', { name: /^drops$/i }))
-
-    // Tom tilstand vises, ikke kortets stub
-    expect(screen.queryByTestId('danmarkskort-stub')).not.toBeInTheDocument()
-    expect(screen.getByText(/vi har ikke registreret/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /se webshops der fører/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /vis alle butikker på kortet/i })).toBeInTheDocument()
-  })
 })
