@@ -17,6 +17,9 @@ dist
 # TypeScript incremental build info
 tsconfig.tsbuildinfo
 
+# Supabase CLI temp files
+supabase/.temp/
+
 # Vite transient timestamp files
 vite.config.js.timestamp-*.mjs
 

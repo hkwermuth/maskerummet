@@ -378,7 +378,7 @@ export default function OmStriqPage() {
           </p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
             <a
-              href="mailto:info@striq.dk"
+              href="mailto:kontakt@striq.dk"
               style={{
                 background: '#FFFFFF', color: C.text,
                 padding: '10px 20px', borderRadius: 999,
@@ -387,7 +387,7 @@ export default function OmStriqPage() {
                 boxShadow: '0 2px 8px rgba(48,34,24,.10)',
               }}
             >
-              ✉️  info@striq.dk
+              ✉️  kontakt@striq.dk
             </a>
             <a
               href="https://instagram.com/nellyeknit"

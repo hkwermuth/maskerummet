@@ -19,7 +19,7 @@ const SEKTIONER = [
   {
     titel: 'Dataansvarlig',
     indhold: (
-      <p>STRIQ drives af Hannah Kamstrup Wermuth. Du kan kontakte os på <a href="mailto:hej@striq.dk" style={{ color: '#9B6272', textDecoration: 'underline' }}>hej@striq.dk</a>.</p>
+      <p>STRIQ drives af Hannah Kamstrup Wermuth. Du kan kontakte os på <a href="mailto:kontakt@striq.dk" style={{ color: '#9B6272', textDecoration: 'underline' }}>kontakt@striq.dk</a>.</p>
     ),
   },
   {
@@ -57,7 +57,7 @@ const SEKTIONER = [
   {
     titel: 'Opbevaring og sletning',
     indhold: (
-      <p>Dine data opbevares så længe du har en konto hos STRIQ. Hvis du ønsker at slette din konto og alle tilhørende data, kan du skrive til <a href="mailto:hej@striq.dk" style={{ color: '#9B6272', textDecoration: 'underline' }}>hej@striq.dk</a>, så sletter vi alt inden 30 dage.</p>
+      <p>Dine data opbevares så længe du har en konto hos STRIQ. Hvis du ønsker at slette din konto og alle tilhørende data, kan du skrive til <a href="mailto:kontakt@striq.dk" style={{ color: '#9B6272', textDecoration: 'underline' }}>kontakt@striq.dk</a>, så sletter vi alt inden 30 dage.</p>
     ),
   },
   {
@@ -72,7 +72,7 @@ const SEKTIONER = [
           <li><strong>Dataportabilitet</strong> — få dine data udleveret i et læsbart format.</li>
           <li><strong>Klage</strong> — du kan klage til <a href="https://www.datatilsynet.dk" target="_blank" rel="noopener noreferrer" style={{ color: '#9B6272', textDecoration: 'underline' }}>Datatilsynet</a>.</li>
         </ul>
-        <p>Kontakt os på <a href="mailto:hej@striq.dk" style={{ color: '#9B6272', textDecoration: 'underline' }}>hej@striq.dk</a> for at bruge dine rettigheder.</p>
+        <p>Kontakt os på <a href="mailto:kontakt@striq.dk" style={{ color: '#9B6272', textDecoration: 'underline' }}>kontakt@striq.dk</a> for at bruge dine rettigheder.</p>
       </>
     ),
   },

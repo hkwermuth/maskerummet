@@ -16,7 +16,7 @@ export function Footer() {
       </div>
       <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
         <a href="/privatlivspolitik" style={{ color: '#8C7E74', textDecoration: 'underline' }}>Privatlivspolitik</a>
-        <a href="mailto:hej@striq.dk" style={{ color: '#8C7E74', textDecoration: 'underline' }}>hej@striq.dk</a>
+        <a href="mailto:kontakt@striq.dk" style={{ color: '#8C7E74', textDecoration: 'underline' }}>kontakt@striq.dk</a>
       </div>
     </footer>
   )

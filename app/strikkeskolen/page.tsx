@@ -142,10 +142,10 @@ export default function StrikkekolenPage() {
             Har du forslag til guides eller vil dele din viden?
           </p>
           <a
-            href="mailto:hej@striq.dk"
+            href="mailto:kontakt@striq.dk"
             style={{ fontSize: 14, fontWeight: 500, color: C.sage, textDecoration: 'underline' }}
           >
-            Skriv til os på hej@striq.dk
+            Skriv til os på kontakt@striq.dk
           </a>
         </div>
       </div>
