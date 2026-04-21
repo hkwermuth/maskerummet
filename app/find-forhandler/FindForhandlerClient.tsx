@@ -7,7 +7,7 @@ import { HeroIllustration } from '@/components/layout/HeroIllustration'
 import { searchStoresNear, type StoreBase, type StoreResult } from '@/lib/data/stores'
 import type { Brand, OnlineRetailer } from '@/lib/data/retailers'
 import type { DanmarksKortHandle } from './DanmarksKortClient'
-import { FilterChip, OnlineRetailersSection, orderBrands } from './OnlineRetailersSection'
+import { FilterChip, HIDDEN_BRAND_SLUGS, OnlineRetailersSection, orderBrands } from './OnlineRetailersSection'
 
 const DanmarksKort = dynamic(() => import('./DanmarksKortClient'), {
   ssr: false,
@@ -51,15 +51,15 @@ export function FindForhandlerClient({
   const [geoLoading, setGeoLoading] = useState(false)
   const [activeBrand, setActiveBrand] = useState<string | null>(null)
 
-  // Kun mærker med mindst én fysisk butik vises i chip-listen. Mærker der
-  // kun har online-forhandlere skjules indtil vi har fysiske data for dem
-  // (resterende 9 mærker: Mayflower, Önling, Sandnes, Holst, Ístex, Rauma,
-  // Hillesvåg, Hobbii, Novita). De vises stadig i online-sektionens
-  // retailer-cards som brand-tags.
+  // Kun mærker med mindst én fysisk butik vises i chip-listen (mærker uden
+  // fysiske butikker kan stadig have online-forhandlere — de vises bare ikke
+  // som filter-chip). Derudover filtreres HIDDEN_BRAND_SLUGS fra — en manuelt
+  // kurateret liste over mærker der pt. er for få forhandlere af til at være
+  // meningsfulde som filter.
   const brandsWithStores = useMemo(() => {
     const slugsInStores = new Set<string>()
     initialStores.forEach(s => s.brands.forEach(b => slugsInStores.add(b.slug)))
-    return brands.filter(b => slugsInStores.has(b.slug))
+    return brands.filter(b => slugsInStores.has(b.slug) && !HIDDEN_BRAND_SLUGS.has(b.slug))
   }, [brands, initialStores])
 
   const orderedBrands = useMemo(() => orderBrands(brandsWithStores), [brandsWithStores])

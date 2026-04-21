@@ -11,6 +11,11 @@ type Props = {
 
 export const FEATURED_BRAND_SLUGS = ['drops', 'permin', 'filcolana'] as const
 
+// Mærker der midlertidigt skjules overalt på siden (for få forhandlere, lille
+// dansk tilstedeværelse). Data bliver i databasen — kan reaktiveres ved at
+// fjerne slug herfra.
+export const HIDDEN_BRAND_SLUGS = new Set(['hillesvag', 'holst', 'hobbii', 'novita'])
+
 // Sortér brands så Drops, Permin, Filcolana ligger først; derefter alfabetisk.
 export function orderBrands(brands: Brand[]): Brand[] {
   const featured = FEATURED_BRAND_SLUGS
@@ -196,12 +201,15 @@ function RetailerCard({
         )}
       </div>
 
-      {retailer.brands.length > 0 && (
+      {(() => {
+        const visibleBrands = retailer.brands.filter(b => !HIDDEN_BRAND_SLUGS.has(b.slug))
+        if (visibleBrands.length === 0) return null
+        return (
         <div
           aria-label="Mærker"
           style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}
         >
-          {retailer.brands.slice(0, 6).map(brand => {
+          {visibleBrands.slice(0, 6).map(brand => {
             const highlighted = activeBrandSlug === brand.slug
             return (
               <span
@@ -220,13 +228,14 @@ function RetailerCard({
               </span>
             )
           })}
-          {retailer.brands.length > 6 && (
+          {visibleBrands.length > 6 && (
             <span style={{ fontSize: 11, color: '#8C7E74', padding: '3px 4px' }}>
-              +{retailer.brands.length - 6}
+              +{visibleBrands.length - 6}
             </span>
           )}
         </div>
-      )}
+        )
+      })()}
 
       {safeHref ? (
         <a
