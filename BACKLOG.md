@@ -128,6 +128,17 @@ Ingen `dark:`-klasser i kodebasen. Dark mode er ikke startet. Sørg for at OS da
 ### Forhandlersøgning — data mangler sandsynligvis
 Siden er implementeret teknisk, men `find_stores_near` RPC'en forudsætter at butiks-data er indlæst i databasen. Verificer at der faktisk er data.
 
+### "Min placering" — IP-fallback fejler ved gentagne radius-skift
+Når brugeren klikker "📍 Min placering" og derefter skifter radius (10/25/50 km) flere gange, fejler IP-lookupet (`ipapi.co/json/` rate-limit eller intermittent fejl). Brugerens oprindelige IP-lokation bliver tabt, og søgningen stopper med "Kunne ikke finde din placering"-fejl.
+
+**Forslag til alternativ "Min placering":**
+- Cache brugerens lat/lng i `sessionStorage` efter første succes — ingen nye IP-lookups ved radius-skift.
+- Eller brug `navigator.geolocation.watchPosition` med `maximumAge: 300000` så browseren selv genbruger lokation.
+- Evt. serverside proxy-endpoint der cacher IP→lokation for 1 time.
+- Fallback til "Skriv din by" med bedre fejlbesked når IP-lookup fejler.
+
+Ikke launch-blokerende — kan løses efter testbruger-launch. `FindForhandlerClient.tsx` — `tryIpFallback()`-funktionen.
+
 ### Online-forhandlere — admin og vedligehold
 - Seed-data er manuelt indsamlet april 2026 (28 shops) — `sidst_tjekket`-kolonnen på hver række markerer verificerings-dato. Kvartalsvis manuel gennemgang anbefalet indtil admin-UI er på plads.
 - Ingen admin-UI endnu: tilføjelse/redigering kræver ny SQL-migration eller direkte service_role-query.
