@@ -221,10 +221,14 @@ export function FindForhandlerClient({
               fontSize: 'clamp(28px, 4.2vw, 38px)',
               fontWeight: 600, color: '#302218', margin: 0, letterSpacing: '.01em',
             }}>
-              Find garnbutikker nær dig
+              Find garnbutikker nær dig eller online
             </h1>
             <p style={{ fontSize: 14.5, color: '#6B5D4F', margin: '6px 0 0', maxWidth: 640, lineHeight: 1.55 }}>
-              Søg på by, brug din placering eller udforsk kortet — vi har 200+ danske garnbutikker med.
+              Søg på by, brug din placering eller udforsk kortet. Du kan også{' '}
+              <a href="#online-forhandlere" style={{ color: '#61846D', fontWeight: 500 }}>
+                gå direkte til online-oversigten
+              </a>{' '}
+              og se hvem der forhandler dit yndlingsmærke.
             </p>
           </div>
           <div className="forhandler-hero-art" style={{ flexShrink: 0, width: 220, maxWidth: '100%' }}>

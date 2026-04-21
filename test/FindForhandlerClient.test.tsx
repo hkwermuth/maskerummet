@@ -92,7 +92,10 @@ describe('B1 hero h1 and subtitle', () => {
   it('renders the subtitle text', () => {
     render(<FindForhandlerClient initialStores={[makeStore()]} />)
     expect(
-      screen.getByText(/Søg på by, brug din placering eller udforsk kortet — vi har 200\+ danske garnbutikker med\./i)
+      screen.getByText(/søg på by, brug din placering eller udforsk kortet/i)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: /gå direkte til online-oversigten/i })
     ).toBeInTheDocument()
   })
 })
