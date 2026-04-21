@@ -2,7 +2,7 @@
 
 Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
-**Sidst synkroniseret:** 2026-04-20 (Fællesskabet implementeret + "Prøv garn"-åbning + slank drop-zone)
+**Sidst synkroniseret:** 2026-04-21 (Find forhandler-udvidelse: online-sektion, brand-filter på kort + online, LLM-klassifikation)
 
 ---
 
@@ -97,13 +97,33 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - **Strikkeskolen** (`app/strikkeskolen/page.tsx`) — "kommer snart"-side med planlagte guides, FAQ-link
 - Idéboard / kanban (`app/ideer/page.tsx`) — admin-only
 
-### Forhandlersøgning
+### Forhandlersøgning (udbygget 2026-04-21)
 - Find forhandler nær dig (`app/find-forhandler/page.tsx`) — geolokation + by-søgning, Supabase RPC `find_stores_near`, brand-filter
-- **Køb garn online**-sektion under kortet (`app/find-forhandler/OnlineRetailersSection.tsx`) — 28 danske online-forhandlere, brand-filter-chips (Drops/Permin/Filcolana + flere), direkte link til hver webshop. Data i `public.online_retailers` + `retailer_brands`-junction (17 brands, 68 koblinger). RLS offentlig SELECT. `stores.online_retailer_id` FK gør det muligt senere at linke fysiske butikker til deres webshop.
-- **Brand-filter over kortet** styrer både kort-pins, radius-søgeresultater og online-forhandler-sektion samtidigt. Re-kører RPC'en automatisk når brand skiftes efter en søgning. Tom tilstand på kort peger brugeren mod online-sektionen når et mærke ikke har fysiske koblinger.
-- **`store_brands` populeret** for 8 mærker: Permin (188), Filcolana (104), Hjertegarn (53), CaMaRose (18), Isager (18), Knitting for Olive (18), Drops (16), BC Garn (2). Total: 417 store-brand-koblinger.
-- **Brand-filter skjuler mærker uden fysiske butikker** — kun de 8 mærker ovenfor vises som chip-filter over kortet. De resterende 9 mærker (Sandnes, Hobbii, Mayflower, Holst, Önling, Ístex, Rauma, Hillesvåg, Novita) vises stadig i online-sektionens retailer-cards som brand-tags, men kan ikke filtreres på. Når fysiske butikker findes for dem, kommer chipsene tilbage automatisk.
-- **16 fysiske butikker linket til deres webshop** via `stores.online_retailer_id`: Citystoffer (×2 Aarhus), Garnværkstedet, Kreamok, Little Yarn, Maskefabrikken, Netgarn, Rito, Strikkenet (×2), Strikkestedet, Svinninge Garn, Uldfisken, Uldgalleriet, Unigarn, Woolstock. Brand-koblinger kopieret fra `store_brands` til `retailer_brands` så filter virker konsistent på tværs.
+- **Hero-tekst** — "Find garnbutikker nær dig eller online" med direkte ankerlink til online-sektionen
+- **Brand-filter over kortet** (`FindForhandlerClient.tsx`) — ét filter styrer samtidigt kort-pins, radius-søgeresultater OG online-forhandler-sektionen. Re-kører RPC automatisk når brand skiftes. Chip-listen viser kun mærker med fysiske butikker og filtrerer `HIDDEN_BRAND_SLUGS` (Hobbii, Novita, Holst, Hillesvåg) fra.
+- **"Køb garn online"-sektion** under kortet (`OnlineRetailersSection.tsx`) — **113 webshops** leverer til DK, alfabetisk sorteret, brand-tags pr. butik, XSS-sikret URL-validering på alle eksterne links (`target="_blank"` + `rel="noopener noreferrer"` + `safeWebUrl()`).
+- **Fysisk + online-kobling** — 16 butikker er linket til deres webshop via `stores.online_retailer_id` (Woolstock, Uldgalleriet, Strikkestedet, Maskefabrikken, Sommerfuglen, Uldfisken m.fl.). Brand-tags propageres begge veje — fra store_brands til retailer_brands og tilbage efter LLM-klassifikation.
+- **Kontrast-forbedringer** — lys-grå #8C7E74 erstattet med mørkere #6B5D4F overalt (kontrastforhold 4.5:1 → 6:1 mod hvid). Resultat-meta og webshop-tæller matcher nu H2-overskriftens styling (#302218, 15px, fontWeight 500).
+
+#### Database-tabeller (tilføjet 2026-04-21)
+- `public.brands` — kanonisk 17 garn-mærker (slug, name, origin, website, updated_at)
+- `public.online_retailers` — **113 webshops** (slug, navn, url, land, leverer_til_dk, sidst_tjekket)
+- `public.retailer_brands` — junction (retailer ↔ brand), **403 koblinger**
+- `public.store_brands` — junction (store ↔ brand), **579 koblinger** efter bagud-propagation fra webshops
+- `public.stores.online_retailer_id` — nullable FK, linker fysisk butik til webshop
+- RLS: offentlig SELECT på alle, ingen anon writes. `GRANT SELECT` tilføjet eksplicit (ellers blokeret trods policy).
+
+#### Datagrundlag
+- 17 brands, 228 fysiske butikker, 113 webshops
+- **13 af 17 mærker** har fysiske butikker (chip-synlige). 4 skjult via `HIDDEN_BRAND_SLUGS`.
+- **Top mærker (fysiske butikker):** Permin (197), Filcolana (117), Hjertegarn (59), Isager (41), CaMaRose (32), KfO (29), Sandnes (26), Drops (23), Rauma (16), Ístex (11), BC Garn (10), Mayflower (8), Önling (7).
+- Online-dækning udvidet via **LLM-klassifikation** (Claude Haiku 4.5): analyserede HTML + navigation for hver af de 113 webshops, identificerede mærker fra navigationsstrukturen. Tilføjede 131 retailer_brands-koblinger (258 → 389, derefter 403 efter propagation).
+
+#### Værktøjer i `scripts/`
+- `find-webshops.mjs` — webshop-detektion for fysiske butikker (domain-guessing + HTML-signal-analyse: "læg i kurv", Shopify/Woo-tags, kr-priser)
+- `classify-retailer-brands.mjs` — LLM-klassifikation via Claude Haiku 4.5, rate-limit retry, ONLY_MISSING_BRANDS=1 for delta-kørsel
+- `check-retailer-links.mjs` — bulk HTTP-check af alle online-URLs (110/113 OK, 3× 429 fra shops med bot-beskyttelse)
+- `generate-webshop-migration.mjs` — genererer SQL fra crawl-output
 
 ### Visualizer
 - AI farvevisualizer (`app/visualizer/page.tsx`, `YarnVisualizer.jsx`) — kræver login
