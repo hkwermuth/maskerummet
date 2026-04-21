@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useSupabase } from '@/lib/supabase/client'
+import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 import { toDb, fromDb } from '@/lib/supabase/mappers'
 import { uploadFile as uploadFileRaw } from '@/lib/supabase/storage'
 import {
@@ -16,6 +17,7 @@ import BarcodeScanner from './BarcodeScanner'
 import BrugNoeglerModal from './BrugNoeglerModal'
 import { detectColorFamily, COLOR_FAMILY_LABELS, COLOR_FAMILY_DEFAULT_HEX, yarnMatchesStashSearch } from '@/lib/data/colorFamilies'
 import { exportGarnlager } from '@/lib/export/exportGarnlager'
+import { validateForm } from '@/lib/validators/yarnForm'
 
 const WEIGHTS  = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
 const STATUSES = ['På lager', 'I brug', 'Brugt op', 'Ønskeliste']
@@ -69,13 +71,22 @@ function normalizeUserHexInput(raw) {
 
 // ─── Garn-katalog søgning (Supabase `yarns_full`) ─────────────────────────────
 
-function YarnCatalogSearch({ value, onChange, onSelectYarn, placeholder }) {
+function YarnCatalogSearch({ value, onChange, onSelectYarn, placeholder, autoFocus }) {
   const supabase = useSupabase()
   const [open, setOpen] = useState(false)
   const [hits, setHits] = useState([])
   const [loading, setLoading] = useState(false)
   const wrapRef = useRef(null)
+  const inputRef = useRef(null)
   const debounceRef = useRef(null)
+
+  useEffect(() => {
+    if (!autoFocus) return
+    const el = inputRef.current
+    if (!el) return
+    // preventScroll undgår ubehagelig scroll-jump når modal åbner
+    try { el.focus({ preventScroll: true }) } catch { el.focus() }
+  }, [autoFocus])
 
   useEffect(() => {
     const q = (value || '').trim()
@@ -106,6 +117,7 @@ function YarnCatalogSearch({ value, onChange, onSelectYarn, placeholder }) {
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
       <input
+        ref={inputRef}
         value={value}
         onChange={e => onChange(e.target.value)}
         onFocus={() => hits.length > 0 && setOpen(true)}
@@ -160,6 +172,7 @@ const QUICK_START_STEPS = [
 ]
 
 function QuickStartModal({ onClose }) {
+  useEscapeKey(true, onClose)
   return (
     <div
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
@@ -303,13 +316,17 @@ export default function Garnlager({ user, onRequestLogin }) {
   const [showScanner, setShowScanner] = useState(false)
   const [brugModal, setBrugModal] = useState(null) // yarn object or null
   const [saveError, setSaveError] = useState(null)
+  const [fieldErrors, setFieldErrors] = useState({})
   const [confirmDel, setConfirmDel] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     setConfirmDel(false)
     setDeleting(false)
+    setFieldErrors({})
   }, [modal])
+
+  useEscapeKey(modal !== null && !brugModal && !showScanner, () => setModal(null))
 
   const [catalogQuery, setCatalogQuery] = useState('')
   const [selectedYarn, setSelectedYarn] = useState(null)
@@ -342,8 +359,17 @@ export default function Garnlager({ user, onRequestLogin }) {
   }
 
   // ── CRUD ─────────────────────────────────────────────────────────────────────
+  const formErrors = validateForm(form)
+  const isFormValid = Object.keys(formErrors).length === 0
+
   async function save() {
     setSaveError(null)
+    const errs = validateForm(form)
+    if (Object.keys(errs).length > 0) {
+      setFieldErrors(errs)
+      return
+    }
+    setFieldErrors({})
     try {
       // Auto-detect color category from color name if not manually set
       const colorCategory = form.colorCategory || detectColorFamily(form.colorName) || null
@@ -614,12 +640,14 @@ export default function Garnlager({ user, onRequestLogin }) {
           {saveMsg && (
             <span style={{ fontSize: '11px', color: saving ? '#61846D' : '#4A8A6A', marginRight: 4 }}>{saveMsg}</span>
           )}
-          <button
-            onClick={() => setShowScanner(true)}
-            style={{ background: '#FFFFFF', border: '1px solid #61846D', borderRadius: '6px', padding: '6px 11px', fontSize: '12px', color: '#2C4A3E', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px' }}
-          >
-            <span>📷</span> Skann garn
-          </button>
+          {yarns.length > 0 && (
+            <button
+              onClick={() => setShowScanner(true)}
+              style={{ background: '#FFFFFF', border: '1px solid #61846D', borderRadius: '6px', padding: '6px 11px', fontSize: '12px', color: '#2C4A3E', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px' }}
+            >
+              <span>📷</span> Skann garn
+            </button>
+          )}
           <button
             onClick={async () => {
               const result = await exportGarnlager(supabase)
@@ -670,7 +698,7 @@ export default function Garnlager({ user, onRequestLogin }) {
             key={f}
             onClick={() => setFilterFiber(filterFiber.toLowerCase() === f.toLowerCase() ? '' : f)}
             style={{
-              padding: '4px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer',
+              minHeight: '36px', padding: '6px 14px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer',
               fontFamily: "'DM Sans', sans-serif", border: '1px solid',
               background: filterFiber.toLowerCase() === f.toLowerCase() ? '#2C4A3E' : 'transparent',
               color:      filterFiber.toLowerCase() === f.toLowerCase() ? '#fff' : '#6B5D4F',
@@ -782,7 +810,7 @@ export default function Garnlager({ user, onRequestLogin }) {
               {modal === 'add' ? 'Tilføj garn' : 'Rediger garn'}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px' }}>
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <Field label="Søg i garn-katalog">
                   <YarnCatalogSearch
@@ -790,6 +818,7 @@ export default function Garnlager({ user, onRequestLogin }) {
                     onChange={setCatalogQuery}
                     onSelectYarn={handleSelectCatalogYarn}
                     placeholder="Skriv mærke eller garnnavn fra garn-kataloget…"
+                    autoFocus={modal === 'add'}
                   />
                 </Field>
                 {form.catalogYarnId && (
@@ -833,21 +862,34 @@ export default function Garnlager({ user, onRequestLogin }) {
                 </Field>
               )}
               {[
-                ['name', 'Garnnavn'], ['brand', 'Mærke'],
-                ['metrage', 'Løbelængde/nøgle (m)'],
-                ['pindstr', 'Pindstørrelse'], ['antal', 'Antal nøgler'],
-              ].map(([k, l]) => (
-                <Field key={k} label={l}>
-                  <input
-                    value={form[k] ?? ''}
-                    onChange={e => setF(k, e.target.value)}
-                    type={k === 'antal' || k === 'metrage' ? 'number' : 'text'}
-                    step={k === 'antal' ? '0.25' : k === 'metrage' ? '1' : undefined}
-                    min={k === 'antal' ? '0' : undefined}
-                    style={inputStyle}
-                  />
-                </Field>
-              ))}
+                ['name', 'Garnnavn', true], ['brand', 'Mærke', true],
+                ['metrage', 'Løbelængde/nøgle (m)', false],
+                ['pindstr', 'Pindstørrelse', false], ['antal', 'Antal nøgler', false],
+              ].map(([k, l, required]) => {
+                const err = fieldErrors[k]
+                return (
+                  <Field key={k} label={required ? `${l} *` : l}>
+                    <input
+                      value={form[k] ?? ''}
+                      onChange={e => {
+                        setF(k, e.target.value)
+                        if (err) setFieldErrors(prev => { const n = { ...prev }; delete n[k]; return n })
+                      }}
+                      type={k === 'antal' || k === 'metrage' ? 'number' : 'text'}
+                      step={k === 'antal' ? '0.25' : k === 'metrage' ? '1' : undefined}
+                      min={k === 'antal' ? '0' : undefined}
+                      aria-invalid={err ? true : undefined}
+                      aria-describedby={err ? `err-${k}` : undefined}
+                      style={err ? { ...inputStyle, borderColor: '#8B3A2A' } : inputStyle}
+                    />
+                    {err && (
+                      <div id={`err-${k}`} role="alert" style={{ fontSize: '11px', color: '#8B3A2A', marginTop: '2px' }}>
+                        {err}
+                      </div>
+                    )}
+                  </Field>
+                )
+              })}
 
               {/* Fiber med hurtigvalg */}
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -867,7 +909,7 @@ export default function Garnlager({ user, onRequestLogin }) {
                         type="button"
                         onClick={() => toggleFiberInForm(f)}
                         style={{
-                          padding: '3px 10px', borderRadius: '20px', fontSize: '11px', cursor: 'pointer',
+                          minHeight: '32px', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer',
                           fontFamily: "'DM Sans', sans-serif", border: '1px solid',
                           background: active ? '#2C4A3E' : 'transparent',
                           color:      active ? '#fff'    : '#6B5D4F',
@@ -972,9 +1014,10 @@ export default function Garnlager({ user, onRequestLogin }) {
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input
                     type="color"
+                    aria-label="Vælg farve"
                     value={validHexForColorInput(form.hex)}
                     onChange={e => setF('hex', e.target.value)}
-                    style={{ width: '44px', height: '34px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px' }}
+                    style={{ width: '48px', height: '44px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px' }}
                   />
                   <input
                     value={form.hex || ''}
@@ -982,7 +1025,7 @@ export default function Garnlager({ user, onRequestLogin }) {
                     placeholder="#RRGGBB"
                     style={{ ...inputStyle, flex: 1 }}
                   />
-                  <div style={{ width: '34px', height: '34px', borderRadius: '6px', background: (form.hex && form.hex.trim()) ? form.hex : '#D0C8BA', border: '1px solid #D0C8BA', flexShrink: 0 }} />
+                  <div style={{ width: '44px', height: '44px', borderRadius: '6px', background: (form.hex && form.hex.trim()) ? form.hex : '#D0C8BA', border: '1px solid #D0C8BA', flexShrink: 0 }} />
                 </div>
               </div>
 
@@ -1089,7 +1132,20 @@ export default function Garnlager({ user, onRequestLogin }) {
               <button onClick={() => setModal(null)} style={{ padding: '8px 14px', border: '1px solid #D0C8BA', borderRadius: '6px', background: 'transparent', fontSize: '13px', cursor: 'pointer', color: '#6B5D4F', fontFamily: "'DM Sans', sans-serif" }}>
                 Annuller
               </button>
-              <button onClick={save} style={{ padding: '8px 18px', background: '#2C4A3E', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+              <button
+                onClick={save}
+                disabled={!isFormValid}
+                aria-disabled={!isFormValid}
+                style={{
+                  padding: '8px 18px',
+                  background: isFormValid ? '#2C4A3E' : '#8AAAA0',
+                  color: '#fff', border: 'none', borderRadius: '6px',
+                  fontSize: '13px', fontWeight: 500,
+                  cursor: isFormValid ? 'pointer' : 'not-allowed',
+                  opacity: isFormValid ? 1 : 0.7,
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
                 {modal === 'add' ? 'Tilføj' : 'Gem ændringer'}
               </button>
             </div>

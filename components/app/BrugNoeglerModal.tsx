@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useSupabase } from '@/lib/supabase/client'
+import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 import { toUsageDb } from '@/lib/supabase/mappers'
 import { uploadFile } from '@/lib/supabase/storage'
 
@@ -73,6 +74,7 @@ export default function BrugNoeglerModal({
   onSaved: (usageRow: any, newQty: number, newStatus: string) => void
 }) {
   const supabase = useSupabase()
+  useEscapeKey(true, onClose)
   const today = new Date().toISOString().slice(0, 10)
 
   const [projects, setProjects] = useState<Project[]>([])
@@ -216,7 +218,7 @@ export default function BrugNoeglerModal({
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <Field label="Projektnavn"><input value={newProject.title} onChange={e => setNP('title', e.target.value)} placeholder="F.eks. Bluse" style={inputStyle} /></Field>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
                   <Field label="Dato"><input type="date" value={newProject.usedAt} onChange={e => setNP('usedAt', e.target.value)} style={inputStyle} /></Field>
                   <Field label="Pindestørrelse"><input value={newProject.needleSize} onChange={e => setNP('needleSize', e.target.value)} placeholder="mm" style={inputStyle} /></Field>
                 </div>
@@ -226,7 +228,7 @@ export default function BrugNoeglerModal({
             )}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             <Field label={`Antal nøgler brugt (max ${maxQty})`}>
               <input type="number" step="0.25" min="0.25" max={maxQty} value={form.quantityUsed} onChange={e => setF('quantityUsed', parseFloat(e.target.value))} style={inputStyle} />
             </Field>
@@ -237,7 +239,7 @@ export default function BrugNoeglerModal({
             <input value={form.usedFor} onChange={e => setF('usedFor', e.target.value)} placeholder="F.eks. Sommersweater, hue til børn..." style={inputStyle} />
           </Field>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             <Field label="Pindestørrelse brugt"><input value={form.needleSize} onChange={e => setF('needleSize', e.target.value)} placeholder={yarn.pindstr || 'mm'} style={inputStyle} /></Field>
             <Field label="Strikket sammen med"><input value={form.heldWith} onChange={e => setF('heldWith', e.target.value)} placeholder="F.eks. Bella 883174" style={inputStyle} /></Field>
           </div>

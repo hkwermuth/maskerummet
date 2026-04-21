@@ -283,7 +283,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
 
           {editing ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
                 <div>
                   <Label>Dato</Label>
                   <input type="date" value={form.usedAt} onChange={e => setF('usedAt', e.target.value)} style={inputStyle} />
@@ -339,7 +339,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
             </div>
           ) : (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '16px' }}>
                 {entry.needle_size && (
                   <div>
                     <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '3px' }}>Pindestørrelse</div>
@@ -562,7 +562,7 @@ function NytProjektModal({ user, onClose, onSaved }) {
             <input value={form.title} onChange={e => setF('title', e.target.value)} placeholder="F.eks. Sommersweater, hue til børn..." style={inputStyle} />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px' }}>
             <div>
               <Label>Pindestørrelse</Label>
               <input value={form.needleSize} onChange={e => setF('needleSize', e.target.value)} placeholder="mm" style={inputStyle} />

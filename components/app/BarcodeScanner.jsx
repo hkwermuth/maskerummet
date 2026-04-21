@@ -4,6 +4,7 @@ import { BrowserMultiFormatReader } from '@zxing/library'
 import { lookupByBarcode } from '@/lib/data/perminCatalog'
 import { lookupTiliaByBarcode } from '@/lib/data/filcolanaCatalog'
 import { useSupabase } from '@/lib/supabase/client'
+import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 import { resolveBarcodeToCatalog, applyCatalogYarnColorToForm, displayYarnName } from '@/lib/catalog'
 
 function lookupAllCatalogs(code) {
@@ -12,6 +13,7 @@ function lookupAllCatalogs(code) {
 
 export default function BarcodeScanner({ onClose, onAddToLager }) {
   const supabase = useSupabase()
+  useEscapeKey(true, onClose)
   const videoRef = useRef(null)
   const readerRef = useRef(null)
   const lastCodeRef = useRef(null)

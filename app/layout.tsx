@@ -4,6 +4,7 @@ import { BackgroundCarousel } from '@/components/layout/BackgroundCarousel'
 import { Nav } from '@/components/layout/Nav'
 import { Footer } from '@/components/layout/Footer'
 import { HashRedirect } from '@/components/layout/HashRedirect'
+import { OnboardingGate } from '@/components/app/OnboardingGate'
 
 export const metadata: Metadata = {
   title: {
@@ -48,6 +49,7 @@ export default function RootLayout({
           </main>
           <Footer />
         </div>
+        <OnboardingGate />
       </body>
     </html>
   )

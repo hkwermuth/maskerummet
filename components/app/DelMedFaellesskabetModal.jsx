@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useSupabase } from '@/lib/supabase/client'
+import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 import { PROJECT_TYPES, PROJECT_TYPE_LABELS } from '@/lib/types'
 import { fetchOwnProfile, shareProject, unshareProject } from '@/lib/community'
 
@@ -40,9 +41,10 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
     return () => { active = false }
   }, [supabase, user.id])
 
+  useEscapeKey(true, onClose)
+
   useEffect(() => {
     function onKey(e) {
-      if (e.key === 'Escape') { onClose(); return }
       if (e.key !== 'Tab') return
       const root = dialogRef.current
       if (!root) return
@@ -62,7 +64,7 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
     document.addEventListener('keydown', onKey)
     dialogRef.current?.focus()
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [])
 
   async function handleShare() {
     if (!projectType) { setError('Vælg en projekttype.'); return }
@@ -163,7 +165,7 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
             <div>
               <Label required>Opskriftens navn</Label>
               <input value={patternName} onChange={e => setPatternName(e.target.value)} placeholder="Fx Sortie" style={inputStyle} />

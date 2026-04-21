@@ -99,7 +99,7 @@ export async function fetchOwnProfile(
 ) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,display_name,created_at,updated_at')
+    .select('id,display_name,onboarded_at,created_at,updated_at')
     .eq('id', userId)
     .maybeSingle()
   if (error) {
@@ -107,4 +107,19 @@ export async function fetchOwnProfile(
     return null
   }
   return data
+}
+
+export async function markOnboarded(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .upsert(
+      { id: userId, onboarded_at: new Date().toISOString() },
+      { onConflict: 'id' },
+    )
+  if (error) {
+    console.error('markOnboarded', error)
+  }
 }
