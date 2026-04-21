@@ -53,6 +53,7 @@ vi.mock('@/lib/data/stores', async (importOriginal) => {
 // Import after mocks
 import { FindForhandlerClient } from '@/app/find-forhandler/FindForhandlerClient'
 import type { StoreBase, StoreResult } from '@/lib/data/stores'
+import type { Brand, OnlineRetailer } from '@/lib/data/retailers'
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -68,6 +69,7 @@ const makeStore = (overrides: Partial<StoreBase> = {}): StoreBase => ({
   website: 'https://garnbutikken.dk',
   lat: 55.7,
   lng: 12.6,
+  brands: [],
   ...overrides,
 })
 
@@ -173,7 +175,7 @@ describe('B4 no geolocation support falls back to IP lookup', () => {
     // Wait for fetch + search
     await vi.waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('https://ipapi.co/json/')
-      expect(mockSearch).toHaveBeenCalledWith(expect.anything(), { lat: 55.68, lng: 12.57, radius: 25 })
+      expect(mockSearch).toHaveBeenCalledWith(expect.anything(), { lat: 55.68, lng: 12.57, radius: 25, brandSlug: null })
     })
 
     // Label should mention "via IP"
@@ -253,7 +255,7 @@ describe('B6 geolocation error code 2 (position unavailable) falls back to IP', 
 
     await vi.waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('https://ipapi.co/json/')
-      expect(mockSearch).toHaveBeenCalledWith(expect.anything(), { lat: 56.15, lng: 10.21, radius: 25 })
+      expect(mockSearch).toHaveBeenCalledWith(expect.anything(), { lat: 56.15, lng: 10.21, radius: 25, brandSlug: null })
     })
   })
 
@@ -298,7 +300,7 @@ describe('B7 geolocation error code 3 (timeout) falls back to IP', () => {
 
     await vi.waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('https://ipapi.co/json/')
-      expect(mockSearch).toHaveBeenCalledWith(expect.anything(), { lat: 55.40, lng: 10.39, radius: 25 })
+      expect(mockSearch).toHaveBeenCalledWith(expect.anything(), { lat: 55.40, lng: 10.39, radius: 25, brandSlug: null })
     })
   })
 })
@@ -528,5 +530,131 @@ describe('B10 StoreCard shows all required fields', () => {
 
     await screen.findByText('Test Garnbutik')
     expect(screen.queryByRole('link', { name: /åbn website/i })).not.toBeInTheDocument()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// B11: Brand-filter chips over kortet (styret af FindForhandlerClient)
+// ---------------------------------------------------------------------------
+
+function makeBrand(overrides: Partial<Brand> = {}): Brand {
+  return {
+    id: 'brand-1',
+    slug: 'some-brand',
+    name: 'Some Brand',
+    origin: null,
+    website: null,
+    ...overrides,
+  }
+}
+
+function makeRetailer(overrides: Partial<OnlineRetailer> = {}): OnlineRetailer {
+  return {
+    id: 'retailer-1',
+    slug: 'garnbutik',
+    navn: 'Garnbutik Online',
+    url: 'https://garnbutik.dk',
+    beskrivelse: null,
+    land: 'DK',
+    leverer_til_dk: true,
+    sidst_tjekket: null,
+    brands: [],
+    ...overrides,
+  }
+}
+
+const brandDrops = makeBrand({ id: 'b-drops', slug: 'drops', name: 'Drops' })
+const brandIsager = makeBrand({ id: 'b-isager', slug: 'isager', name: 'Isager' })
+
+describe('B11 brand-filter chips over kortet', () => {
+  it('chips vises over kortet når brands-prop har værdier', () => {
+    render(
+      <FindForhandlerClient
+        initialStores={[makeStore()]}
+        brands={[brandDrops, brandIsager]}
+        retailers={[]}
+      />
+    )
+    // Chip-gruppe skal have "Alle", "Drops", "Isager"
+    expect(screen.getByRole('button', { name: /^alle$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^drops$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^isager$/i })).toBeInTheDocument()
+  })
+
+  it('ingen chips vises når brands-prop er tom', () => {
+    render(<FindForhandlerClient initialStores={[makeStore()]} brands={[]} retailers={[]} />)
+    expect(screen.queryByText(/filtrér på mærke/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^alle$/i })).not.toBeInTheDocument()
+  })
+
+  it('klik på Drops-chip filtrerer kort-stores — store uden drops forsvinder', async () => {
+    const user = userEvent.setup()
+    const storeWithDrops = makeStore({
+      id: 'store-drops',
+      name: 'Drops Butik',
+      brands: [{ slug: 'drops', name: 'Drops' }],
+    })
+    const storeWithoutDrops = makeStore({
+      id: 'store-other',
+      name: 'Anden Butik',
+      brands: [],
+    })
+
+    render(
+      <FindForhandlerClient
+        initialStores={[storeWithDrops, storeWithoutDrops]}
+        brands={[brandDrops, brandIsager]}
+        retailers={[]}
+      />
+    )
+
+    // Kort-stub er renderet (begge stores → kort vises)
+    expect(screen.getByTestId('danmarkskort-stub')).toBeInTheDocument()
+
+    // Klik på Drops-chip
+    await user.click(screen.getByRole('button', { name: /^drops$/i }))
+
+    // Drops-chip er nu aktiv
+    expect(screen.getByRole('button', { name: /^drops$/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /^alle$/i })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('klik på Alle-chip efter Drops nulstiller til alle chips inaktive undtagen Alle', async () => {
+    const user = userEvent.setup()
+    render(
+      <FindForhandlerClient
+        initialStores={[makeStore()]}
+        brands={[brandDrops, brandIsager]}
+        retailers={[]}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: /^drops$/i }))
+    expect(screen.getByRole('button', { name: /^drops$/i })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(screen.getByRole('button', { name: /^alle$/i }))
+    expect(screen.getByRole('button', { name: /^alle$/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /^drops$/i })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('valg af brand hvor ingen stores → tom tilstand på kort med "vis alle butikker"-knap', async () => {
+    const user = userEvent.setup()
+    // Store har ingen brands → vil forsvinde fra kortet ved Drops-filter
+    const storeNoBrands = makeStore({ id: 'store-nobrand', brands: [] })
+
+    render(
+      <FindForhandlerClient
+        initialStores={[storeNoBrands]}
+        brands={[brandDrops]}
+        retailers={[]}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: /^drops$/i }))
+
+    // Tom tilstand vises, ikke kortets stub
+    expect(screen.queryByTestId('danmarkskort-stub')).not.toBeInTheDocument()
+    expect(screen.getByText(/ingen registrerede butikker forhandler/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /vis alle butikker/i })).toBeInTheDocument()
   })
 })

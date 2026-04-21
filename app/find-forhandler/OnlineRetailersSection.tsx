@@ -1,29 +1,28 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { Brand, OnlineRetailer } from '@/lib/data/retailers'
 
 type Props = {
   retailers: OnlineRetailer[]
   brands: Brand[]
+  activeBrand: string | null
 }
 
-const FEATURED_BRAND_SLUGS = ['drops', 'permin', 'filcolana'] as const
+export const FEATURED_BRAND_SLUGS = ['drops', 'permin', 'filcolana'] as const
 
-export function OnlineRetailersSection({ retailers, brands }: Props) {
-  const [activeBrand, setActiveBrand] = useState<string | null>(null)
+// Sortér brands så Drops, Permin, Filcolana ligger først; derefter alfabetisk.
+export function orderBrands(brands: Brand[]): Brand[] {
+  const featured = FEATURED_BRAND_SLUGS
+    .map(slug => brands.find(b => b.slug === slug))
+    .filter((b): b is Brand => Boolean(b))
+  const rest = brands
+    .filter(b => !FEATURED_BRAND_SLUGS.includes(b.slug as (typeof FEATURED_BRAND_SLUGS)[number]))
+    .sort((a, b) => a.name.localeCompare(b.name, 'da'))
+  return [...featured, ...rest]
+}
 
-  // Sortér brands så Drops, Permin, Filcolana ligger først; derefter alfabetisk.
-  const orderedBrands = useMemo(() => {
-    const featured = FEATURED_BRAND_SLUGS
-      .map(slug => brands.find(b => b.slug === slug))
-      .filter((b): b is Brand => Boolean(b))
-    const rest = brands
-      .filter(b => !FEATURED_BRAND_SLUGS.includes(b.slug as (typeof FEATURED_BRAND_SLUGS)[number]))
-      .sort((a, b) => a.name.localeCompare(b.name, 'da'))
-    return [...featured, ...rest]
-  }, [brands])
-
+export function OnlineRetailersSection({ retailers, brands, activeBrand }: Props) {
   const filtered = useMemo(() => {
     if (!activeBrand) return retailers
     return retailers.filter(r => r.brands.some(b => b.slug === activeBrand))
@@ -61,33 +60,15 @@ export function OnlineRetailersSection({ retailers, brands }: Props) {
             Køb garn online
           </h2>
           <span style={{ fontSize: 12.5, color: '#8C7E74' }}>
-            {retailers.length} webshops leverer til Danmark
+            {activeBrandName
+              ? `${filtered.length} af ${retailers.length} webshops fører ${activeBrandName}`
+              : `${retailers.length} webshops leverer til Danmark`}
           </span>
         </div>
         <p style={{ fontSize: 14, color: '#6B5D4F', margin: '0 0 18px', lineHeight: 1.55, maxWidth: 640 }}>
-          Filtrér på mærke for at finde forhandlere der fører netop det garn du leder efter.
-          Alle webshops her leverer til Danmark.
+          Brug mærke-filteret øverst på siden for at finde forhandlere der fører
+          netop det garn du leder efter. Alle webshops her leverer til Danmark.
         </p>
-
-        <div
-          role="group"
-          aria-label="Filtrér på mærke"
-          style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}
-        >
-          <FilterChip
-            label="Alle"
-            active={activeBrand === null}
-            onClick={() => setActiveBrand(null)}
-          />
-          {orderedBrands.map(brand => (
-            <FilterChip
-              key={brand.slug}
-              label={brand.name}
-              active={activeBrand === brand.slug}
-              onClick={() => setActiveBrand(brand.slug)}
-            />
-          ))}
-        </div>
 
         {filtered.length === 0 ? (
           <div
@@ -124,7 +105,7 @@ export function OnlineRetailersSection({ retailers, brands }: Props) {
   )
 }
 
-function FilterChip({
+export function FilterChip({
   label,
   active,
   onClick,

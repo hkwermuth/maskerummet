@@ -1,13 +1,13 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { useSupabase } from '@/lib/supabase/client'
 import { HeroIllustration } from '@/components/layout/HeroIllustration'
 import { searchStoresNear, type StoreBase, type StoreResult } from '@/lib/data/stores'
 import type { Brand, OnlineRetailer } from '@/lib/data/retailers'
 import type { DanmarksKortHandle } from './DanmarksKortClient'
-import { OnlineRetailersSection } from './OnlineRetailersSection'
+import { FilterChip, OnlineRetailersSection, orderBrands } from './OnlineRetailersSection'
 
 const DanmarksKort = dynamic(() => import('./DanmarksKortClient'), {
   ssr: false,
@@ -49,6 +49,18 @@ export function FindForhandlerClient({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [geoLoading, setGeoLoading] = useState(false)
+  const [activeBrand, setActiveBrand] = useState<string | null>(null)
+
+  const orderedBrands = useMemo(() => orderBrands(brands), [brands])
+
+  const filteredStores = useMemo(() => {
+    if (!activeBrand) return initialStores
+    return initialStores.filter(s => s.brands.some(b => b.slug === activeBrand))
+  }, [initialStores, activeBrand])
+
+  const activeBrandName = activeBrand
+    ? brands.find(b => b.slug === activeBrand)?.name ?? null
+    : null
 
   async function geocodeCity(name: string) {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&countrycodes=dk&limit=1`
@@ -150,12 +162,15 @@ export function FindForhandlerClient({
     setLoading(false)
   }
 
-  async function runSearch(lat: number, lng: number, label: string) {
+  async function runSearch(lat: number, lng: number, label: string, brandOverride?: string | null) {
+    // brandOverride sendes af useEffect når brand skiftes, så vi ikke venter på at React
+    // genrender runSearch med ny closure — vigtigt når effekten fyres umiddelbart efter state-skift.
+    const brand = brandOverride !== undefined ? brandOverride : activeBrand
     const id = ++searchIdRef.current
     setLoading(true)
     setError(null)
     try {
-      const stores = await searchStoresNear(supabase, { lat, lng, radius })
+      const stores = await searchStoresNear(supabase, { lat, lng, radius, brandSlug: brand })
       if (id !== searchIdRef.current) return
       setResults({ stores, label, lat, lng })
       kortRef.current?.flyTo(lat, lng, 11)
@@ -167,6 +182,14 @@ export function FindForhandlerClient({
       if (id === searchIdRef.current) setLoading(false)
     }
   }
+
+  // Re-kør søgning når brand skiftes efter en aktiv søgning, så resultaterne
+  // matcher nyt brand (ikke bare klient-filter af gammelt datasæt).
+  useEffect(() => {
+    if (!results) return
+    void runSearch(results.lat, results.lng, results.label, activeBrand)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBrand])
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", minHeight: 'calc(100vh - 58px - 57px)' }}>
@@ -299,6 +322,43 @@ export function FindForhandlerClient({
         </form>
       </div>
 
+      {/* Mærke-filter over kortet — styrer både kort, resultater og online-sektion */}
+      {orderedBrands.length > 0 && (
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '14px 24px 0' }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: '#8C7E74',
+              textTransform: 'uppercase',
+              letterSpacing: '.1em',
+              marginBottom: 8,
+            }}
+            id="brand-filter-label"
+          >
+            Filtrér på mærke
+          </div>
+          <div
+            role="group"
+            aria-labelledby="brand-filter-label"
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
+          >
+            <FilterChip
+              label="Alle"
+              active={activeBrand === null}
+              onClick={() => setActiveBrand(null)}
+            />
+            {orderedBrands.map(brand => (
+              <FilterChip
+                key={brand.slug}
+                label={brand.name}
+                active={activeBrand === brand.slug}
+                onClick={() => setActiveBrand(brand.slug)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Kort */}
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '18px 24px 10px' }}>
         {initialStores.length === 0 ? (
@@ -309,8 +369,28 @@ export function FindForhandlerClient({
           }}>
             Kortet er under opbygning — vi mangler stadig koordinater på butikkerne. Prøv søgefunktionen ovenfor.
           </div>
+        ) : filteredStores.length === 0 ? (
+          <div style={{
+            padding: '24px 20px', textAlign: 'center',
+            background: 'rgba(255,252,247,0.9)', border: '1px solid #E5DDD9', borderRadius: 12,
+            color: '#6B5D4F', fontSize: 13.5, lineHeight: 1.55,
+          }}>
+            Ingen registrerede butikker forhandler <strong>{activeBrandName}</strong> endnu.
+            Se online-forhandlere nedenfor, eller{' '}
+            <button
+              type="button"
+              onClick={() => setActiveBrand(null)}
+              style={{
+                background: 'transparent', border: 'none', padding: 0,
+                color: '#61846D', fontSize: 13.5, cursor: 'pointer',
+                textDecoration: 'underline', fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              vis alle butikker
+            </button>.
+          </div>
         ) : (
-          <DanmarksKort ref={kortRef} stores={initialStores} />
+          <DanmarksKort ref={kortRef} stores={filteredStores} />
         )}
       </div>
 
@@ -330,13 +410,18 @@ export function FindForhandlerClient({
               </span>
               <span style={{ fontSize: 12.5, color: '#8C7E74' }}>
                 inden for {radius} km fra {results.label}
+                {activeBrandName ? ` der fører ${activeBrandName}` : ''}
               </span>
             </div>
 
             {results.stores.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 20px', color: '#8C7E74' }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>🔍</div>
-                <div style={{ fontSize: 13 }}>Prøv en større radius</div>
+                <div style={{ fontSize: 13 }}>
+                  {activeBrandName
+                    ? `Prøv en større radius eller et andet mærke`
+                    : 'Prøv en større radius'}
+                </div>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -349,7 +434,7 @@ export function FindForhandlerClient({
         )}
       </div>
 
-      <OnlineRetailersSection retailers={retailers} brands={brands} />
+      <OnlineRetailersSection retailers={retailers} brands={brands} activeBrand={activeBrand} />
     </div>
   )
 }

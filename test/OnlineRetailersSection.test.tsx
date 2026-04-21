@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import React from 'react'
 
-import { OnlineRetailersSection } from '@/app/find-forhandler/OnlineRetailersSection'
+import { OnlineRetailersSection, orderBrands, FilterChip, FEATURED_BRAND_SLUGS } from '@/app/find-forhandler/OnlineRetailersSection'
 import type { Brand, OnlineRetailer } from '@/lib/data/retailers'
 
 // ---------------------------------------------------------------------------
@@ -61,23 +60,18 @@ const retailerIsager = makeRetailer({
 })
 
 // ---------------------------------------------------------------------------
-// C1: Render tom — ingen kort, men "Alle"-chip vises
+// C1: Render tom — ingen kort
 // ---------------------------------------------------------------------------
 
 describe('C1 render med tomme arrays', () => {
   it('viser ingen article-kort når retailers er tom', () => {
-    render(<OnlineRetailersSection retailers={[]} brands={[]} />)
+    render(<OnlineRetailersSection retailers={[]} brands={[]} activeBrand={null} />)
     expect(screen.queryAllByRole('article')).toHaveLength(0)
-  })
-
-  it('viser "Alle"-chip selv med tomme arrays', () => {
-    render(<OnlineRetailersSection retailers={[]} brands={[]} />)
-    expect(screen.getByRole('button', { name: /^alle$/i })).toBeInTheDocument()
   })
 })
 
 // ---------------------------------------------------------------------------
-// C2: Render med data — alle kort og chips vises
+// C2: Render med data — alle kort vises
 // ---------------------------------------------------------------------------
 
 describe('C2 render med 3 retailers og 3 brands', () => {
@@ -85,63 +79,36 @@ describe('C2 render med 3 retailers og 3 brands', () => {
   const retailers = [retailerDrops, retailerPermin, retailerIsager]
 
   it('viser 3 article-kort', () => {
-    render(<OnlineRetailersSection retailers={retailers} brands={brands} />)
+    render(<OnlineRetailersSection retailers={retailers} brands={brands} activeBrand={null} />)
     expect(screen.getAllByRole('article')).toHaveLength(3)
-  })
-
-  it('viser "Alle"-chip plus en chip per brand', () => {
-    render(<OnlineRetailersSection retailers={retailers} brands={brands} />)
-    expect(screen.getByRole('button', { name: /^alle$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^drops$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^permin$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^isager$/i })).toBeInTheDocument()
   })
 })
 
 // ---------------------------------------------------------------------------
-// C3: Filter på brand — klik filtrerer, klik igen/Alle nulstiller
+// C3: Filter styret af prop: activeBrand filtrerer korrekt
 // ---------------------------------------------------------------------------
 
-describe('C3 filter på brand-chip', () => {
+describe('C3 filter styret af activeBrand-prop', () => {
   const brands = [brandDrops, brandPermin, brandIsager]
   const retailers = [retailerDrops, retailerPermin, retailerIsager]
 
-  it('klik på "Drops" viser kun Drops-retailer', async () => {
-    const user = userEvent.setup()
-    render(<OnlineRetailersSection retailers={retailers} brands={brands} />)
-    await user.click(screen.getByRole('button', { name: /^drops$/i }))
+  it('activeBrand="drops" viser kun Drops-retailer', () => {
+    render(<OnlineRetailersSection retailers={retailers} brands={brands} activeBrand="drops" />)
     const cards = screen.getAllByRole('article')
     expect(cards).toHaveLength(1)
     expect(within(cards[0]).getByText('Drops Webshop')).toBeInTheDocument()
   })
 
-  it('klik på "Alle" efter filter viser alle kort igen', async () => {
-    const user = userEvent.setup()
-    render(<OnlineRetailersSection retailers={retailers} brands={brands} />)
-    await user.click(screen.getByRole('button', { name: /^drops$/i }))
-    await user.click(screen.getByRole('button', { name: /^alle$/i }))
+  it('activeBrand=null viser alle retailers', () => {
+    render(<OnlineRetailersSection retailers={retailers} brands={brands} activeBrand={null} />)
     expect(screen.getAllByRole('article')).toHaveLength(3)
   })
 
-  it('"Drops"-chip har aria-pressed=true efter klik', async () => {
-    const user = userEvent.setup()
-    render(<OnlineRetailersSection retailers={retailers} brands={brands} />)
-    const dropsChip = screen.getByRole('button', { name: /^drops$/i })
-    expect(dropsChip).toHaveAttribute('aria-pressed', 'false')
-    await user.click(dropsChip)
-    expect(dropsChip).toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('"Alle"-chip har aria-pressed=true som default', () => {
-    render(<OnlineRetailersSection retailers={retailers} brands={brands} />)
-    expect(screen.getByRole('button', { name: /^alle$/i })).toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('"Alle"-chip har aria-pressed=false når brand er aktivt', async () => {
-    const user = userEvent.setup()
-    render(<OnlineRetailersSection retailers={retailers} brands={brands} />)
-    await user.click(screen.getByRole('button', { name: /^drops$/i }))
-    expect(screen.getByRole('button', { name: /^alle$/i })).toHaveAttribute('aria-pressed', 'false')
+  it('activeBrand="permin" viser kun Permin-retailer', () => {
+    render(<OnlineRetailersSection retailers={retailers} brands={brands} activeBrand="permin" />)
+    const cards = screen.getAllByRole('article')
+    expect(cards).toHaveLength(1)
+    expect(within(cards[0]).getByText('Permin Shop')).toBeInTheDocument()
   })
 })
 
@@ -150,25 +117,35 @@ describe('C3 filter på brand-chip', () => {
 // ---------------------------------------------------------------------------
 
 describe('C4 tom tilstand når brand ikke har forhandlere', () => {
-  it('viser "Ingen online-forhandlere registreret for ..." når intet match', async () => {
-    const user = userEvent.setup()
+  it('viser "Ingen online-forhandlere registreret for ..." når ingen match via prop', () => {
     // brandFilcolana er i brands-listen men ingen retailers fører den
     render(
       <OnlineRetailersSection
         retailers={[retailerDrops]}
         brands={[brandDrops, brandFilcolana]}
+        activeBrand="ukendtbrand"
       />
     )
-    await user.click(screen.getByRole('button', { name: /^filcolana$/i }))
     expect(
       screen.getByText(/ingen online-forhandlere registreret for/i)
     ).toBeInTheDocument()
-    // "Filcolana" optræder to steder: chip-knappen og <strong> i fejlbeskeden
-    const matches = screen.getAllByText('Filcolana')
-    expect(matches.length).toBeGreaterThanOrEqual(1)
-    // Bekræft at mindst ét element er inde i fejlbeskeden (strong)
-    const strongEl = matches.find(el => el.tagName.toLowerCase() === 'strong')
-    expect(strongEl).toBeTruthy()
+  })
+
+  it('viser brand-navn i strong-element i tom-tilstand', () => {
+    render(
+      <OnlineRetailersSection
+        retailers={[retailerDrops]}
+        brands={[brandDrops, brandFilcolana]}
+        activeBrand="filcolana"
+      />
+    )
+    expect(
+      screen.getByText(/ingen online-forhandlere registreret for/i)
+    ).toBeInTheDocument()
+    // "Filcolana" optræder i <strong> i fejlbeskeden
+    const strongElements = document.querySelectorAll('strong')
+    const hasFilcolana = Array.from(strongElements).some(el => el.textContent === 'Filcolana')
+    expect(hasFilcolana).toBe(true)
   })
 })
 
@@ -178,19 +155,19 @@ describe('C4 tom tilstand når brand ikke har forhandlere', () => {
 
 describe('C5 "Besøg webshop"-link har korrekte attributter', () => {
   it('har target="_blank"', () => {
-    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} />)
+    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} activeBrand={null} />)
     const link = screen.getByRole('link', { name: /besøg drops webshop.*åbner i nyt vindue/i })
     expect(link).toHaveAttribute('target', '_blank')
   })
 
   it('har rel="noopener noreferrer"', () => {
-    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} />)
+    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} activeBrand={null} />)
     const link = screen.getByRole('link', { name: /besøg drops webshop.*åbner i nyt vindue/i })
     expect(link).toHaveAttribute('rel', 'noopener noreferrer')
   })
 
   it('har aria-label der nævner "åbner i nyt vindue"', () => {
-    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} />)
+    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} activeBrand={null} />)
     const link = screen.getByRole('link', { name: /åbner i nyt vindue/i })
     expect(link).toBeInTheDocument()
   })
@@ -211,7 +188,7 @@ describe('C6 alfabetisk sortering af retailers i DOM', () => {
       makeRetailer({ id: 'r2', navn: 'Midt Garn', url: 'https://midt.dk', brands: [] }),
       makeRetailer({ id: 'r3', navn: 'Zara Garn', url: 'https://zara.dk', brands: [] }),
     ]
-    render(<OnlineRetailersSection retailers={sorted} brands={[]} />)
+    render(<OnlineRetailersSection retailers={sorted} brands={[]} activeBrand={null} />)
     const cards = screen.getAllByRole('article')
     const names = cards.map(card => within(card).getByRole('heading').textContent)
     expect(names).toEqual(['Alpha Garn', 'Midt Garn', 'Zara Garn'])
@@ -219,39 +196,26 @@ describe('C6 alfabetisk sortering af retailers i DOM', () => {
 })
 
 // ---------------------------------------------------------------------------
-// C7: Featured brands (Drops, Permin, Filcolana) vises først i chip-rækken
+// C7: safeWebUrl — farlig URL renderer "Webshop-link utilgængeligt"
 // ---------------------------------------------------------------------------
 
-describe('C7 featured brands vises først i chip-rækkefølge', () => {
-  it('Drops, Permin, Filcolana-chips kommer før Isager i DOM', () => {
-    const brands = [brandIsager, brandFilcolana, brandDrops, brandPermin]
-    render(<OnlineRetailersSection retailers={[]} brands={brands} />)
-    const chips = screen.getAllByRole('button').filter(
-      btn => ['Alle', 'Drops', 'Permin', 'Filcolana', 'Isager'].includes(btn.textContent ?? '')
-    )
-    const chipLabels = chips.map(c => c.textContent)
-    // "Alle" er altid først, derefter Drops, Permin, Filcolana, så Isager
-    expect(chipLabels[0]).toBe('Alle')
-    expect(chipLabels[1]).toBe('Drops')
-    expect(chipLabels[2]).toBe('Permin')
-    expect(chipLabels[3]).toBe('Filcolana')
-    expect(chipLabels[4]).toBe('Isager')
+describe('C7 safeWebUrl — farlig URL renderer fallback-tekst', () => {
+  it('viser "Webshop-link utilgængeligt" når URL er javascript:-protokol', () => {
+    // eslint-disable-next-line no-script-url
+    const badRetailer = makeRetailer({ url: 'javascript:alert(1)', navn: 'Farlig Shop' })
+    render(<OnlineRetailersSection retailers={[badRetailer]} brands={[]} activeBrand={null} />)
+    expect(screen.getByText(/webshop-link utilgængeligt/i)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /besøg/i })).not.toBeInTheDocument()
   })
 })
 
 // ---------------------------------------------------------------------------
-// C8: Touch target ≥ 44px via minHeight inline style
+// C8: Touch target ≥ 44px — "Besøg webshop"-linket
 // ---------------------------------------------------------------------------
 
 describe('C8 touch targets ≥ 44px (minHeight inline style)', () => {
-  it('"Alle"-chip har minHeight: 44 via inline style', () => {
-    render(<OnlineRetailersSection retailers={[]} brands={[]} />)
-    const chip = screen.getByRole('button', { name: /^alle$/i })
-    expect(chip).toHaveStyle({ minHeight: '44px' })
-  })
-
   it('"Besøg webshop"-link har minHeight: 44 via inline style', () => {
-    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} />)
+    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} activeBrand={null} />)
     const link = screen.getByRole('link', { name: /åbner i nyt vindue/i })
     expect(link).toHaveStyle({ minHeight: '44px' })
   })
@@ -263,18 +227,42 @@ describe('C8 touch targets ≥ 44px (minHeight inline style)', () => {
 
 describe('C9 brand-tags renderes i retailer-kort', () => {
   it('brand-tags vises i kortet under filteret', () => {
-    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} />)
+    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} activeBrand={null} />)
     const card = screen.getAllByRole('article')[0]
     expect(within(card).getByText('Drops')).toBeInTheDocument()
   })
 
-  it('brand-tag renderes stadig når filter er aktivt', async () => {
-    const user = userEvent.setup()
-    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} />)
-    await user.click(screen.getByRole('button', { name: /^drops$/i }))
+  it('brand-tag renderes stadig når activeBrand matcher via prop', () => {
+    render(<OnlineRetailersSection retailers={[retailerDrops]} brands={[brandDrops]} activeBrand="drops" />)
     const card = screen.getAllByRole('article')[0]
-    // Tag med brand-navn renderes inde i kortet (der kan være to: chip + tag)
-    const tagElements = within(card).getAllByText('Drops')
-    expect(tagElements.length).toBeGreaterThanOrEqual(1)
+    expect(within(card).getByText('Drops')).toBeInTheDocument()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// C10: orderBrands og FEATURED_BRAND_SLUGS eksporteres
+// ---------------------------------------------------------------------------
+
+describe('C10 eksporterede hjælpere', () => {
+  it('orderBrands er eksporteret som funktion', () => {
+    expect(typeof orderBrands).toBe('function')
+  })
+
+  it('FEATURED_BRAND_SLUGS er eksporteret som array', () => {
+    expect(Array.isArray(FEATURED_BRAND_SLUGS)).toBe(true)
+  })
+
+  it('FilterChip er eksporteret som funktion', () => {
+    expect(typeof FilterChip).toBe('function')
+  })
+
+  it('orderBrands placerer Drops, Permin, Filcolana før Isager', () => {
+    const brands = [brandIsager, brandFilcolana, brandDrops, brandPermin]
+    const ordered: Brand[] = orderBrands(brands)
+    const names = ordered.map(b => b.name)
+    expect(names[0]).toBe('Drops')
+    expect(names[1]).toBe('Permin')
+    expect(names[2]).toBe('Filcolana')
+    expect(names[3]).toBe('Isager')
   })
 })
