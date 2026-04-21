@@ -5,7 +5,9 @@ import dynamic from 'next/dynamic'
 import { useSupabase } from '@/lib/supabase/client'
 import { HeroIllustration } from '@/components/layout/HeroIllustration'
 import { searchStoresNear, type StoreBase, type StoreResult } from '@/lib/data/stores'
+import type { Brand, OnlineRetailer } from '@/lib/data/retailers'
 import type { DanmarksKortHandle } from './DanmarksKortClient'
+import { OnlineRetailersSection } from './OnlineRetailersSection'
 
 const DanmarksKort = dynamic(() => import('./DanmarksKortClient'), {
   ssr: false,
@@ -26,7 +28,17 @@ type GeoError = {
   message: string
 }
 
-export function FindForhandlerClient({ initialStores }: { initialStores: StoreBase[] }) {
+type Props = {
+  initialStores: StoreBase[]
+  retailers?: OnlineRetailer[]
+  brands?: Brand[]
+}
+
+export function FindForhandlerClient({
+  initialStores,
+  retailers = [],
+  brands = [],
+}: Props) {
   const supabase = useSupabase()
   const kortRef = useRef<DanmarksKortHandle | null>(null)
   const searchIdRef = useRef(0)
@@ -336,6 +348,8 @@ export function FindForhandlerClient({ initialStores }: { initialStores: StoreBa
           </>
         )}
       </div>
+
+      <OnlineRetailersSection retailers={retailers} brands={brands} />
     </div>
   )
 }

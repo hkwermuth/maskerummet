@@ -99,6 +99,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
 ### Forhandlersøgning
 - Find forhandler nær dig (`app/find-forhandler/page.tsx`) — geolokation + by-søgning, Supabase RPC `find_stores_near`, brand-filter
+- **Køb garn online**-sektion under kortet (`app/find-forhandler/OnlineRetailersSection.tsx`) — 28 danske online-forhandlere, brand-filter-chips (Drops/Permin/Filcolana + flere), direkte link til hver webshop. Data i `public.online_retailers` + `retailer_brands`-junction (17 brands, 68 koblinger). RLS offentlig SELECT. `stores.online_retailer_id` FK gør det muligt senere at linke fysiske butikker til deres webshop.
 
 ### Visualizer
 - AI farvevisualizer (`app/visualizer/page.tsx`, `YarnVisualizer.jsx`) — kræver login
@@ -123,6 +124,13 @@ Ingen `dark:`-klasser i kodebasen. Dark mode er ikke startet. Sørg for at OS da
 ### Forhandlersøgning — data mangler sandsynligvis
 Siden er implementeret teknisk, men `find_stores_near` RPC'en forudsætter at butiks-data er indlæst i databasen. Verificer at der faktisk er data.
 
+### Online-forhandlere — admin og vedligehold
+- Seed-data er manuelt indsamlet april 2026 (28 shops) — `sidst_tjekket`-kolonnen på hver række markerer verificerings-dato. Kvartalsvis manuel gennemgang anbefalet indtil admin-UI er på plads.
+- Ingen admin-UI endnu: tilføjelse/redigering kræver ny SQL-migration eller direkte service_role-query.
+- `stores.online_retailer_id` FK er oprettet men ikke befolket — fysiske butikker i `stores` er ikke koblet til deres online-pendant endnu (fx Hobbii). Matching-job bør laves.
+- `yarn_items.yarn_brand` er fri tekst; linke til kanonisk `brands(id)` som separat migration.
+- Featured brands (Drops/Permin/Filcolana) er hardkodet i `OnlineRetailersSection.tsx:11` — kunne flyttes til en `is_featured` kolonne i `brands`.
+
 ---
 
 ## Mangler — blokerende for testbruger-launch
@@ -132,6 +140,9 @@ Tjek at "Confirm email" er aktiveret under Authentication > Email i Supabase-das
 
 ### 2. Mobil-test af kerne-flows
 Touch targets og layout under 640px. Garnlager + projekter skal testes på mobil.
+
+### 3. Ret tekst i velkomst-modal
+Onboarding-velkomstmodalen (`components/app/OnboardingModal.tsx`, `SECTIONS`-array linje 11-31) indeholder fejl i copy. Skal gennemlæses og rettes af Hannah inden testbruger-launch.
 
 ---
 
