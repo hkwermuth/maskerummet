@@ -64,7 +64,7 @@ export function OnlineRetailersSection({ retailers, brands, activeBrand }: Props
           >
             Køb garn online
           </h2>
-          <span style={{ fontSize: 12.5, color: '#8C7E74' }}>
+          <span style={{ fontSize: 15, color: '#302218', fontWeight: 500 }}>
             {activeBrandName
               ? `${filtered.length} af ${retailers.length} webshops fører ${activeBrandName}`
               : `${retailers.length} webshops leverer til Danmark`}
