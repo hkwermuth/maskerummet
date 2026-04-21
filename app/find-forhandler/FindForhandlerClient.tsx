@@ -375,8 +375,15 @@ export function FindForhandlerClient({
             background: 'rgba(255,252,247,0.9)', border: '1px solid #E5DDD9', borderRadius: 12,
             color: '#6B5D4F', fontSize: 13.5, lineHeight: 1.55,
           }}>
-            Ingen registrerede butikker forhandler <strong>{activeBrandName}</strong> endnu.
-            Se online-forhandlere nedenfor, eller{' '}
+            Vi har ikke registreret hvilke fysiske butikker der fører <strong>{activeBrandName}</strong> endnu.
+            <br />
+            <a
+              href="#online-forhandlere"
+              style={{ color: '#61846D', fontWeight: 500, textDecoration: 'underline' }}
+            >
+              Se webshops der fører {activeBrandName} ↓
+            </a>
+            {' '}eller{' '}
             <button
               type="button"
               onClick={() => setActiveBrand(null)}
@@ -386,7 +393,7 @@ export function FindForhandlerClient({
                 textDecoration: 'underline', fontFamily: "'DM Sans', sans-serif",
               }}
             >
-              vis alle butikker
+              vis alle butikker på kortet
             </button>.
           </div>
         ) : (

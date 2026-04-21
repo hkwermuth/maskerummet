@@ -100,6 +100,8 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 ### Forhandlersøgning
 - Find forhandler nær dig (`app/find-forhandler/page.tsx`) — geolokation + by-søgning, Supabase RPC `find_stores_near`, brand-filter
 - **Køb garn online**-sektion under kortet (`app/find-forhandler/OnlineRetailersSection.tsx`) — 28 danske online-forhandlere, brand-filter-chips (Drops/Permin/Filcolana + flere), direkte link til hver webshop. Data i `public.online_retailers` + `retailer_brands`-junction (17 brands, 68 koblinger). RLS offentlig SELECT. `stores.online_retailer_id` FK gør det muligt senere at linke fysiske butikker til deres webshop.
+- **Brand-filter over kortet** styrer både kort-pins, radius-søgeresultater og online-forhandler-sektion samtidigt. Re-kører RPC'en automatisk når brand skiftes efter en søgning. Tom tilstand på kort peger brugeren mod online-sektionen når et mærke ikke har fysiske koblinger.
+- **`store_brands` populeret** for de 6 vigtigste mærker: Permin (188), Filcolana (104), CaMaRose (18), Isager (18), Knitting for Olive (18), Drops (16). Total: 362 store-brand-koblinger.
 
 ### Visualizer
 - AI farvevisualizer (`app/visualizer/page.tsx`, `YarnVisualizer.jsx`) — kræver login
@@ -130,6 +132,11 @@ Siden er implementeret teknisk, men `find_stores_near` RPC'en forudsætter at bu
 - `stores.online_retailer_id` FK er oprettet men ikke befolket — fysiske butikker i `stores` er ikke koblet til deres online-pendant endnu (fx Hobbii). Matching-job bør laves.
 - `yarn_items.yarn_brand` er fri tekst; linke til kanonisk `brands(id)` som separat migration.
 - Featured brands (Drops/Permin/Filcolana) er hardkodet i `OnlineRetailersSection.tsx:11` — kunne flyttes til en `is_featured` kolonne i `brands`.
+
+### store_brands — udvidelse
+- **Drops:** kun 16 af ~38 officielle DK-forhandlere blev matched mod vores `stores`-tabel (resten mangler eller har afvigende navne). Flere kan tilføjes manuelt hvis stores-tabellen udvides.
+- **Isager + Knitting for Olive:** seed er _approksimation_ baseret på overlap med CaMaRose-forhandlerlisten (18 butikker hver). Bør verificeres manuelt mod officielle lister når tid tillader — Isager-siden har dynamisk retailer-finder der ikke kan scrapes via WebFetch.
+- **Mærker uden koblinger (11 stk.):** Sandnes Garn, Hobbii, Mayflower, BC Garn, Holst Garn, Önling, Hjertegarn, Ístex, Rauma, Hillesvåg, Novita — vises kun i online-sektionen pga. manglende fysiske koblinger. Populer fra officielle forhandlerlister når tid tillader.
 
 ---
 

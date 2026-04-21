@@ -654,7 +654,8 @@ describe('B11 brand-filter chips over kortet', () => {
 
     // Tom tilstand vises, ikke kortets stub
     expect(screen.queryByTestId('danmarkskort-stub')).not.toBeInTheDocument()
-    expect(screen.getByText(/ingen registrerede butikker forhandler/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /vis alle butikker/i })).toBeInTheDocument()
+    expect(screen.getByText(/vi har ikke registreret/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /se webshops der fører/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /vis alle butikker på kortet/i })).toBeInTheDocument()
   })
 })
