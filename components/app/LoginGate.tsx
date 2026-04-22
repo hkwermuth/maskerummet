@@ -41,7 +41,10 @@ export function LoginGate({ title, desc, icon, children }: Props) {
           </div>
           <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 600, color: '#61846D', margin: '0 0 8px' }}>{title}</h2>
           <p style={{ fontSize: 14, color: '#8C7E74', lineHeight: 1.6, margin: '0 0 24px' }}>{desc}</p>
-          <button onClick={() => router.push(buildLoginHref(pathname))} style={{
+          <button onClick={() => {
+            const path = pathname ?? (typeof window !== 'undefined' ? window.location.pathname : null)
+            router.push(buildLoginHref(path))
+          }} style={{
             background: '#61846D', color: '#fff', border: 'none', borderRadius: 24,
             padding: '10px 28px', fontSize: 14, fontWeight: 500, cursor: 'pointer',
             fontFamily: "'DM Sans', sans-serif",
