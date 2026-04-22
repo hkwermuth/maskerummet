@@ -245,6 +245,36 @@ Ofte kan man erstatte fx en "Aran"-garn med *to tråde* af en tyndere garn. Data
 
 Launch-blokerende: feature er halv-implementeret uden klart klik-flow eller understøttelse af den mest almindelige danske substitutions-case (flertrådet).
 
+### 5. Infra / ops inden testbruger-launch
+
+Opsamling fra Jespers råd (IT-arkitekt) + løbende diskussion. Markeret efter kritikalitet.
+
+**KRITISK — skal være på plads før testbrugere får adgang:**
+
+- [ ] **5.1 Dev/prod-split af Supabase** — i dag kører alt mod én Supabase-instans (`bdxjhylopixuvncswfqj.supabase.co`). Opret separat prod-projekt, kopiér schema + seed-data, opdater `NEXT_PUBLIC_SUPABASE_URL` + keys i Vercel prod-env. Dev-instansen bevares til lokale kørsler. Task #13 (i gang).
+- [ ] **5.2 Migrations-versionering / kørsels-proces** — migrations i `supabase/migrations/` køres ikke automatisk. Dokumentér proces ("før deploy: kør nye migrations manuelt i SQL Editor"), eller sæt Supabase CLI op så `supabase db push` virker. Uden dette risikerer vi gentagelser af "status-kolonne mangler"-fejlen. Del af task #13.
+- [ ] **5.3 Backup — rå kopi af data** — Supabase Pro giver 7 dages automatisk backup. Free-tier har ingen. To veje:
+  - **A) Opgradér til Supabase Pro** (~$25/md) — task #11
+  - **B) Automatiseret nightly backup via GitHub Actions** — `pg_dump` til privat storage, Free-tier-kompatibel. Task #20
+  Vælg én **inden** testbrugere lægger data ind.
+- [ ] **5.4 Secrets-audit** — verificér at ingen nøgler/tokens er hardcodet i koden eller committet til git. Kør `git log -p | grep -i "api_key\|secret\|token"` som stikprøve. Alle reelle secrets skal ligge i Vercel env-vars, ikke i `.env` (som er i gitignore men bør verificeres). Task #10 er delvist kørt — verificér mod prod-env.
+- [ ] **5.5 Verificér "Confirm email" i Supabase Auth** — allerede i punkt 1 ovenfor. Uden dette logges nye brugere ind direkte uden email-verifikation. Tjek Authentication → Email → "Confirm email" er tændt.
+- [ ] **5.6 Kør pending migrations i prod** — før launch: verificér at alle `supabase/migrations/` er kørt mod prod-instansen. Særligt `20260423000001_project_status.sql` (status-kolonne) og `20260419000001_rls_yarn_items_and_usage.sql` (RLS på garn).
+
+**VIGTIG — bør være på plads inden mange brugere:**
+
+- [ ] **5.7 Password-beskyt Vercel-previews** — Vercel preview deployments er offentligt tilgængelige med kendt URL-mønster. Aktivér Vercel Auth eller password-beskyt via Vercel Pro. Task #9.
+- [ ] **5.8 Rate-limiting på auth-endpoints** — i dag har login/signup ingen throttling. Brute-force-beskyttelse via Vercel Edge Middleware eller Supabase Auth-rate-limits. Task #17.
+- [ ] **5.9 CSP + security headers** — Content-Security-Policy, Strict-Transport-Security, X-Frame-Options m.fl. Sæt via `next.config.js` headers() eller middleware. Task #16.
+- [ ] **5.10 Sentry — fejl-monitorering** — i dag har vi ingen logging af runtime-fejl i prod. Tilføj Sentry (gratis-tier). Task #15.
+
+**KAN-VENTE (men bør planlægges):**
+
+- [ ] **5.11 Striq-branded emails via Resend** — Supabases default-emails er generiske. Opsæt Resend som SMTP-provider i Supabase Auth så velkomst/reset-mails ser ud som Striq. Task #19.
+- [ ] **5.12 Performance/latency-monitorering** — Vercel Analytics eller Sentry Performance. Mål end-to-end klik→svar tid. Nice-to-have før launch, må-have kort efter.
+- [ ] **5.13 Dashboard / observability** — opsaml fejl + performance-signaler i et sted (Sentry + Vercel Analytics). Del af 5.10 + 5.12.
+- [ ] **5.14 Code hardening fase 2** — `npm audit` + `dependency scanning` i CI, secrets-scanner (fx gitleaks). Ikke akut men hygiejne-mæssigt vigtigt.
+
 ---
 
 ## Ønsker / overvejelser
