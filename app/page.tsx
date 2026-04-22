@@ -123,6 +123,35 @@ export default function HomePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 58px - 57px)' }}>
 
+      {/* Under udvikling-banner */}
+      <div
+        role="status"
+        style={{
+          background: 'linear-gradient(90deg, #9B6272 0%, #B88A95 100%)',
+          color: '#FFFCF7',
+          padding: '22px 24px',
+          textAlign: 'center',
+          boxShadow: '0 2px 10px rgba(48,34,24,0.18)',
+        }}
+      >
+        <div style={{
+          fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase',
+          fontSize: 15, marginBottom: 6,
+        }}>
+          🚧 Under udvikling
+        </div>
+        <div style={{ fontSize: 16, lineHeight: 1.55, maxWidth: 640, margin: '0 auto' }}>
+          Skriv til{' '}
+          <a
+            href="mailto:kontakt@striq.dk?subject=Testbruger%20%E2%80%94%20STRIQ"
+            style={{ color: '#FFFCF7', textDecoration: 'underline', fontWeight: 600 }}
+          >
+            kontakt@striq.dk
+          </a>
+          , så kontakter vi dig når sitet er klar til testbrugere.
+        </div>
+      </div>
+
       {/* Hero */}
       <div style={{
         textAlign: 'center',
