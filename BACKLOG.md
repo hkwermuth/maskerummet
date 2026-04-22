@@ -326,7 +326,7 @@ Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
 **Fra Hannah (egne ønsker, 2026-04-19):**
 - **AI-validering af substitutioner** (Claude API) — AI der ved om fibre/vægt/metrage faktisk matcher. M-estimat
 - **Moderations-flow for substitutions-forslag — effektivitets-review** — `ModerationClient.tsx` findes, men Hannah ønsker at verificere at godkendelses-workflowet er så hurtigt som muligt pr. forslag (batch-godkend? tastatur-shortcuts? keyboard-only flow?). UX-review anbefales.
-- **Garnproducent-kontaktliste** — Excel med producentnavne, kontaktoplysninger, hvilke garner de fører. Research-task, ikke kode. Kan hjælpe separat.
+- **Garnproducent- og designer-kontakt** — status i `content/fabrikanter.md` + `content/fabrikanter.csv` (fabrikanter) og `content/designere.md` (top 20 designere). Kontaktet 🟡: Drops (2026-04-21), Permin (2026-04-22), Filcolana — Anne Holt Kirkegaard (2026-04-22). Opfølgnings-datoer 2026-05-05 og 2026-05-06.
 - **Opskrifts-katalog (fuld feature, post-launch)** — juridisk og forretningsmæssig overvejelse før teknisk. Består af:
   - **Ny tabel `patterns`** i Supabase (titel, designer, billede, garn, pind, sværhedsgrad, pris, kilde-URL, `is_own`, `owner_user_id`) + RLS
   - **Tabel `pattern_favorites`** (user_id, pattern_id) — erstatter den nuværende localStorage-løsning på demo-siden

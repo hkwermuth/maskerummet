@@ -7,6 +7,10 @@ Arbejdsdokument for at få tilladelse til at bruge farvedata og produktbilleder 
 
 ---
 
+## Relaterede dokumenter
+
+- **`content/designere.md`** — parallel liste over strikdesignere (top 20) som skal kontaktes om tilladelse til opskrifts-linking
+
 ## Kommende opfølgninger
 
 Huskeliste over hvornår afsendte mails skal følges op. Tjekkes fx hver mandag morgen.

@@ -6,7 +6,7 @@ import { useState, type ReactElement } from 'react'
 const FARVE: Record<string, string> = {
   Festival:       '#61846D',
   Workshop:       '#61846D',
-  Liveshow:       '#D4ADB6',
+  Liveshow:       '#9B6272',
   Retreat:        '#D9BFC3',
   Internationalt: '#A8C8D8',
 }
@@ -180,26 +180,6 @@ function erLys(hex: string): boolean {
 // ── Events ───────────────────────────────────────────────────────────────────
 const EVENTS = [
   // ── APRIL ──
-  {
-    maaned: 'April',
-    dato: '16.–18. april', ugedag: 'Tor',
-    titel: 'Strikkefestival i Fuglafjørður',
-    sted: 'Fuglafjørður · Færøerne',
-    type: 'Internationalt', farve: FARVE.Internationalt,
-    beskrivelse: 'Internationalt strikketræf med workshops i private hjem og foredrag om håndværkets kreative potentiale.',
-    url: 'https://visitfaroeislands.com/en/whatson/events/event/the-knitting-festival-in-fuglafjordur0',
-    billetter: 'Billetter', ikon: 'hus',
-  },
-  {
-    maaned: 'April',
-    dato: '17. april', ugedag: 'Fre',
-    titel: 'Strik & Drik',
-    sted: 'Bremen Teater · København',
-    type: 'Liveshow', farve: FARVE.Liveshow,
-    beskrivelse: 'Christine Feldthaus og Lærke Bagger på scenen med garn, grin og hyggeligt kaos. Kl. 19:00 (døre kl. 18:00).',
-    url: 'https://www.brementeater.dk/datoer/strik-drik-10',
-    billetter: 'Billetter', ikon: 'vin',
-  },
   {
     maaned: 'April',
     dato: '24.–26. april', ugedag: 'Fre',
@@ -477,7 +457,7 @@ export default function KalenderPage() {
         <p style={{ fontSize: 15, color: '#8C7E74', margin: '0 auto 8px', maxWidth: 480, lineHeight: 1.65 }}>
           Find kommende strikke-events, workshops, retreats og liveshows — i Danmark og Norden.
         </p>
-        <p style={{ fontSize: 11.5, color: '#a09090' }}>Sidst opdateret: 18. april 2026</p>
+        <p style={{ fontSize: 11.5, color: '#a09090' }}>Sidst opdateret: 22. april 2026</p>
       </div>
 
       <div style={{ maxWidth: 840, margin: '0 auto', padding: '36px 24px 64px' }}>
