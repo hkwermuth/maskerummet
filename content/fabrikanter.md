@@ -2,8 +2,23 @@
 
 Arbejdsdokument for at få tilladelse til at bruge farvedata og produktbilleder fra garnfabrikanter i STRIQ-kataloget.
 
-**Sidst opdateret:** 2026-04-20
+**Sidst opdateret:** 2026-04-22
 **Ansvarlig:** Hannah
+
+---
+
+## Kommende opfølgninger
+
+Huskeliste over hvornår afsendte mails skal følges op. Tjekkes fx hver mandag morgen.
+
+| Dato | Fabrikant | Handling |
+|------|-----------|----------|
+| 2026-05-05 | Drops / Garnstudio (media@garnstudio.com) | Opfølgnings-mail hvis intet svar. Alternativ: export@garnstudio.com (EU-kontor) |
+| 2026-05-06 | Permin (permin@permin.dk) | Opfølgnings-mail hvis intet svar |
+| 2026-05-06 | Filcolana (Anne Holt Kirkegaard) | Opfølgnings-mail hvis intet svar |
+| 2026-05-12 | Alle 3 (hvis stadig tavse) | Vurder "sidste forsøg"-mail fra skabelon 3 |
+
+Skabeloner til opfølgnings-mails findes længere nede i dokumentet under "E-mail-skabeloner → 2. Opfølgning efter 10 arbejdsdage" og "3. Sidste forsøg efter 3 uger".
 
 ---
 
@@ -110,35 +125,60 @@ Tre versioner — **første henvendelse**, **opfølgning efter 10 dage**, og **s
 
 Skræddersyede versioner af førstehenvendelsen. Brug disse i stedet for den generiske version når du skriver til de konkrete fabrikanter.
 
-### Permin (B2B-distributør, har allerede Bella i kataloget)
+### Permin (B2B-distributør, har allerede Bella, Bella Color og Hannah i kataloget)
+
+**Sendt:** 2026-04-22 til permin@permin.dk. **Opfølgning planlagt:** 2026-05-06.
 
 > **Til:** permin@permin.dk
-> **Emne:** Tilladelse til at vise Permin-garn i STRIQ — dansk app til strikkere
+> **Emne:** STRIQ – tilladelse til at vise by Permin-garn og opskrifter
 >
-> Kære Permin,
+> Kære Permin
 >
-> Jeg hedder Hannah Wermuth og er selv en ivrig strikker. Jeg byggede oprindeligt **STRIQ** (maskerummet.dk) fordi jeg savnede ét sted, hvor jeg kunne se mit eget garnlager og gemme mine færdige projekter — og så greb projektet lige så stille om sig. I dag er det ved at være en rigtig dansk web-app, der hjælper andre strikkere med at holde styr på garn, projekter og opskrifter. Vi åbner for testbrugere i løbet af de næste uger.
+> Mit navn er Hannah Wermuth, og jeg står bag STRIQ – en dansk web-app, der hjælper strikkere med at holde overblik over deres garnlager, projekter og opskrifter og give inspiration.
 >
-> Jeres Bella indgår allerede i vores garnkatalog i begrænset omfang, fordi brugerne efterspørger det — men jeg vil gerne have det på plads formelt med jer, og gerne udvide til flere af jeres kvaliteter hvis I er med på det.
+> Jeg er selv aktiv strikker og meget glad for by Permins kvaliteter – især Bella og Bella Color strikker jeg i hele tiden.
 >
-> Jeg skriver for at høre, om vi må bruge følgende i STRIQ-kataloget:
+> STRIQ åbner for testbrugere i de kommende uger, og jeg skriver for at høre, om I vil give tilladelse til, at by Permin repræsenteres korrekt og krediteret i appens garn- og opskriftskatalog.
 >
-> 1. **Farvedata** — farvenavne, farvenumre og hex-/RGB-værdier for Bella og jeres øvrige kvaliteter
-> 2. **Produktbilleder og farveprøver** — små thumbnails (≤ 500 px) med tydelig kreditering til Permin og link tilbage til permin.dk
-> 3. **Tekniske specifikationer** — fiber, metrage, pindstørrelse, løbelængde
+> **1. Garnvisning**
 >
-> Det koster jer ikke noget. STRIQ er non-kommerciel i denne fase, brugerne betaler ikke for adgang til kataloget, og I kan til enhver tid bede os fjerne jeres data igen.
+> I STRIQ ønsker jeg at vise udvalgte by Permin-garner med:
 >
-> Da jeg ved I sælger B2B og ikke direkte til private, vil jeg også foreslå at STRIQ linker fra jeres kvaliteter i kataloget direkte til jeres **"Find forhandler"**-side — så vores brugere bliver guidet videre til jeres faktiske forhandlere, når de har fundet det garn, de leder efter.
+> - farvenavne og farvenumre
+> - farvedata (fx hex/RGB)
+> - basale tekniske specifikationer (fiber, metrage, anbefalet pind)
+> - små produktbilleder (≤ 500 px)
 >
-> I kan se STRIQ live på maskerummet.dk. I er meget velkomne til at svare på denne mail eller ringe til mig på [telefon].
+> Al visning sker med tydelig kreditering og direkte link til permin.dk.
 >
-> Mange tak for jeres tid — jeg glæder mig til at høre fra jer.
+> Lige nu har jeg selv lagt Bella, Bella Color og Hannah ind i kataloget med farvedata og små produktbilleder hentet fra jeres website, alene for at kunne demonstrere katalogets funktionalitet for testbrugerne. Det beder jeg om jeres forståelse for – og hvis I ikke ønsker dette, fjerner jeg naturligvis data og billeder med det samme. Billederne der viser selve garnet, har jeg selv taget fra min egen garnsamling. I kan fx se Bella Color i garnkataloget her: Permin Bella Color | Striq
 >
-> Venlig hilsen,
+> STRIQ videresælger ikke garn, ændrer ikke på jeres indhold og anvender det udelukkende som informations- og overbliksmateriale for brugerne. Visningen kan til enhver tid justeres eller fjernes efter jeres ønske.
+>
+> Hvis I har et pressekit eller en mediepakke med godkendte produktbilleder, vil jeg meget gerne erstatte de nuværende billeder med jeres egne.
+>
+> Jeg har også en Find forhandler-side, hvor man kan se hvilke webshops og fysiske butikker der forhandler jeres garn.
+>
+> **2. Opskrifter**
+>
+> Jeg vil desuden meget gerne linke til by Permins opskrifter som simple link-kort (titel, billede, garn-/pindkrav m.m.), hvor et klik altid åbner opskriften på permin.dk.
+>
+> Det gælder både gratis og betalte opskrifter.
+>
+> Selve strikkeinstruktionen republiceres aldrig i STRIQ, og opskriftsvisningen kan – ligesom garnvisningen – fjernes igen efter jeres ønske.
+>
+> Et eksempel på visningen (kun en demo indtil videre) kan ses her: Opskrifter — Striq | Striq
+>
+> Hvis det har interesse, tager jeg meget gerne en kort og uforpligtende dialog.
+>
+> I er naturligvis også velkomne til blot at svare på mailen.
+>
+> På forhånd tak for jeres tid – og for de smukke garner.
+>
+> Med venlig hilsen
 > Hannah Wermuth
-> STRIQ / maskerummet.dk
-> [telefon] · hkwermuth@gmail.com
+> STRIQ
+> Tlf. 42 40 39 39 · kontakt@striq.dk
 
 ### Drops / Garnstudio (stor, har pressekanal + mediaportal)
 
@@ -195,8 +235,8 @@ Sendes til **`media@garnstudio.com`** (deres presse-/medie-email, ikke den almin
 
 | Fabrikant | Website | Kontakt | Status | Sidst kontaktet | Noter |
 |-----------|---------|---------|--------|-----------------|-------|
-| Filcolana | filcolana.dk | filcolana.dk/kontakt | ⚪ | — | Allerede delvist i STRIQ-katalog (Tilia). Høj prioritet |
-| Permin (Permin of Copenhagen) | permin.dk | permin.dk/kontakt | ⚪ | — | Allerede delvist i STRIQ-katalog (Bella). Høj prioritet |
+| Filcolana | filcolana.dk | Anne Holt Kirkegaard (salgsansvarlig) | 🟡 | 2026-04-22 | Første mail sendt 2026-04-22 direkte til salgsansvarlig. Opfølgning planlagt 2026-05-06. Allerede delvist i katalog (Tilia) |
+| Permin (Permin of Copenhagen) | permin.dk | permin@permin.dk | 🟡 | 2026-04-22 | Første mail sendt 2026-04-22 med tilgivelses-vinkel (Bella, Bella Color og Hannah allerede i katalog). Opfølgning planlagt 2026-05-06 |
 | Holst Garn | holstgarn.dk | holstgarn.dk/kontakt | ⚪ | — | Små partier, håndfarvet |
 | CaMaRose | camarose.dk | camarose.dk/kontakt | ⚪ | — | Eget garn + opskrifter |
 | Hjertegarn | hjertegarn.dk | hjertegarn.dk/kontakt | ⚪ | — | Bred distribution i DK |
@@ -216,7 +256,7 @@ Sendes til **`media@garnstudio.com`** (deres presse-/medie-email, ikke den almin
 | Fabrikant | Website | Kontakt | Status | Sidst kontaktet | Noter |
 |-----------|---------|---------|--------|-----------------|-------|
 | Sandnes Garn | sandnesgarn.no | sandnesgarn.no/kundeservice | ⚪ | — | Stor i DK, "Sunday" og "Alpakka Silke" populære |
-| Drops / Garnstudio | garnstudio.com | garnstudio.com/kontakt | ⚪ | — | Norsk (Garnstudio). Bred distribution. Har muligvis eksisterende mediekit |
+| Drops / Garnstudio | garnstudio.com | media@garnstudio.com | 🟡 | 2026-04-21 | Første mail sendt til media@garnstudio.com. Opfølgning planlagt 2026-05-05. Mediekit: media.garnstudio.com (login). EU-kontor: export@garnstudio.com |
 | Dale Garn / Dale of Norway | dalegarn.com | dalegarn.com/kontakt | ⚪ | — | Klassiske norske uldgarn |
 | Rauma Garn | raumaull.no | raumaull.no/kontakt | ⚪ | — | Traditionelt norsk uld |
 | Hillesvåg Ullvarefabrikk | ull.no | ull.no/kontakt | ⚪ | — | Lille, traditionelt |

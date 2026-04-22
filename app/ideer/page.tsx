@@ -16,7 +16,7 @@ const COLS = [
 
 const SEED_CARDS = [
   { column_id: 'garnlager',  title: 'Import fra Ravelry', description: 'API eller CSV export fra hkwermuth-profilen', position: 0 },
-  { column_id: 'garnlager',  title: 'Garnsubstitution baseret på stash', description: '', position: 1 },
+  { column_id: 'garnlager',  title: 'Garnalternativ baseret på stash', description: '', position: 1 },
   { column_id: 'garnlager',  title: 'Fiber-kategorier til filter', description: 'Uld, Merino, Mohair, Alpaka, Plante, Blanding', position: 2 },
   { column_id: 'garnlager',  title: 'Metrage-beregner pr. projekt', description: '', position: 3 },
   { column_id: 'mønstre',    title: 'AI-forklaring af teknikker', description: 'German short rows, Italian cast-off osv.', position: 0 },

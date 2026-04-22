@@ -88,6 +88,18 @@ export type Color = {
   image_url: string | null
 }
 
+// ── Projekt-stadier ───────────────────────────────────────────────────────────
+
+export const PROJECT_STATUSES = ['vil_gerne', 'i_gang', 'faerdigstrikket'] as const
+
+export type ProjectStatus = typeof PROJECT_STATUSES[number]
+
+export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  vil_gerne:       'Vil gerne strikke',
+  i_gang:          'I gang',
+  faerdigstrikket: 'Færdigstrikket',
+}
+
 // ── Fællesskabet (delte projekter) ───────────────────────────────────────────
 
 export const PROJECT_TYPES = [

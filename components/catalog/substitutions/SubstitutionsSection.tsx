@@ -224,14 +224,14 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
     <section className="mt-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="font-serif text-xl text-striq-sage mb-1">Mulige substitutter</h2>
+          <h2 className="font-serif text-xl text-striq-sage mb-1">Mulige alternativer</h2>
           <p className="text-xs text-striq-muted/70 mb-3">
             Forslagene er automatisk beregnet ud fra garnets tykkelse, løbelængde, strikkefasthed, fiberindhold og vaskeanvisning.
           </p>
           {saveErr && <p className="text-xs text-striq-link mb-2">{saveErr}</p>}
         </div>
         <button onClick={() => setSuggestOpen(true)} className="text-xs bg-striq-border px-3 py-2 rounded-lg hover:bg-striq-bg">
-          + Foreslå substitut
+          + Foreslå alternativ
         </button>
       </div>
 
@@ -356,7 +356,7 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
         ) : null}
       </Modal>
 
-      <Modal open={suggestOpen} title="Foreslå et substitut" onClose={() => setSuggestOpen(false)}>
+      <Modal open={suggestOpen} title="Foreslå et alternativ" onClose={() => setSuggestOpen(false)}>
         <div className="flex gap-2 mb-3">
           <button onClick={() => setSuggestTab('catalog')} className={`text-xs px-3 py-2 rounded-lg border ${suggestTab === 'catalog' ? 'bg-striq-sage text-cream border-striq-sage' : 'bg-cream border-striq-border'}`}>Fra kataloget</button>
           <button onClick={() => setSuggestTab('external')} className={`text-xs px-3 py-2 rounded-lg border ${suggestTab === 'external' ? 'bg-striq-sage text-cream border-striq-sage' : 'bg-cream border-striq-border'}`}>Nyt garn (ikke i kataloget)</button>
@@ -385,7 +385,7 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
           </div>
         )}
         <div className="mt-3">
-          <textarea value={suggestNote} onChange={(e) => setSuggestNote(e.target.value)} rows={3} placeholder="Note (valgfrit): hvorfor er det et godt substitut?" className={inputCls} />
+          <textarea value={suggestNote} onChange={(e) => setSuggestNote(e.target.value)} rows={3} placeholder="Note (valgfrit): hvorfor er det et godt alternativ?" className={inputCls} />
         </div>
         <div className="mt-3 flex justify-end">
           <button onClick={() => void submitSuggestion()} className="bg-striq-sage text-cream px-4 py-2 rounded-lg text-sm">Send forslag</button>

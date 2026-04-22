@@ -12,6 +12,7 @@ export type Variant =
   | 'forhandler-lup-dk'
   | 'forhandler-pin-nogle'
   | 'forhandler-lille-butik'
+  | 'projekter-tre-stadier'
 
 type Props = {
   variant?: Variant
@@ -65,6 +66,7 @@ function renderVariant(variant: Variant) {
     case 'forhandler-lup-dk':       return <ForhandlerLupDk />
     case 'forhandler-pin-nogle':    return <ForhandlerPinNogle />
     case 'forhandler-lille-butik':  return <ForhandlerLilleButik />
+    case 'projekter-tre-stadier':   return <ProjekterTreStadier />
     case 'skab-bloed':
     default:                        return <SkabBloed />
   }
@@ -373,6 +375,81 @@ function ForhandlerLilleButik() {
       <circle cx="204" cy="192" r="3" fill="#88A798" />
       <circle cx="210" cy="192" r="3" fill="#88A798" />
       <circle cx="207" cy="188" r="3" fill="#88A798" />
+    </>
+  )
+}
+
+/* ── Projekter: Tre kort fanet ud (vil_gerne → i_gang → færdig) ─────────── */
+
+function ProjekterTreStadier() {
+  return (
+    <>
+      <ellipse cx="140" cy="222" rx="104" ry="5" fill="#302218" fillOpacity="0.07" />
+
+      {/* Kort 1: Ønske — 3 nøgler garn (venstre, skrå) */}
+      <g transform="translate(70 140) rotate(-10)">
+        <rect x="-34" y="-56" width="68" height="96" rx="6" fill="#F9F3E9" filter="url(#heroSoftShadow)" />
+
+        {/* Nøgle 1 (øverst-bagest) — dusty pink */}
+        <g transform="translate(-10 -34)">
+          <ellipse cx="0" cy="0" rx="14" ry="11" fill="#D4ADB6" />
+          <path d="M-10 -4 Q-2 -7 10 -4" stroke="#FFFCF7" strokeOpacity="0.7" strokeWidth="1" fill="none" strokeLinecap="round" />
+          <path d="M-12 1 Q0 -3 12 1" stroke="#FFFCF7" strokeOpacity="0.7" strokeWidth="1" fill="none" strokeLinecap="round" />
+          <path d="M-10 6 Q2 2 10 6" stroke="#FFFCF7" strokeOpacity="0.7" strokeWidth="1" fill="none" strokeLinecap="round" />
+        </g>
+
+        {/* Nøgle 2 (øverst-højre, let overlap) — soft sage */}
+        <g transform="translate(12 -24)">
+          <ellipse cx="0" cy="0" rx="13" ry="10" fill="#C9E6DA" />
+          <path d="M-9 -4 Q-2 -6 9 -4" stroke="#FFFCF7" strokeOpacity="0.75" strokeWidth="1" fill="none" strokeLinecap="round" />
+          <path d="M-11 1 Q-1 -3 11 1" stroke="#FFFCF7" strokeOpacity="0.75" strokeWidth="1" fill="none" strokeLinecap="round" />
+          <path d="M-9 5 Q1 2 9 5" stroke="#FFFCF7" strokeOpacity="0.75" strokeWidth="1" fill="none" strokeLinecap="round" />
+        </g>
+
+        {/* Nøgle 3 (forrest, størst) — lys pink */}
+        <g transform="translate(-2 8)">
+          <ellipse cx="0" cy="0" rx="17" ry="13" fill="#E2BFC5" filter="url(#heroSoftShadow)" />
+          <path d="M-13 -5 Q-2 -9 13 -5" stroke="#FFFCF7" strokeOpacity="0.7" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+          <path d="M-15 0 Q-1 -4 15 0" stroke="#FFFCF7" strokeOpacity="0.7" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+          <path d="M-13 6 Q1 2 13 6" stroke="#FFFCF7" strokeOpacity="0.7" strokeWidth="1.1" fill="none" strokeLinecap="round" />
+          {/* Tråd-ende */}
+          <path d="M14 4 Q20 14 16 26" stroke="#E2BFC5" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+        </g>
+      </g>
+
+      {/* Kort 2: I gang (midten, lige) */}
+      <g transform="translate(140 144)">
+        <rect x="-36" y="-60" width="72" height="100" rx="6" fill="#F9F3E9" filter="url(#heroSoftShadow)" />
+        {/* Strikketøj på pindene */}
+        <line x1="-28" y1="-28" x2="-34" y2="-52" stroke="#C9B6A4" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="28" y1="-28" x2="34" y2="-52" stroke="#C9B6A4" strokeWidth="2.2" strokeLinecap="round" />
+        <circle cx="-34" cy="-52" r="2.4" fill="#C9B6A4" />
+        <circle cx="34" cy="-52" r="2.4" fill="#C9B6A4" />
+        <path d="M-28 -28 L28 -28 L26 14 Q14 10 0 12 Q-14 10 -26 14 Z" fill="#88A798" />
+        {[-18, -8, 2].map(y => (
+          <line key={y} x1="-22" y1={y} x2="22" y2={y} stroke="#FFFCF7" strokeOpacity="0.5" strokeWidth="0.8" />
+        ))}
+        {/* Garn-nøgle nederst */}
+        <circle cx="-14" cy="26" r="8" fill="#E2BFC5" />
+        <path d="M-20 24 Q-14 21 -8 25" stroke="#FFFCF7" strokeWidth="0.9" fill="none" strokeOpacity="0.7" />
+        <path d="M-20 28 Q-13 25 -8 29" stroke="#FFFCF7" strokeWidth="0.9" fill="none" strokeOpacity="0.7" />
+      </g>
+
+      {/* Kort 3: Færdig trøje (højre, skrå) */}
+      <g transform="translate(210 140) rotate(10)">
+        <rect x="-34" y="-56" width="68" height="96" rx="6" fill="#F9F3E9" filter="url(#heroSoftShadow)" />
+        {/* Trøje */}
+        <path d="M-22 -32 L-28 -20 L-22 -14 L-22 20 L22 20 L22 -14 L28 -20 L22 -32 L12 -36 Q0 -32 -12 -36 Z" fill="#D4ADB6" />
+        {/* Hals */}
+        <path d="M-8 -32 Q0 -28 8 -32" stroke="#9B6272" strokeWidth="1.4" fill="none" />
+        {/* Strikkelinjer */}
+        {[-22, -14, -6, 2, 10].map(y => (
+          <line key={y} x1="-18" y1={y} x2="18" y2={y} stroke="#FFFCF7" strokeOpacity="0.4" strokeWidth="0.8" />
+        ))}
+        {/* Lille check-flueben */}
+        <circle cx="22" cy="-48" r="8" fill="#88A798" />
+        <path d="M18 -48 L21 -45 L26 -51" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
     </>
   )
 }

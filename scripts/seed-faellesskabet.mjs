@@ -129,6 +129,7 @@ async function main() {
         is_shared: true,
         shared_at: sharedAt,
         project_type: x.projectType,
+        status: 'faerdigstrikket',
       })
       .eq('id', x.id)
     if (uErr) {

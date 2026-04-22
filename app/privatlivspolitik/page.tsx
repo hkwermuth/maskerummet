@@ -29,7 +29,7 @@ const SEKTIONER = [
         <li><strong>Konto</strong> — e-mailadresse og krypteret adgangskode (håndteret af Supabase Auth).</li>
         <li><strong>Garnlager</strong> — de garner du registrerer: navn, farve, fiber, metrage, noter og billeder.</li>
         <li><strong>Projekter</strong> — dine strikkeprojekter og hvilke garner de bruger.</li>
-        <li><strong>Stemmer</strong> — hvis du stemmer på garnsubstitutioner i kataloget.</li>
+        <li><strong>Stemmer</strong> — hvis du stemmer på garnalternativer i kataloget.</li>
       </ul>
     ),
   },

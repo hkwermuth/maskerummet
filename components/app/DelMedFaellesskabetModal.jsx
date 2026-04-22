@@ -95,7 +95,11 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
       })
       onClose()
     } catch (e) {
-      setError('Kunne ikke dele: ' + e.message)
+      if (e?.code === '23514' || /projects_shared_requires_faerdig/i.test(e?.message ?? '')) {
+        setError('Projektet skal være markeret som færdigstrikket før det kan deles.')
+      } else {
+        setError('Kunne ikke dele: ' + e.message)
+      }
     }
     setSaving(false)
   }

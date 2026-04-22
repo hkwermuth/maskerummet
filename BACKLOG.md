@@ -2,7 +2,7 @@
 
 Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
-**Sidst synkroniseret:** 2026-04-21 (Find forhandler-udvidelse: online-sektion, brand-filter på kort + online, LLM-klassifikation)
+**Sidst synkroniseret:** 2026-04-22 (Projekt-stadier + delings-gating + rename substitution→alternativ)
 
 ---
 
@@ -79,6 +79,16 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - **Privatlivspolitik-side** (`app/privatlivspolitik/page.tsx`) — dansk, GDPR-compliant, dækker dataansvarlig, data indsamlet, cookies, tredjeparter (Supabase, Google Fonts), rettigheder, kontakt
 - **Kontakt/feedback**: kontakt@striq.dk synlig i footer og på privatlivspolitik-siden
 - **Data-eksport**: CSV-download af garnlager og projekter (GDPR art. 20 dataportabilitet)
+
+### Projekt-stadier + delings-gating + hero (2026-04-22)
+- **3-stage projekter** (`components/app/Arkiv.jsx`) — vil_gerne / i_gang / faerdigstrikket. Tabs i sub-header med tællere pr. stadie, default åbner på "Færdigstrikket". Søg filtrerer inden for valgt tab.
+- **Status-vælger** i både NytProjektModal og DetailModal (chip-knapper). Ønskeprojekter må oprettes uden garn-linje; i_gang + færdig kræver mindst ét garn.
+- **Hero til Projekter-siden** (`app/projekter/page.tsx`) — matcher Opskrifter i gradient (sage→dustyPink), form og størrelse. Titel "Mine strikkeprojekter" + underoverskrift. Illustration `skab-bloed`.
+- **Datamodel** (`supabase/migrations/20260423000001_project_status.sql`) — ny `status`-kolonne (default `faerdigstrikket`, bagudkompatibelt). CHECK-constraint enforcer enum. Defense-in-depth CHECK: `is_shared=true` kræver `status='faerdigstrikket'`. Idempotent migration med `notify pgrst, 'reload schema'`.
+- **UI-gating** af "Del med fællesskabet"-knap — skjult bag dæmpet hjælpetekst når status ≠ faerdigstrikket.
+- **Backend-gating** — skift til ikke-faerdig på delt projekt sætter automatisk `is_shared=false` i samme UPDATE. Postgres CHECK-violation (23514) fejl-mappes til dansk besked i DelMedFaellesskabetModal.
+- **Rename "substitution" → "alternativ"** — alle bruger-vendte strings (SubstitutionsSection, privatlivspolitik, ideer). Tabel-navne, RPC'er og TypeScript-typer bevaret for teknisk stabilitet.
+- **Tests** (17 nye): Arkiv.tabs, Arkiv.statusGating, DelMedFaellesskabetModal.errorMapping — 194/194 passerer.
 
 ### Fællesskabet (2026-04-20)
 - **Offentlig delingsside** (`app/faellesskabet/page.tsx` + `FaellesskabClient.tsx`) — matcher design-mockup, søg + 3 filter-dropdowns (type, garn, opskrift), kort-grid med type-chip, forfatter ("af [display_name]"), opskriftskort (kun navn+designer), garn-chips med overflow, tom tilstand, ingen login krævet
@@ -203,6 +213,38 @@ Touch targets og layout under 640px. Garnlager + projekter skal testes på mobil
 ### 3. Ret tekst i velkomst-modal
 Onboarding-velkomstmodalen (`components/app/OnboardingModal.tsx`, `SECTIONS`-array linje 11-31) indeholder fejl i copy. Skal gennemlæses og rettes af Hannah inden testbruger-launch.
 
+### 4. Substitutions-flow: klik-adfærd, kommentarer, flertrådede forslag
+Flere huller i substitutions-UX'en skal lukkes inden launch:
+
+**5a. Klik-adfærd på et substitutions-forslag**
+I dag: uklart hvad der sker når bruger klikker på et garn i substitutions-sektionen (`SubstitutionsSection.tsx`). Skal afklares og implementeres:
+- Navigér til substitutions-garnets egen detaljeside?
+- Åbn modal med fuld info + "Tilføj til mit lager"-knap?
+- Begge (klik = navigér, anden knap = tilføj)?
+
+**5b. Kommentar-flow**
+Medlemmer kan poste kommentarer/forslag til substitutioner, men flowet er ikke verificeret:
+- Hvordan ser brugerinput ud (formular-felter)?
+- Er der tydelig feedback efter submit ("tak, dit forslag gennemgås")?
+- Hvordan vises godkendte kommentarer på garn-detaljesiden?
+- Moderations-flowet (`ModerationClient.tsx`) — se også BØR-HAVE om effektivitets-review.
+
+**5c. Flertrådede substitutions-forslag**
+Ofte kan man erstatte fx en "Aran"-garn med *to tråde* af en tyndere garn. Datamodellen skal understøtte dette:
+- Udvid `substitutions`-tabellen (eller hvad der nu er) med `strand_count` (int, default 1) + evt. `held_with_yarn_id` hvis blanding af to forskellige garner.
+- UI: "foreslå som 2-tråds substitution" i forslags-flowet.
+- Visning: "2 tråde af [garn]" i substitutions-listen.
+
+
+**Filer formentligt berørt:**
+- `components/garn/SubstitutionsSection.tsx` (klik-handlers, kommentar-UI, rename)
+- `components/garn/ModerationClient.tsx` (rename, evt. flertråds-UI)
+- Ny migration hvis flertrådede forslag kræver schema-ændring
+- `app/garn/[slug]/page.tsx` (visning, rename)
+- Evt. `content/` hvis der er statisk copy
+
+Launch-blokerende: feature er halv-implementeret uden klart klik-flow eller understøttelse af den mest almindelige danske substitutions-case (flertrådet).
+
 ---
 
 ## Ønsker / overvejelser
@@ -253,6 +295,7 @@ Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
 
 **Fra Hannah (egne ønsker, 2026-04-19):**
 - **AI-validering af substitutioner** (Claude API) — AI der ved om fibre/vægt/metrage faktisk matcher. M-estimat
+- **Moderations-flow for substitutions-forslag — effektivitets-review** — `ModerationClient.tsx` findes, men Hannah ønsker at verificere at godkendelses-workflowet er så hurtigt som muligt pr. forslag (batch-godkend? tastatur-shortcuts? keyboard-only flow?). UX-review anbefales.
 - **Garnproducent-kontaktliste** — Excel med producentnavne, kontaktoplysninger, hvilke garner de fører. Research-task, ikke kode. Kan hjælpe separat.
 - **Opskrifts-katalog (fuld feature, post-launch)** — juridisk og forretningsmæssig overvejelse før teknisk. Består af:
   - **Ny tabel `patterns`** i Supabase (titel, designer, billede, garn, pind, sværhedsgrad, pris, kilde-URL, `is_own`, `owner_user_id`) + RLS

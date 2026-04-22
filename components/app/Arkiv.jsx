@@ -6,6 +6,48 @@ import { uploadFile as uploadFileRaw } from '@/lib/supabase/storage'
 import { displayYarnName, fetchColorsByIds, fetchColorsForYarn, searchYarnsFull } from '@/lib/catalog'
 import { exportProjekter } from '@/lib/export/exportProjekter'
 import { DelMedFaellesskabetModal } from '@/components/app/DelMedFaellesskabetModal'
+import { PROJECT_STATUSES, PROJECT_STATUS_LABELS } from '@/lib/types'
+
+function StatusChips({ value, onChange }) {
+  return (
+    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+      {PROJECT_STATUSES.map(s => {
+        const active = value === s
+        return (
+          <button
+            key={s}
+            type="button"
+            onClick={() => onChange(s)}
+            style={{
+              padding: '7px 12px',
+              borderRadius: '999px',
+              fontSize: '12px',
+              fontFamily: "'DM Sans', sans-serif",
+              cursor: 'pointer',
+              border: active ? '1px solid #6A5638' : '1px solid #D0C8BA',
+              background: active ? '#6A5638' : 'transparent',
+              color: active ? '#fff' : '#6B5D4F',
+              fontWeight: active ? 500 : 400,
+            }}
+          >
+            {PROJECT_STATUS_LABELS[s]}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+const PROJECT_STATUS_CHIP_STYLE = {
+  display: 'inline-block',
+  padding: '3px 10px',
+  borderRadius: '999px',
+  fontSize: '11px',
+  fontFamily: "'DM Sans', sans-serif",
+  background: '#EDE7D8',
+  color: '#6A5638',
+  letterSpacing: '.02em',
+}
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
@@ -158,6 +200,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     needleSize: entry?.needle_size ?? '',
     heldWith:   entry?.held_with   ?? '',
     notes:      entry?.notes       ?? '',
+    status:     entry?.status      ?? 'faerdigstrikket',
   })
   const [imageFile, setImageFile]       = useState(null)
   const [imagePreview, setImagePreview] = useState(entry?.project_image_url ?? null)
@@ -186,6 +229,10 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         needle_size: form.needleSize || null,
         held_with:   form.heldWith   || null,
         notes:       form.notes      || null,
+        status:      form.status     || 'faerdigstrikket',
+      }
+      if (form.status !== 'faerdigstrikket' && entry.is_shared) {
+        updates.is_shared = false
       }
 
       if (imageFile) {
@@ -205,7 +252,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         .from('projects')
         .update(updates)
         .eq('id', entry.id)
-        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,created_at,updated_at')
+        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,status,created_at,updated_at')
         .single()
       if (error) throw error
 
@@ -251,7 +298,16 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                   {entry.title || 'Unavngivet projekt'}
                 </div>
               )}
-              {!editing && entry.used_at && <div style={{ fontSize: '12px', color: '#8B7D6B', marginTop: '2px' }}>{formatDate(entry.used_at)}</div>}
+              {!editing && (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px', flexWrap: 'wrap' }}>
+                  <span style={PROJECT_STATUS_CHIP_STYLE}>
+                    {PROJECT_STATUS_LABELS[entry.status ?? 'faerdigstrikket']}
+                  </span>
+                  {entry.used_at && (
+                    <span style={{ fontSize: '12px', color: '#8B7D6B' }}>{formatDate(entry.used_at)}</span>
+                  )}
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '6px', marginLeft: '12px', flexShrink: 0 }}>
               {!editing && (
@@ -283,6 +339,16 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
 
           {editing ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <Label>Status</Label>
+                <StatusChips value={form.status} onChange={v => setF('status', v)} />
+                {form.status !== 'faerdigstrikket' && entry.is_shared && (
+                  <div style={{ marginTop: '6px', fontSize: '11px', color: '#8B3A2A' }}>
+                    Projektet er delt i Fællesskabet. Hvis du gemmer med denne status, fjernes delingen.
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
                 <div>
                   <Label>Dato</Label>
@@ -369,13 +435,19 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => onShare?.(entry)}
-                  style={{ padding: '7px 14px', background: entry.is_shared ? '#E4EEE4' : '#F0E5D8', color: entry.is_shared ? '#2A4A2A' : '#6A5638', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                  aria-label={entry.is_shared ? 'Rediger deling med fællesskabet' : 'Del med fællesskabet'}
-                >
-                  {entry.is_shared ? '✓ Delt med fællesskabet' : 'Del med fællesskabet'}
-                </button>
+                {(entry.status ?? 'faerdigstrikket') === 'faerdigstrikket' ? (
+                  <button
+                    onClick={() => onShare?.(entry)}
+                    style={{ padding: '7px 14px', background: entry.is_shared ? '#E4EEE4' : '#F0E5D8', color: entry.is_shared ? '#2A4A2A' : '#6A5638', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    aria-label={entry.is_shared ? 'Rediger deling med fællesskabet' : 'Del med fællesskabet'}
+                  >
+                    {entry.is_shared ? '✓ Delt med fællesskabet' : 'Del med fællesskabet'}
+                  </button>
+                ) : (
+                  <span style={{ fontSize: '12px', color: '#8B7D6B', fontStyle: 'italic' }}>
+                    Del er mulig når projektet er færdigstrikket
+                  </span>
+                )}
                 {confirmDel ? (
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <span style={{ fontSize: '12px', color: '#8B3A2A' }}>Er du sikker?</span>
@@ -415,6 +487,7 @@ const EMPTY_NEW = {
   needleSize: '',
   heldWith: '',
   notes: '',
+  status: 'faerdigstrikket',
   yarnLines: [EMPTY_YARN_LINE],
 }
 
@@ -477,6 +550,7 @@ function NytProjektModal({ user, onClose, onSaved }) {
           needle_size: form.needleSize || null,
           held_with: form.heldWith || null,
           notes: form.notes || null,
+          status: form.status || 'faerdigstrikket',
         }])
         .select()
         .single()
@@ -502,7 +576,11 @@ function NytProjektModal({ user, onClose, onSaved }) {
       }
 
       const lines = (form.yarnLines ?? []).filter(l => (l.yarnName || l.yarnBrand || l.colorName || l.colorCode || l.quantityUsed))
-      if (lines.length === 0) throw new Error('Tilføj mindst ét garn til projektet.')
+      // Ønskeprojekter må gerne oprettes uden garn — brugere har sjældent valgt
+      // garn på ønskestadiet. Igangværende og færdige projekter kræver mindst ét garn.
+      if (lines.length === 0 && form.status !== 'vil_gerne') {
+        throw new Error('Tilføj mindst ét garn til projektet.')
+      }
 
       const usageRows = lines.map(l => ({
         ...toUsageDb({
@@ -525,15 +603,19 @@ function NytProjektModal({ user, onClose, onSaved }) {
         user_id: user.id,
       }))
 
-      const { data: usages, error: yErr } = await supabase
-        .from('yarn_usage')
-        .insert(usageRows)
-        .select()
-      if (yErr) throw yErr
+      let usages = []
+      if (usageRows.length > 0) {
+        const { data, error: yErr } = await supabase
+          .from('yarn_usage')
+          .insert(usageRows)
+          .select()
+        if (yErr) throw yErr
+        usages = data ?? []
+      }
 
       onSaved({
         ...project,
-        yarnLines: (usages ?? []).map(fromUsageDb),
+        yarnLines: usages.map(fromUsageDb),
       })
       onClose()
     } catch (e) {
@@ -551,11 +633,16 @@ function NytProjektModal({ user, onClose, onSaved }) {
 
         <div style={{ background: '#6A5638', padding: '18px 24px', position: 'relative' }}>
           <button onClick={onClose} style={{ position: 'absolute', top: '12px', right: '16px', background: 'none', border: 'none', color: 'rgba(255,255,255,.6)', fontSize: '18px', cursor: 'pointer' }}>✕</button>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 600, color: '#fff' }}>Nyt færdigt projekt</div>
-          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.6)', marginTop: '2px' }}>Registrer uden at trække fra lageret</div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 600, color: '#fff' }}>Nyt projekt</div>
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.6)', marginTop: '2px' }}>Ønske, i gang eller færdigstrikket</div>
         </div>
 
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+
+          <div>
+            <Label>Status</Label>
+            <StatusChips value={form.status} onChange={v => setF('status', v)} />
+          </div>
 
           <div>
             <Label>Hvad er strikket?</Label>
@@ -743,6 +830,7 @@ export default function Arkiv({ user, onRequestLogin }) {
   const [projects, setProjects] = useState([])
   const [loaded, setLoaded]   = useState(false)
   const [q, setQ]             = useState('')
+  const [statusTab, setStatusTab] = useState('faerdigstrikket')
   const [selected, setSelected] = useState(null)
   const [sharing, setSharing]   = useState(null)
   const [showNew, setShowNew] = useState(false)
@@ -760,7 +848,7 @@ export default function Arkiv({ user, onRequestLogin }) {
       // otherwise make the entire UI appear empty even though data exists.
       const { data: pData, error: pErr } = await supabase
         .from('projects')
-        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,created_at,updated_at')
+        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,status,created_at,updated_at')
         .order('used_at', { ascending: false })
         .order('created_at', { ascending: false })
       if (pErr) console.error(pErr)
@@ -811,7 +899,18 @@ export default function Arkiv({ user, onRequestLogin }) {
     if (projects.length > 0) loadColors()
   }, [projects])
 
+  const counts = useMemo(() => {
+    const c = { vil_gerne: 0, i_gang: 0, faerdigstrikket: 0 }
+    for (const p of projects) {
+      const s = p.status ?? 'faerdigstrikket'
+      if (c[s] !== undefined) c[s]++
+    }
+    return c
+  }, [projects])
+
   const filtered = projects.filter(p => {
+    const s = p.status ?? 'faerdigstrikket'
+    if (s !== statusTab) return false
     if (!q) return true
     const qL = q.toLowerCase()
     const title = (p.title || '').toLowerCase()
@@ -870,37 +969,73 @@ export default function Arkiv({ user, onRequestLogin }) {
         />
       )}
 
-      {/* Sub-header */}
-      <div style={{ background: '#6A5638', padding: '10px 20px', borderBottom: '1px solid #5A4628' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', gap: '10px', flexWrap: 'wrap' }}>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '14px', color: 'rgba(255,255,255,.6)' }}>
-            {projectCountLabel}
-          </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button
-              onClick={async () => {
-                const result = await exportProjekter(supabase)
-                if (!result.success) alert(result.error)
-              }}
-              style={{ padding: '7px 12px', background: 'rgba(255,255,255,.12)', color: 'rgba(255,255,255,.8)', border: '1px solid rgba(255,255,255,.2)', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}
-              aria-label="Eksporter projekter som CSV"
-            >
-              📥 Eksporter
-            </button>
-            <button
-              onClick={() => setShowNew(true)}
-              style={{ padding: '7px 14px', background: '#C16B47', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}
-            >
-              + Nyt projekt
-            </button>
-          </div>
+      {/* Sub-header — 1 row: count + handlinger (matches Garnlager-pattern) */}
+      <div style={{
+        background: '#EDE7D8',
+        borderBottom: '1px solid #D8D0C0',
+        padding: '8px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        flexWrap: 'wrap',
+      }}>
+        <div style={{ flex: '1 1 auto', minWidth: 0, fontFamily: "'Cormorant Garamond', serif", fontSize: '14px', color: '#6B5D4F' }}>
+          {projectCountLabel}
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={async () => {
+              const result = await exportProjekter(supabase)
+              if (!result.success) alert(result.error)
+            }}
+            style={{ background: '#FFFFFF', border: '1px solid #D0C8BA', borderRadius: '6px', padding: '6px 11px', fontSize: '12px', color: '#5A4E42', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px' }}
+            aria-label="Eksporter projekter som CSV"
+          >
+            <span>📥</span> Eksporter
+          </button>
+          <button
+            onClick={() => setShowNew(true)}
+            style={{ background: '#61846D', color: '#fff', border: 'none', borderRadius: '6px', padding: '7px 14px', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", fontWeight: 500, cursor: 'pointer' }}
+          >
+            + Nyt projekt
+          </button>
+        </div>
+      </div>
+
+      {/* Søg + tabs i indholdsområdet */}
+      <div style={{ padding: '12px 20px 8px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           value={q}
           onChange={e => setQ(e.target.value)}
           placeholder="Søg projekt, garn eller farve..."
-          style={{ width: '100%', maxWidth: '340px', padding: '7px 12px', border: '1px solid rgba(255,255,255,.2)', borderRadius: '6px', fontSize: '13px', background: 'rgba(255,255,255,.12)', color: '#fff', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
+          style={{ flex: '1 1 220px', minWidth: '0', padding: '8px 12px', border: '1px solid #D0C8BA', borderRadius: '6px', fontSize: '13px', background: '#FFFCF7', color: '#2C2018', fontFamily: "'DM Sans', sans-serif" }}
         />
+        <div role="tablist" aria-label="Projekt-stadier" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          {PROJECT_STATUSES.map(s => {
+            const active = statusTab === s
+            return (
+              <button
+                key={s}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setStatusTab(s)}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '999px',
+                  fontSize: '12px',
+                  fontFamily: "'DM Sans', sans-serif",
+                  cursor: 'pointer',
+                  border: '1px solid ' + (active ? '#6A5638' : '#D0C8BA'),
+                  background: active ? '#6A5638' : '#FFFCF7',
+                  color: active ? '#fff' : '#6B5D4F',
+                  fontWeight: active ? 500 : 400,
+                }}
+              >
+                {PROJECT_STATUS_LABELS[s]} <span style={{ opacity: active ? .8 : .7 }}>({counts[s]})</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Entries */}
@@ -908,10 +1043,20 @@ export default function Arkiv({ user, onRequestLogin }) {
         <div style={{ textAlign: 'center', padding: '60px 20px', color: '#8B7D6B' }}>
           <div style={{ fontSize: '36px', marginBottom: '10px' }}>📦</div>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px' }}>
-            {projects.length === 0 ? 'Ingen færdige projekter endnu' : 'Ingen resultater'}
+            {q
+              ? 'Ingen resultater'
+              : statusTab === 'vil_gerne'
+                ? 'Ingen ønskeprojekter endnu'
+                : statusTab === 'i_gang'
+                  ? 'Ingen igangværende projekter'
+                  : 'Ingen færdige projekter endnu'}
           </div>
           <div style={{ fontSize: '13px', marginTop: '6px' }}>
-            {projects.length === 0 ? 'Klik "+ Nyt projekt" for at registrere, eller brug "Brug nøgler" på et garn i lageret' : 'Prøv andre søgeord'}
+            {q
+              ? 'Prøv andre søgeord'
+              : statusTab === 'faerdigstrikket'
+                ? 'Klik "+ Nyt projekt" for at registrere, eller brug "Brug nøgler" på et garn i lageret'
+                : 'Klik "+ Nyt projekt" og vælg status øverst i dialogen'}
           </div>
         </div>
       ) : (
