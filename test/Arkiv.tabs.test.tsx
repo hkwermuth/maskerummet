@@ -80,8 +80,10 @@ function buildSupabaseMock(projects: object[]) {
   // Build a proper chainable mock for projects query
   const projectsChain = {
     select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
     order: vi.fn().mockImplementation(() => projectsChain),
   }
+  projectsChain.eq.mockImplementation(() => projectsChain)
   // The last .order() call must return a resolved promise
   let orderCallCount = 0
   projectsChain.order.mockImplementation(() => {

@@ -118,8 +118,13 @@ function buildSupabaseMock(
   updateResult: object = { data: null, error: null }
 ) {
   let orderCallCount = 0
-  const projectsChain = {
+  const projectsChain: {
+    select: ReturnType<typeof vi.fn>
+    eq: ReturnType<typeof vi.fn>
+    order: ReturnType<typeof vi.fn>
+  } = {
     select: vi.fn().mockReturnThis(),
+    eq: vi.fn(),
     order: vi.fn().mockImplementation(() => {
       orderCallCount++
       if (orderCallCount >= 2) {
@@ -128,6 +133,7 @@ function buildSupabaseMock(
       return projectsChain
     }),
   }
+  projectsChain.eq.mockImplementation(() => projectsChain)
 
   const yarnChain = {
     select: vi.fn().mockReturnThis(),
@@ -298,7 +304,13 @@ describe('AC6 – Saving status change from faerdigstrikket to i_gang unshares t
     })
 
     let orderCallCount = 0
-    const projectsChain = {
+    const projectsChain: {
+      select: ReturnType<typeof vi.fn>
+      order: ReturnType<typeof vi.fn>
+      update: ReturnType<typeof vi.fn>
+      eq: ReturnType<typeof vi.fn>
+      single: ReturnType<typeof vi.fn>
+    } = {
       select: vi.fn().mockReturnThis(),
       order: vi.fn().mockImplementation(() => {
         orderCallCount++
@@ -311,9 +323,13 @@ describe('AC6 – Saving status change from faerdigstrikket to i_gang unshares t
       eq: eqMock,
       single: singleMock,
     }
+    // Route eq() by argument: 'user_id' = load chain → projectsChain.order(), 'id' = update chain → select()
+    eqMock.mockImplementation((column: string) => {
+      if (column === 'user_id') return projectsChain
+      return { select: selectMock }
+    })
     // Make update chain chainable
     updateMock.mockReturnValue({ eq: eqMock })
-    eqMock.mockReturnValue({ select: selectMock })
     selectMock.mockReturnValue({ single: singleMock })
 
     const yarnChain = {

@@ -849,6 +849,7 @@ export default function Arkiv({ user, onRequestLogin }) {
       const { data: pData, error: pErr } = await supabase
         .from('projects')
         .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,status,created_at,updated_at')
+        .eq('user_id', user.id)
         .order('used_at', { ascending: false })
         .order('created_at', { ascending: false })
       if (pErr) console.error(pErr)
