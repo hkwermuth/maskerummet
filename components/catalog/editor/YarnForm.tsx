@@ -2,7 +2,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
-import type { Yarn, FiberComponent } from '@/lib/types'
+import type { Yarn, FiberComponent, YarnWeight } from '@/lib/types'
+import { YARN_WEIGHTS, YARN_WEIGHT_LABELS } from '@/lib/types'
 import { toSlug } from '@/lib/slug'
 
 type Props = { initial?: Partial<Yarn> & { fibers?: FiberComponent[] | null } }
@@ -36,6 +37,7 @@ export function YarnForm({ initial }: Props) {
   const [name, setName] = useState(initial?.name ?? '')
   const [series, setSeries] = useState(initial?.series ?? '')
   const [fiberMain, setFiberMain] = useState(initial?.fiber_main ?? '')
+  const [yarnWeight, setYarnWeight] = useState<YarnWeight | ''>(initial?.yarn_weight ?? '')
   const [thickness, setThickness] = useState(initial?.thickness_category ?? '')
   const [ballWeight, setBallWeight] = useState(initial?.ball_weight_g?.toString() ?? '')
   const [length, setLength] = useState(initial?.length_per_100g_m?.toString() ?? '')
@@ -67,6 +69,7 @@ export function YarnForm({ initial }: Props) {
       producer, name,
       series: series || null,
       fiber_main: fiberMain || null,
+      yarn_weight: yarnWeight || null,
       thickness_category: thickness || null,
       ball_weight_g: ballWeight ? parseFloat(ballWeight) : null,
       length_per_100g_m: length ? parseFloat(length) : null,
@@ -115,7 +118,19 @@ export function YarnForm({ initial }: Props) {
         <Field label="Navn *"><input required value={name} onChange={(e) => setName(e.target.value)} className={inputCls} /></Field>
         <Field label="Serie"><input value={series ?? ''} onChange={(e) => setSeries(e.target.value)} className={inputCls} /></Field>
         <Field label="Fiber-hovedkategori"><input value={fiberMain ?? ''} onChange={(e) => setFiberMain(e.target.value)} className={inputCls} /></Field>
-        <Field label="Tykkelse">
+        <Field label="Vægt">
+          <select
+            value={yarnWeight}
+            onChange={(e) => setYarnWeight(e.target.value as YarnWeight | '')}
+            className={inputCls}
+          >
+            <option value="">—</option>
+            {YARN_WEIGHTS.map((w) => (
+              <option key={w} value={w}>{YARN_WEIGHT_LABELS[w]}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Tykkelse (afløses af Vægt)">
           <select value={thickness ?? ''} onChange={(e) => setThickness(e.target.value)} className={inputCls}>
             <option value="">—</option>
             {THICKNESS.map((t) => <option key={t} value={t}>{t}</option>)}

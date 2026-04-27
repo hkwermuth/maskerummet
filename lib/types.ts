@@ -3,6 +3,10 @@ export type FiberComponent = {
   percentage: number
 }
 
+export { YARN_WEIGHTS, YARN_WEIGHT_LABELS } from './yarn-weight'
+export type { YarnWeight } from './yarn-weight'
+import type { YarnWeight } from './yarn-weight'
+
 export type Yarn = {
   id: string
   producer: string
@@ -11,6 +15,7 @@ export type Yarn = {
   full_name: string
   fiber_main: string | null
   thickness_category: string | null
+  yarn_weight: YarnWeight | null
   ball_weight_g: number | null
   length_per_100g_m: number | null
   needle_min_mm: number | null

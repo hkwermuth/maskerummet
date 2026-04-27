@@ -2,7 +2,7 @@
 
 Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
-**Sidst synkroniseret:** 2026-04-22 (Projekt-stadier + delings-gating + rename substitution→alternativ)
+**Sidst synkroniseret:** 2026-04-27 (Indtastning + garn-katalog brief nedbrudt til 8 features)
 
 ---
 
@@ -38,7 +38,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - Fiber-filter (Uld, Merino, Mohair, Alpaka, Silke, Bomuld, Hør, Akryl)
 - Status-filter (På lager, I brug, Brugt op, Ønskeliste)
 - Farve-kategorier med hexfarve-vælger
-- Barcode-scanner (kamera-baseret, `BarcodeScanner.jsx`)
+- Barcode-scanner (kamera-baseret, `BarcodeScanner.jsx`) — **midlertidigt skjult** i Mit Garnlager (2026-04-27, se "I gang / halv-implementeret")
 - Katalog-søgning: link garn til garn-kataloget ved oprettelse
 - Billede-upload til garnpost
 - Metrage og antal nøgler registreres
@@ -54,6 +54,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - RLS på `projects`-tabel (select/insert/update/delete egne)
 - **CSV-eksport af projekter** (`lib/export/exportProjekter.ts`) — eksportknap i header, dansk kolonnenavne
 - **Bekræftelsesdialog ved sletning af garn** (`components/app/Garnlager.jsx`) — inline "Er du sikker?" + Annuller + "Ja, slet" matcher mønster fra Arkiv.jsx; fejl vises via saveError; ingen dobbelt-sletning under async
+- **Multi-billed-upload til projekter (2026-04-27)** — op til 6 strik-billeder pr. projekt + opskrift som enten 1 PDF eller op til 10 billeder (multi-select). Cover i Fællesskabet er første strik-billede. PDF første side rendres klient-side via `lib/pdf-thumbnail.ts` (pdfjs-dist, lazy-loaded, worker i `public/pdf.worker.min.mjs`). Migration `20260428000001_project_media_arrays.sql` udskifter `project_image_url` med `project_image_urls TEXT[]`, tilføjer `pattern_image_urls TEXT[]` + `pattern_pdf_thumbnail_url`; XOR-CHECK forhindrer at PDF og billed-opskrift koeksisterer. Filstørrelse + MIME-validering via `validateUploadFile`. Pattern-felter forbliver owner-only via kolonne-niveau-GRANT.
 
 ### Sikkerhed / RLS
 - RLS på `projects` (select/insert/update/delete egne)
@@ -67,6 +68,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - Substitution-sektion med community-validering (`SubstitutionsSection.tsx`, `ModerationClient.tsx`)
 - Admin-editor til oprettelse/redigering af garn (`app/garn/admin/`) — med tom tilstand
 - FAQ for garn-katalog (`app/garn/faq/page.tsx`)
+- **F1: yarnWeight-enum på yarns-tabellen (2026-04-27)** — kanonisk vægt-klassifikation som Postgres-enum (`lace`/`fingering`/`sport`/`dk`/`worsted`/`aran`/`bulky`/`super_bulky`) erstatter fri-tekst `thickness_category`. Migration `20260427000003_yarn_weight_enum.sql` opretter enum, tilføjer kolonne, backfiller via alias-mapping (engelsk + dansk + n-ply), eksplicit BC Garn Luxor → fingering override (Luxor-bug fixet). `yarns_full`-view recreates med ny kolonne. Ny `lib/yarn-weight.ts` med `mapToYarnWeight()`-funktion 1:1 med SQL CASE. Admin-editor (`YarnForm.tsx`) får ny "Vægt"-dropdown; gammel "Tykkelse" bevares parallelt med "afløses af Vægt"-label indtil F2-F4 migreres væk fra det. 33 nye Vitest-tests (327/327 grønne).
 
 ### Layout og navigation
 - Glassmorphism-navigation med auth-gating (`components/layout/Nav.tsx`)
@@ -151,6 +153,16 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 ---
 
 ## I gang / halv-implementeret
+
+### Barcode-scanner i Mit Garnlager — skjult indtil EAN-koder er på plads (2026-04-27)
+Funktionaliteten er fuldt implementeret (kamera-scanner + opslag mod `colors.barcode` + bidrag-flow til ukendte EAN-koder), men "Skann garn"-knappen i `Mit Garnlager` er **skjult** via feature-flag `SHOW_SCANNER = false` (`components/app/Garnlager.jsx:26`). Begrundelse: kataloget mangler stadig EAN-koder på de fleste farver, så scanner-flowet ville ramme tom hyppigere end det rammer match. Det giver dårlig første-oplevelse for testbrugere.
+
+**Sådan genaktiveres når EAN-koder er populeret:**
+1. Skift `SHOW_SCANNER` til `true` i `components/app/Garnlager.jsx`.
+2. Verificér at `colors.barcode` har dækning (>~50% af farverne i kataloget).
+3. Bekræft at bidrag-flowet (`BarcodeSuggestionForm`) virker for de tilfælde hvor EAN ikke matcher.
+
+Bemærk: `ScanFraKatalogButton` på den offentlige `/garn`-katalog-side er IKKE skjult — kun den i Mit Garnlager. Modul/import bevaret, så ingen kode-rot.
 
 ### Dark mode (LAV PRIORITET)
 Ingen `dark:`-klasser i kodebasen. Dark mode er ikke startet. Sørg for at OS dark mode ikke utilsigtet bryder layoutet. Kan vente til efter testbruger-launch.
@@ -280,6 +292,34 @@ Opsamling fra Jespers råd (IT-arkitekt) + løbende diskussion. Markeret efter k
 ## Ønsker / overvejelser
 
 Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
+
+### Planlagt: Indtastning + garn-katalog (brief 2026-04-27)
+
+Stort brief om hele indtastnings-flowet og bidragsflow til STRIQs garn-katalog. Nedbrudt til 8 sekventerbare features. Tre datakilder skal være visuelt adskilte gennem hele appen: **grøn = katalog (read-only)**, **lilla = AI-forslag**, **neutral = bruger-input**.
+
+**Afhængighedsgraf:**
+```
+F1 datamodel ──→ F2 read-only formular ──┬── F3 felt-forenkling ──→ F4 kort-redesign
+                                         └── F5 "Brugt op"-flow
+F6 manuel + bidragsflow ──→ F7 AI-opslag (post-launch)
+                        └─→ F8 review + admin-notifikationer
+```
+
+- ~~**F1 (S)** Datamodel: `yarnWeight`-enum på `yarns`-tabellen~~ — **shippet 2026-04-27** (se "Implementeret → Garn-katalog")
+- **F2 (M)** Read-only katalog-sektion i Tilføj Garn-formular. Når garn vælges fra katalog vises katalog-felter som info-blok (ikke inputs). Kun bruger-egne felter er redigerbare. Inkluderer QW2 (escape lukker modal) + QW3 (autofokus på katalog-søg).
+- **F3 (S)** Felt-forenkling i formular: behold hex-vælger som primær farve-input (fjern separat fritekst-farvenavn-felt), fjern EAN-felt fra brugervendt formular, erstat antal-input med +/− tæller-knapper, required-validering ved gem (QW1).
+- **F4 (S)** Garnkort-redesign på Mit Garnlager: rund hex-fyldt farve-cirkel (ikke tekst-label), dedupe mærkenavn fra korttitel hvis det allerede er i badge, diskret "fra katalog"-ikon på linkede garn.
+- **F5 (S)** "Brugt op"-subflow: bekræftelses-prompt ("antal nøgler nulstilles") + valgfri "hvad brugte du det til?"-note. Genbruger `BrugNoeglerModal`-mønster.
+- **F6 (M)** Manuel indtastning + "Foreslå til STRIQs katalog"-bidragsflow. Tredje spor i Tilføj Garn (siden af katalog-søg og scanner). Efter gem: valgfri prompt om at bidrage. Genbruger `BarcodeSuggestionForm`-mønster og eksisterende admin-godkendelses-infrastruktur.
+- **F7 (L)** AI-opslag med caching: knap "Slå op med AI" → Claude API → udfylder fiber/vægt/metrage med confidence-score. Cache i ny `yarn_ai_cache`-tabel (30 dage). AI-felter vises med lilla accent. Kræver `ANTHROPIC_API_KEY` i prod. **Post-launch.**
+- **F8 (M)** Review-flow + admin-notifikationer: fix `user_profiles`-bug (tom i prod → `is_editor()` returnerer false), Supabase Database Webhook → Resend ved nye forslag, batch-godkendelse i `ModerationClient.tsx`. Kræver Resend opsat (5.11).
+
+**Launch-vurdering:** Ingen af de 8 er launch-blokerende. F1–F6 + F8 er realistiske inden/kort efter testbruger-launch (2026-05-09). F7 er eksplicit post-launch.
+
+**Dedupe-noter:**
+- QW1/QW2/QW3 fra "UX-review af Mit Garn-input" nedenfor absorberes i F2+F3 — undgå dobbeltarbejde.
+- "To-trins flow: [Søg katalog] / [Scan] / [Manuelt]" i UX-review nedenfor er i praksis F2+F6.
+- "Notifikations-feature ved nyt forslag" og "Synlighed: hvor lander forslaget" under "Alternativer / substitutions" overlapper med F8 — løses samlet.
 
 ### BØR-HAVE (giver tillid og værdi til testbrugere)
 

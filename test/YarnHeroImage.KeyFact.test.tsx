@@ -32,6 +32,7 @@ function makeYarn(overrides: Partial<Yarn> = {}): Yarn {
     full_name: 'DROPS Merino Extra Fine',
     fiber_main: '100% Merino Uld',
     thickness_category: null,
+    yarn_weight: null,
     ball_weight_g: null,
     length_per_100g_m: null,
     needle_min_mm: null,
