@@ -38,58 +38,70 @@ export default function KatalogInfoblok({ yarn, onClearLink }) {
           color: '#1E4D3A',
           fontWeight: 600,
         }}>
-          Fra kataloget
+          Importeret fra katalog
         </span>
         {onClearLink && (
           <button
             type="button"
             onClick={onClearLink}
             style={{
-              fontSize: 11,
+              fontSize: 12,
               color: '#1E4D3A',
-              background: 'none',
-              border: 'none',
+              background: '#FFFFFF',
+              border: '1px solid #61846D',
+              borderRadius: 999,
               cursor: 'pointer',
-              padding: '2px 4px',
-              textDecoration: 'underline',
+              padding: '6px 16px',
               fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 500,
+              minHeight: 36,
             }}
           >
-            Fjern katalog-link
+            Skift
           </button>
         )}
       </div>
 
       {yarn ? (
-        <dl style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: '10px 16px',
-          margin: 0,
-        }}>
-          {rows.map(([label, val]) => (
-            <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-              <dt style={{
-                fontSize: 10,
-                textTransform: 'uppercase',
-                letterSpacing: '.1em',
-                color: '#3E6650',
-                fontWeight: 500,
-              }}>
-                {label}
-              </dt>
-              <dd style={{
-                margin: 0,
-                fontSize: 13,
-                color: '#2C4A3E',
-                fontWeight: 500,
-                wordBreak: 'break-word',
-              }}>
-                {val}
-              </dd>
-            </div>
-          ))}
-        </dl>
+        <>
+          <dl style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: '10px 16px',
+            margin: 0,
+          }}>
+            {rows.map(([label, val]) => (
+              <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                <dt style={{
+                  fontSize: 10,
+                  textTransform: 'uppercase',
+                  letterSpacing: '.1em',
+                  color: '#3E6650',
+                  fontWeight: 500,
+                }}>
+                  {label}
+                </dt>
+                <dd style={{
+                  margin: 0,
+                  fontSize: 13,
+                  color: '#2C4A3E',
+                  fontWeight: 500,
+                  wordBreak: 'break-word',
+                }}>
+                  {val}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p style={{
+            margin: 0,
+            fontSize: 11,
+            color: '#3E6650',
+            fontStyle: 'italic',
+          }}>
+            Disse felter er låste og styres fra dit garn-katalog.
+          </p>
+        </>
       ) : (
         <p style={{
           margin: 0,

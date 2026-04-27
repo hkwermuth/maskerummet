@@ -16,7 +16,9 @@ import {
 import BarcodeScanner from './BarcodeScanner'
 import BrugNoeglerModal from './BrugNoeglerModal'
 import KatalogInfoblok from './KatalogInfoblok'
-import { detectColorFamily, COLOR_FAMILY_LABELS, COLOR_FAMILY_DEFAULT_HEX, yarnMatchesStashSearch } from '@/lib/data/colorFamilies'
+import FarvekategoriCirkler from './FarvekategoriCirkler'
+import AntalStepper from './AntalStepper'
+import { detectColorFamily, COLOR_FAMILY_DEFAULT_HEX, yarnMatchesStashSearch } from '@/lib/data/colorFamilies'
 import { exportGarnlager } from '@/lib/export/exportGarnlager'
 import { validateForm } from '@/lib/validators/yarnForm'
 
@@ -51,13 +53,6 @@ const EMPTY_FORM = {
   catalogImageUrl: null,
 }
 
-const FALLBACK_HEX = '#E8E4DC'
-
-function validHexForColorInput(hex) {
-  const s = (hex || '').trim()
-  return /^#[0-9A-Fa-f]{6}$/.test(s) ? s : FALLBACK_HEX
-}
-
 function isCatalogSwatchUrl(url) {
   const s = String(url || '')
   // Permin uses 100x100 swatches at /img/spec/<hash>.png
@@ -65,13 +60,26 @@ function isCatalogSwatchUrl(url) {
   return false
 }
 
-function normalizeUserHexInput(raw) {
-  const s = String(raw || '').trim()
-  if (!s) return ''
-  const noHash = s.replace(/^#/, '').replace(/\s+/g, '')
-  if (/^[0-9A-Fa-f]{6}$/.test(noHash)) return `#${noHash.toLowerCase()}`
-  // Allow user to keep typing partial / other formats; keep as-is.
-  return s
+// Splitter et kombineret farve-input til separate {colorName, colorCode}.
+// Heuristik: 3+ sammenhængende cifre er nummer, resten er navn.
+// "883174 Rosa" → { colorCode: '883174', colorName: 'Rosa' }
+// "Rosa 883174" → { colorCode: '883174', colorName: 'Rosa' }
+// "Rosa"        → { colorCode: '',       colorName: 'Rosa' }
+// "883174"      → { colorCode: '883174', colorName: '' }
+function parseCombinedColorInput(input) {
+  const s = String(input || '').trim()
+  if (!s) return { colorName: '', colorCode: '' }
+  const codeMatch = s.match(/(\d{3,})/)
+  if (codeMatch) {
+    const code = codeMatch[1]
+    const name = s.replace(code, '').replace(/\s+/g, ' ').trim()
+    return { colorName: name, colorCode: code }
+  }
+  return { colorName: s, colorCode: '' }
+}
+
+function combineColorDisplay(colorCode, colorName) {
+  return [colorCode, colorName].filter(s => s && String(s).trim()).join(' ').trim()
 }
 
 // ─── Garn-katalog søgning (Supabase `yarns_full`) ─────────────────────────────
@@ -321,6 +329,7 @@ export default function Garnlager({ user, onRequestLogin }) {
 
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
+  const [imageOpen, setImageOpen] = useState(false)
 
   const [modal, setModal] = useState(null) // null | 'add' | yarn.id
   const [form, setForm] = useState(EMPTY_FORM)
@@ -461,6 +470,7 @@ export default function Garnlager({ user, onRequestLogin }) {
     setColorsForYarn([])
     setImageFile(null)
     setImagePreview(null)
+    setImageOpen(false)
     setModal('add')
   }
   async function openEdit(y) {
@@ -470,6 +480,8 @@ export default function Garnlager({ user, onRequestLogin }) {
     setColorsForYarn([])
     setImageFile(null)
     setImagePreview(y.imageUrl ?? null)
+    // Åbn billede-blok automatisk hvis garnet allerede har et billede.
+    setImageOpen(Boolean(y.imageUrl || y.catalogImageUrl))
     setModal(y.id)
     if (y.catalogYarnId) {
       const yarn = await fetchYarnFullById(supabase, y.catalogYarnId)
@@ -504,6 +516,8 @@ export default function Garnlager({ user, onRequestLogin }) {
     const cols = await fetchColorsForYarn(supabase, yarn.id, { includeDiscontinued: true })
     setColorsForYarn(cols)
     setForm(f => applyCatalogYarnOnlyToForm(yarn, { ...f, antal: f.antal || 1 }))
+    // Hvis kataloget medbringer et billede, så åbn billede-blokken så bruger kan se det.
+    if (yarn?.image_url) setImageOpen(true)
   }
 
   function clearCatalogLink() {
@@ -685,7 +699,7 @@ export default function Garnlager({ user, onRequestLogin }) {
         <input
           value={q}
           onChange={e => setQ(e.target.value)}
-          placeholder="Søg garn, farve (pink finder også lyserød-hex), hex…"
+          placeholder="Søg garn, farve eller mærke…"
           style={{ flex: '1 1 180px', minWidth: '0', padding: '8px 12px', border: '1px solid #D0C8BA', borderRadius: '6px', fontSize: '13px', background: '#FFFCF7', color: '#2C2018', fontFamily: "'DM Sans', sans-serif" }}
         />
         <select value={filterWeight} onChange={e => setFilterWeight(e.target.value)} style={{ ...inputStyle, cursor: 'pointer', flex: '0 0 auto' }}>
@@ -890,14 +904,11 @@ export default function Garnlager({ user, onRequestLogin }) {
                   </select>
                 </Field>
               )}
-              {(form.catalogYarnId
-                ? [['antal', 'Antal nøgler', false]]
-                : [
-                    ['name', 'Garnnavn', true], ['brand', 'Mærke', true],
-                    ['metrage', 'Løbelængde/nøgle (m)', false],
-                    ['pindstr', 'Pindstørrelse', false], ['antal', 'Antal nøgler', false],
-                  ]
-              ).map(([k, l, required]) => {
+              {!form.catalogYarnId && [
+                ['name', 'Garnnavn', true], ['brand', 'Mærke', true],
+                ['metrage', 'Løbelængde/nøgle (m)', false],
+                ['pindstr', 'Pindstørrelse', false],
+              ].map(([k, l, required]) => {
                 const err = fieldErrors[k]
                 return (
                   <Field key={k} label={required ? `${l} *` : l}>
@@ -907,9 +918,8 @@ export default function Garnlager({ user, onRequestLogin }) {
                         setF(k, e.target.value)
                         if (err) setFieldErrors(prev => { const n = { ...prev }; delete n[k]; return n })
                       }}
-                      type={k === 'antal' || k === 'metrage' ? 'number' : 'text'}
-                      step={k === 'antal' ? '0.25' : k === 'metrage' ? '1' : undefined}
-                      min={k === 'antal' ? '0' : undefined}
+                      type={k === 'metrage' ? 'number' : 'text'}
+                      step={k === 'metrage' ? '1' : undefined}
                       aria-invalid={err ? true : undefined}
                       aria-describedby={err ? `err-${k}` : undefined}
                       style={err ? { ...inputStyle, borderColor: '#8B3A2A' } : inputStyle}
@@ -957,76 +967,47 @@ export default function Garnlager({ user, onRequestLogin }) {
                 </div>
               )}
 
-              <Field label="Farvenavn">
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <Label>Farve</Label>
                 <input
-                  value={form.colorName ?? ''}
+                  value={combineColorDisplay(form.colorCode, form.colorName)}
                   onChange={e => {
-                    const v = e.target.value
+                    const { colorName, colorCode } = parseCombinedColorInput(e.target.value)
                     setForm(p => {
-                      const detected = detectColorFamily(v)
+                      const detected = detectColorFamily(colorName)
                       const nextCategory = (p.colorCategory && String(p.colorCategory).trim())
                         ? p.colorCategory
-                        : (detected ?? p.colorCategory)
+                        : (detected ?? '')
                       const shouldSetHex = !(p.hex && String(p.hex).trim())
                       const nextHex = shouldSetHex && detected && COLOR_FAMILY_DEFAULT_HEX[detected]
                         ? COLOR_FAMILY_DEFAULT_HEX[detected]
                         : p.hex
                       return {
                         ...p,
-                        colorName: v,
-                        colorCategory: nextCategory ?? '',
+                        colorName,
+                        colorCode,
+                        colorCategory: nextCategory,
                         hex: nextHex ?? '',
                       }
                     })
                   }}
-                  placeholder="F.eks. Blomstereng, Camel…"
+                  placeholder="fx 883174 eller Rosa"
                   style={inputStyle}
                 />
-              </Field>
+                <span style={{ fontSize: '11px', color: '#8B7D6B' }}>Skriv farvenummer, navn eller begge dele</span>
+              </div>
 
-              <Field label="Farvenummer">
-                <input
-                  value={form.colorCode ?? ''}
-                  onChange={e => setF('colorCode', e.target.value)}
-                  placeholder="F.eks. 883174"
-                  style={inputStyle}
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <Label>Farvekategori</Label>
+                <FarvekategoriCirkler
+                  colorCategory={form.colorCategory}
+                  hex={form.hex}
+                  onChange={({ colorCategory, hex }) => {
+                    setForm(p => ({ ...p, colorCategory, hex }))
+                  }}
+                  onExactHexChange={hex => setF('hex', hex)}
                 />
-              </Field>
-
-              {/* Color category — auto-detected, can be overridden */}
-              <Field label="Farvekategori (til søgning)">
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <input
-                    value={form.colorCategory ?? ''}
-                    onChange={e => {
-                      const v = e.target.value
-                      setForm(p => {
-                        const detected = detectColorFamily(v)
-                        const shouldSetHex = !(p.hex && String(p.hex).trim())
-                        const nextHex = shouldSetHex && detected && COLOR_FAMILY_DEFAULT_HEX[detected]
-                          ? COLOR_FAMILY_DEFAULT_HEX[detected]
-                          : p.hex
-                        return {
-                          ...p,
-                          colorCategory: v,
-                          hex: nextHex ?? '',
-                        }
-                      })
-                    }}
-                    placeholder={detectColorFamily(form.colorName) ?? 'F.eks. grøn, brun...'}
-                    style={{ ...inputStyle, flex: 1 }}
-                    list="color-family-list"
-                  />
-                  <datalist id="color-family-list">
-                    {COLOR_FAMILY_LABELS.map(c => <option key={c} value={c} />)}
-                  </datalist>
-                  {(form.colorCategory || detectColorFamily(form.colorName)) && (
-                    <span style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '20px', background: '#EDE7D8', color: '#6B5D4F', whiteSpace: 'nowrap' }}>
-                      {form.colorCategory || detectColorFamily(form.colorName)}
-                    </span>
-                  )}
-                </div>
-              </Field>
+              </div>
 
               {!form.catalogYarnId && (
                 <Field label="Garnvægt">
@@ -1042,85 +1023,95 @@ export default function Garnlager({ user, onRequestLogin }) {
                 </select>
               </Field>
 
-              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <Label>Farve (hex)</Label>
-                {!(form.hex || '').trim() && (
-                  <div style={{ fontSize: '11px', color: '#8B7D6B', marginBottom: '2px' }}>Ingen farve valgt — vælg farve fra kataloget eller skriv eget hex.</div>
-                )}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input
-                    type="color"
-                    aria-label="Vælg farve"
-                    value={validHexForColorInput(form.hex)}
-                    onChange={e => setF('hex', e.target.value)}
-                    style={{ width: '48px', height: '44px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '2px' }}
-                  />
-                  <input
-                    value={form.hex || ''}
-                    onChange={e => setF('hex', normalizeUserHexInput(e.target.value))}
-                    placeholder="#RRGGBB"
-                    style={{ ...inputStyle, flex: 1 }}
-                  />
-                  <div style={{ width: '44px', height: '44px', borderRadius: '6px', background: (form.hex && form.hex.trim()) ? form.hex : '#D0C8BA', border: '1px solid #D0C8BA', flexShrink: 0 }} />
-                </div>
-              </div>
+              {/* Antal nøgler — −/+/n stepper */}
+              <Field label="Antal nøgler">
+                <AntalStepper
+                  value={form.antal}
+                  onChange={v => setF('antal', v)}
+                />
+              </Field>
 
-              {/* Billede upload */}
+              {/* Billede upload — kollapset bag toggle indtil bruger åbner */}
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <Label>Billede af garnet</Label>
-                <label style={{
-                  display: 'flex', alignItems: 'center', gap: '12px',
-                  padding: '8px 12px', border: '1px dashed #C0B8A8',
-                  borderRadius: '8px', cursor: 'pointer', background: '#F4EFE6',
-                }}>
-                  <input type="file" accept="image/*" onChange={handleImageFile} style={{ display: 'none' }} />
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="preview" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #D0C8BA' }} />
-                  ) : form.catalogImageUrl ? (
-                    <img
-                      src={form.catalogImageUrl}
-                      alt="Katalog"
-                      style={{
-                        width: '56px',
-                        height: '56px',
-                        objectFit: isCatalogSwatchUrl(form.catalogImageUrl) ? 'contain' : 'cover',
-                        borderRadius: '6px',
-                        border: '1px solid #D0C8BA',
-                        background: isCatalogSwatchUrl(form.catalogImageUrl) ? 'rgba(255,255,255,.65)' : 'transparent',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ width: '56px', height: '56px', background: '#EDE7D8', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', color: '#8B7D6B' }}>📷</div>
-                  )}
-                  <div>
-                    <div style={{ fontSize: '12px', color: '#2C2018', fontWeight: 500 }}>{imagePreview ? 'Skift billede' : 'Upload billede'}</div>
-                    <div style={{ fontSize: '11px', color: '#8B7D6B' }}>JPG eller PNG — vises på garnkortet</div>
-                  </div>
-                </label>
-                {!imagePreview && form.catalogImageUrl && isCatalogSwatchUrl(form.catalogImageUrl) && (
-                  <div style={{ fontSize: '11px', color: '#8B7D6B', lineHeight: '1.45' }}>
-                    Katalogbilledet er en lille farveprøve (100×100). Upload et foto for skarpere kort.
-                  </div>
-                )}
-                {imagePreview && (
+                {!imageOpen ? (
                   <button
                     type="button"
-                    onClick={() => { setImageFile(null); setImagePreview(null); setF('imageUrl', null) }}
-                    style={{ alignSelf: 'flex-start', fontSize: '11px', color: '#8B3A2A', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif" }}
+                    onClick={() => setImageOpen(true)}
+                    aria-expanded={false}
+                    style={{
+                      alignSelf: 'flex-start',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '4px 0',
+                      fontSize: '12px',
+                      color: '#6B5D4F',
+                      fontFamily: "'DM Sans', sans-serif",
+                      textDecoration: 'underline',
+                    }}
                   >
-                    ✕ Fjern billede
+                    ▸ + Tilføj billede
                   </button>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <Label>Billede af garnet</Label>
+                      {!imagePreview && !form.catalogImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setImageOpen(false)}
+                          aria-expanded={true}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: '#8B7D6B', fontFamily: "'DM Sans', sans-serif" }}
+                        >
+                          ▾ Skjul
+                        </button>
+                      )}
+                    </div>
+                    <label style={{
+                      display: 'flex', alignItems: 'center', gap: '12px',
+                      padding: '8px 12px', border: '1px dashed #C0B8A8',
+                      borderRadius: '8px', cursor: 'pointer', background: '#F4EFE6',
+                    }}>
+                      <input type="file" accept="image/*" onChange={handleImageFile} style={{ display: 'none' }} />
+                      {imagePreview ? (
+                        <img src={imagePreview} alt="preview" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #D0C8BA' }} />
+                      ) : form.catalogImageUrl ? (
+                        <img
+                          src={form.catalogImageUrl}
+                          alt="Katalog"
+                          style={{
+                            width: '56px',
+                            height: '56px',
+                            objectFit: isCatalogSwatchUrl(form.catalogImageUrl) ? 'contain' : 'cover',
+                            borderRadius: '6px',
+                            border: '1px solid #D0C8BA',
+                            background: isCatalogSwatchUrl(form.catalogImageUrl) ? 'rgba(255,255,255,.65)' : 'transparent',
+                          }}
+                        />
+                      ) : (
+                        <div style={{ width: '56px', height: '56px', background: '#EDE7D8', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', color: '#8B7D6B' }}>📷</div>
+                      )}
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#2C2018', fontWeight: 500 }}>{imagePreview ? 'Skift billede' : 'Upload billede'}</div>
+                        <div style={{ fontSize: '11px', color: '#8B7D6B' }}>JPG eller PNG — vises på garnkortet</div>
+                      </div>
+                    </label>
+                    {!imagePreview && form.catalogImageUrl && isCatalogSwatchUrl(form.catalogImageUrl) && (
+                      <div style={{ fontSize: '11px', color: '#8B7D6B', lineHeight: '1.45' }}>
+                        Katalogbilledet er en lille farveprøve (100×100). Upload et foto for skarpere kort.
+                      </div>
+                    )}
+                    {imagePreview && (
+                      <button
+                        type="button"
+                        onClick={() => { setImageFile(null); setImagePreview(null); setF('imageUrl', null) }}
+                        style={{ alignSelf: 'flex-start', fontSize: '11px', color: '#8B3A2A', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        ✕ Fjern billede
+                      </button>
+                    )}
+                  </>
                 )}
-              </div>
-
-              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <Label>Stregkode (EAN)</Label>
-                <input
-                  value={form.barcode ?? ''}
-                  onChange={e => setF('barcode', e.target.value)}
-                  placeholder="Skannet eller manuelt"
-                  style={inputStyle}
-                />
               </div>
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -1182,7 +1173,7 @@ export default function Garnlager({ user, onRequestLogin }) {
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               >
-                {modal === 'add' ? 'Tilføj' : 'Gem ændringer'}
+                {modal === 'add' ? 'Tilføj til lager' : 'Gem ændringer'}
               </button>
             </div>
           </div>

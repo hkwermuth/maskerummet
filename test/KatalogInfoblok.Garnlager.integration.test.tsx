@@ -71,7 +71,8 @@ vi.mock('@/lib/catalog', () => ({
   fetchYarnFullById: vi.fn().mockResolvedValue(null),
   fetchColorsForYarn: vi.fn().mockResolvedValue([]),
   displayYarnName: vi.fn((y) => (y ? y.full_name ?? y.name ?? '' : '')),
-  applyCatalogYarnOnlyToForm: (...args: unknown[]) => mockApplyCatalogYarnOnlyToForm(...args),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  applyCatalogYarnOnlyToForm: (yarn: any, prev: any) => mockApplyCatalogYarnOnlyToForm(yarn, prev),
   applyCatalogYarnColorToForm: vi.fn((yarn, _, prev) => ({ ...(prev ?? {}), catalogYarnId: yarn.id })),
   // KatalogInfoblok bruger også disse to fra @/lib/catalog
   metrageFromYarn: vi.fn((y) => {
@@ -171,7 +172,7 @@ async function renderAndOpenAdd() {
   await user.click(tilfoejBtn)
 
   await waitFor(() => {
-    expect(screen.getByRole('button', { name: /^tilføj$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /tilføj til lager/i })).toBeInTheDocument()
   })
 
   return { user }
@@ -305,18 +306,18 @@ describe('Garnlager + KatalogInfoblok — AC2 + AC4: katalog-link flow', () => {
     expect(section).toBeInTheDocument()
   })
 
-  it('"Fjern katalog-link"-knap vises i KatalogInfoblok', async () => {
+  it('"Skift"-knap (pill) vises i KatalogInfoblok', async () => {
     const { user } = await renderAndOpenAdd()
     await selectCatalogYarn(user)
 
-    expect(screen.getByRole('button', { name: /fjern katalog-link/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /skift/i })).toBeInTheDocument()
   })
 
-  it('AC3: klik på "Fjern katalog-link" fjerner KatalogInfoblok og viser label-felterne igen', async () => {
+  it('AC3: klik på "Skift" fjerner KatalogInfoblok og viser label-felterne igen', async () => {
     const { user } = await renderAndOpenAdd()
     await selectCatalogYarn(user)
 
-    await user.click(screen.getByRole('button', { name: /fjern katalog-link/i }))
+    await user.click(screen.getByRole('button', { name: /skift/i }))
 
     await waitFor(() => {
       expect(screen.queryByTestId('katalog-infoblok')).not.toBeInTheDocument()
@@ -351,8 +352,8 @@ describe('Garnlager — AC7: Esc lukker søge-dropdown, modal forbliver åben', 
       expect(screen.queryByText('Isager Alpaca 1')).not.toBeInTheDocument()
     })
 
-    // Modal er stadig åben — Tilføj-knap ses
-    expect(screen.getByRole('button', { name: /^tilføj$/i })).toBeInTheDocument()
+    // Modal er stadig åben — Tilføj til lager-knap ses
+    expect(screen.getByRole('button', { name: /tilføj til lager/i })).toBeInTheDocument()
   })
 })
 

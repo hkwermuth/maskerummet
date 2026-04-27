@@ -252,8 +252,8 @@ describe('Garnlager – bekræftelsesdialog ved sletning', () => {
     await user.click(tilfoejBtn)
 
     await waitFor(() => {
-      // I add-mode hedder gem-knappen "Tilføj"
-      expect(screen.getByRole('button', { name: /^tilføj$/i })).toBeInTheDocument()
+      // I add-mode hedder gem-knappen "Tilføj til lager" (F3)
+      expect(screen.getByRole('button', { name: /tilføj til lager/i })).toBeInTheDocument()
     })
 
     // Slet-knap må ikke vises

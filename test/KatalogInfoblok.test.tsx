@@ -73,11 +73,11 @@ describe('KatalogInfoblok — sektion renderes altid', () => {
     expect(section).toHaveAttribute('data-testid', 'katalog-infoblok')
   })
 
-  it('viser altid "Fra kataloget"-header', async () => {
+  it('viser altid "Importeret fra katalog"-header', async () => {
     const KatalogInfoblok = await importKatalogInfoblok()
     render(<KatalogInfoblok yarn={FULL_YARN} />)
 
-    expect(screen.getByText('Fra kataloget')).toBeInTheDocument()
+    expect(screen.getByText('Importeret fra katalog')).toBeInTheDocument()
   })
 })
 
@@ -248,44 +248,65 @@ describe('KatalogInfoblok — filtrering af tomme felter', () => {
   })
 })
 
-describe('KatalogInfoblok — AC3: onClearLink / Fjern katalog-link', () => {
-  it('viser "Fjern katalog-link"-knap når onClearLink er givet', async () => {
+describe('KatalogInfoblok — AC3: onClearLink / Skift-knap (F3)', () => {
+  it('viser "Skift"-knap (pill) når onClearLink er givet', async () => {
     const KatalogInfoblok = await importKatalogInfoblok()
     const onClearLink = vi.fn()
     render(<KatalogInfoblok yarn={FULL_YARN} onClearLink={onClearLink} />)
 
-    expect(screen.getByRole('button', { name: /fjern katalog-link/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /skift/i })).toBeInTheDocument()
   })
 
-  it('kalder onClearLink når "Fjern katalog-link" klikkes', async () => {
+  it('kalder onClearLink når "Skift"-knap klikkes', async () => {
     const KatalogInfoblok = await importKatalogInfoblok()
     const onClearLink = vi.fn()
     render(<KatalogInfoblok yarn={FULL_YARN} onClearLink={onClearLink} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /fjern katalog-link/i }))
+    fireEvent.click(screen.getByRole('button', { name: /skift/i }))
 
     expect(onClearLink).toHaveBeenCalledTimes(1)
   })
 
-  it('AC5: ingen "Fjern katalog-link"-knap når onClearLink IKKE er givet', async () => {
+  it('AC5: ingen knap når onClearLink IKKE er givet', async () => {
     const KatalogInfoblok = await importKatalogInfoblok()
     render(<KatalogInfoblok yarn={FULL_YARN} />)
 
-    expect(screen.queryByRole('button', { name: /fjern katalog-link/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /skift/i })).not.toBeInTheDocument()
   })
 
   it('ingen knap vises heller ikke når yarn=null og onClearLink mangler', async () => {
     const KatalogInfoblok = await importKatalogInfoblok()
     render(<KatalogInfoblok yarn={null} />)
 
-    expect(screen.queryByRole('button', { name: /fjern katalog-link/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /skift/i })).not.toBeInTheDocument()
   })
 
-  it('"Fjern katalog-link"-knap vises også ved yarn=null (bruges under loading)', async () => {
+  it('"Skift"-knap vises også ved yarn=null (bruges under loading)', async () => {
     const KatalogInfoblok = await importKatalogInfoblok()
     const onClearLink = vi.fn()
     render(<KatalogInfoblok yarn={null} onClearLink={onClearLink} />)
 
-    expect(screen.getByRole('button', { name: /fjern katalog-link/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /skift/i })).toBeInTheDocument()
+  })
+
+  it('AC1-F3: "Importeret fra katalog" header tekst vises', async () => {
+    const KatalogInfoblok = await importKatalogInfoblok()
+    render(<KatalogInfoblok yarn={FULL_YARN} />)
+
+    expect(screen.getByText('Importeret fra katalog')).toBeInTheDocument()
+  })
+
+  it('AC3-F3: forklarings-tekst "Disse felter er låste…" vises når yarn er fyldt', async () => {
+    const KatalogInfoblok = await importKatalogInfoblok()
+    render(<KatalogInfoblok yarn={FULL_YARN} />)
+
+    expect(screen.getByText(/disse felter er låste og styres fra dit garn-katalog/i)).toBeInTheDocument()
+  })
+
+  it('AC3-F3: forklarings-tekst IKKE vist når yarn er null', async () => {
+    const KatalogInfoblok = await importKatalogInfoblok()
+    render(<KatalogInfoblok yarn={null} />)
+
+    expect(screen.queryByText(/disse felter er låste/i)).not.toBeInTheDocument()
   })
 })
