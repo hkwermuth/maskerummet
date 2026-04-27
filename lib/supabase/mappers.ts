@@ -5,6 +5,10 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function toDb(yarn: Record<string, any>) {
+  // Tomt array sendes som NULL — DB-CHECK afviser tomme arrays.
+  const hexColors = Array.isArray(yarn.hexColors) && yarn.hexColors.length > 0
+    ? yarn.hexColors
+    : null
   return {
     name:            yarn.name          || null,
     brand:           yarn.brand         || null,
@@ -20,6 +24,7 @@ export function toDb(yarn: Record<string, any>) {
     quantity:        yarn.antal         ? parseFloat(yarn.antal) : 1,
     status:          yarn.status        || 'På lager',
     hex_color:       yarn.hex           || null,
+    hex_colors:      hexColors,
     notes:           yarn.noter         || null,
     catalog_yarn_id:   yarn.catalogYarnId   ?? null,
     catalog_color_id:  yarn.catalogColorId  ?? null,
@@ -43,6 +48,7 @@ export function fromDb(row: Record<string, any>) {
     antal:          row.quantity        ?? 1,
     status:         row.status          ?? 'På lager',
     hex:            row.hex_color       ?? '',
+    hexColors:      Array.isArray(row.hex_colors) ? row.hex_colors : [],
     noter:          row.notes           ?? '',
     barcode:        row.barcode,
     imageUrl:       row.image_url       ?? null,

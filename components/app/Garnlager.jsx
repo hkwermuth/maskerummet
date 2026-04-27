@@ -17,8 +17,11 @@ import BarcodeScanner from './BarcodeScanner'
 import BrugNoeglerModal from './BrugNoeglerModal'
 import KatalogInfoblok from './KatalogInfoblok'
 import FarvekategoriCirkler from './FarvekategoriCirkler'
+import FlereFarverVælger from './FlereFarverVælger'
 import AntalStepper from './AntalStepper'
 import { detectColorFamily, COLOR_FAMILY_DEFAULT_HEX, yarnMatchesStashSearch } from '@/lib/data/colorFamilies'
+import { dedupeYarnNameFromBrand, gradientFromHexColors, primaryFiberLabel } from '@/lib/yarn-display'
+import { YARN_WEIGHT_LABELS } from '@/lib/yarn-weight'
 import { exportGarnlager } from '@/lib/export/exportGarnlager'
 import { validateForm } from '@/lib/validators/yarnForm'
 
@@ -46,7 +49,7 @@ const STATUS_TEXT = {
 const EMPTY_FORM = {
   name: '', brand: '', colorName: '', colorCode: '', colorCategory: '',
   weight: 'DK', fiber: '', metrage: '', pindstr: '',
-  antal: 1, status: 'På lager', hex: '', noter: '', barcode: '',
+  antal: 1, status: 'På lager', hex: '', hexColors: [], noter: '', barcode: '',
   imageUrl: null,
   catalogYarnId: null,
   catalogColorId: null,
@@ -751,33 +754,47 @@ export default function Garnlager({ user, onRequestLogin }) {
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '14px', padding: '0 20px 32px' }}>
-          {filtered.map(y => (
-            <div
-              key={y.id}
-              onClick={() => openEdit(y)}
-              style={{ background: '#FFFCF7', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(44,32,24,.08)', cursor: 'pointer', transition: 'transform .15s, box-shadow .15s' }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(44,32,24,.13)' }}
-              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
-            >
-              {(() => {
-                const headerUrl = y.imageUrl || y.catalogImageUrl
-                if (!headerUrl) {
-                  return <div style={{ height: '72px', background: (y.hex && y.hex.trim()) ? y.hex : '#D0C8BA' }} />
-                }
-
-                // If it's a tiny catalog swatch (100x100), do NOT upscale it to full width.
-                const isSwatch = !y.imageUrl && y.catalogImageUrl && isCatalogSwatchUrl(y.catalogImageUrl)
-                if (isSwatch) {
-                  const bg = (y.hex && y.hex.trim()) ? y.hex : '#F4EFE6'
-                  return (
+          {filtered.map(y => {
+            const displayName = dedupeYarnNameFromBrand(y.name, y.brand)
+            const colorBg = gradientFromHexColors(y.hexColors, y.hex)
+            const isMulti = Array.isArray(y.hexColors) && y.hexColors.length >= 2
+            const headerUrl = y.imageUrl || y.catalogImageUrl
+            const isSwatch = !y.imageUrl && y.catalogImageUrl && isCatalogSwatchUrl(y.catalogImageUrl)
+            const showPhoto = headerUrl && !isSwatch
+            const colorPillText = y.colorName || (isMulti ? `Multi (${y.hexColors.length})` : '')
+            const weightLabel = (y.weight && YARN_WEIGHT_LABELS[String(y.weight).toLowerCase()])
+              || y.weight
+              || ''
+            const fiberLabel = primaryFiberLabel(y.fiber)
+            return (
+              <div
+                key={y.id}
+                onClick={() => openEdit(y)}
+                style={{ background: '#FFFCF7', borderRadius: '10px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(44,32,24,.08)', cursor: 'pointer', transition: 'transform .15s, box-shadow .15s' }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(44,32,24,.13)' }}
+                onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
+              >
+                {/* Billedfelt — fyldt med foto, swatch-på-farve, eller solid/gradient */}
+                <div style={{
+                  position: 'relative',
+                  height: '120px',
+                  background: showPhoto ? '#F4EFE6' : colorBg,
+                  overflow: 'hidden',
+                }}>
+                  {showPhoto && (
+                    <img
+                      src={headerUrl}
+                      alt={y.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  )}
+                  {isSwatch && (
                     <div style={{
-                      height: '100px',
-                      background: bg,
+                      position: 'absolute',
+                      inset: 0,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      position: 'relative',
-                      overflow: 'hidden',
                     }}>
                       <div style={{
                         width: 76,
@@ -789,40 +806,91 @@ export default function Garnlager({ user, onRequestLogin }) {
                         alignItems: 'center',
                         justifyContent: 'center',
                         boxShadow: '0 2px 10px rgba(44,32,24,.12)',
-                        backdropFilter: 'blur(2px)',
                       }}>
                         <img
                           src={headerUrl}
                           alt={y.name}
-                          style={{ width: 64, height: 64, objectFit: 'contain', imageRendering: 'auto' }}
+                          style={{ width: 64, height: 64, objectFit: 'contain' }}
                         />
                       </div>
                     </div>
-                  )
-                }
+                  )}
 
-                return (
-                  <div style={{ height: '100px', overflow: 'hidden' }}>
-                    <img src={headerUrl} alt={y.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                )
-              })()}
-              <div style={{ padding: '12px' }}>
-                <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.12em', color: '#8B7D6B', marginBottom: '2px' }}>{y.brand}</div>
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '17px', fontWeight: 600, color: '#2C2018', marginBottom: '3px' }}>{y.name}</div>
-                <div style={{ fontSize: '12px', color: '#6B5D4F', marginBottom: '9px' }}>{y.colorName}{y.colorCode ? ` · ${y.colorCode}` : ''}</div>
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                  <Chip style={{ background: '#EDE7D8', color: '#5A4228' }}>{y.weight}</Chip>
-                  <Chip style={{ background: '#E4EEE4', color: '#2A4A2A' }}>{y.antal} ngl</Chip>
-                  <Chip style={{ background: STATUS_COLORS[y.status], color: STATUS_TEXT[y.status] }}>{y.status}</Chip>
-                  {y.catalogYarnId && (
-                    <Chip style={{ background: '#D8E8E0', color: '#1E4D3A' }}>Katalog</Chip>
+                  {/* Manuelt-ikon ved IKKE-katalog (omvendt logik) */}
+                  {!y.catalogYarnId && (
+                    <span
+                      title="Manuelt tilføjet"
+                      aria-label="Manuelt tilføjet"
+                      style={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        background: 'rgba(255,255,255,.85)',
+                        border: '1px solid rgba(44,32,24,.15)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 12,
+                        boxShadow: '0 1px 3px rgba(44,32,24,.12)',
+                      }}
+                    >
+                      ✎
+                    </span>
+                  )}
+
+                  {/* Farvenavn-pille i nederste hjørne */}
+                  {colorPillText && (
+                    <span style={{
+                      position: 'absolute',
+                      left: 10,
+                      bottom: 10,
+                      maxWidth: 'calc(100% - 20px)',
+                      padding: '3px 10px',
+                      background: 'rgba(255,255,255,.92)',
+                      border: '1px solid rgba(44,32,24,.18)',
+                      borderRadius: 999,
+                      fontSize: 11,
+                      color: '#2C2018',
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontWeight: 500,
+                      boxShadow: '0 1px 3px rgba(44,32,24,.10)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                    }}>
+                      {colorPillText}
+                    </span>
                   )}
                 </div>
-                {y.noter && <div style={{ marginTop: '8px', fontSize: '11px', color: '#8B7D6B', fontStyle: 'italic', lineHeight: '1.45' }}>{y.noter}</div>}
+
+                <div style={{ padding: '12px' }}>
+                  <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '.12em', color: '#8B7D6B', marginBottom: '2px' }}>{y.brand}</div>
+                  <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '17px', fontWeight: 600, color: '#2C2018', marginBottom: '6px' }}>{displayName}</div>
+                  {/* Kompakt detaljelinje: kode · antal · status */}
+                  <div style={{ fontSize: '12px', color: '#6B5D4F', marginBottom: '9px' }}>
+                    {[
+                      y.colorCode || null,
+                      `${y.antal} ngl`,
+                      y.status,
+                    ].filter(Boolean).join(' · ')}
+                  </div>
+                  {/* Tags på samme linje: vægt + fiber */}
+                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                    {weightLabel && (
+                      <Chip style={{ background: '#EDE7D8', color: '#5A4228' }}>{weightLabel}</Chip>
+                    )}
+                    {fiberLabel && (
+                      <Chip style={{ background: '#E4EEE4', color: '#2A4A2A' }}>{fiberLabel}</Chip>
+                    )}
+                  </div>
+                  {y.noter && <div style={{ marginTop: '8px', fontSize: '11px', color: '#8B7D6B', fontStyle: 'italic', lineHeight: '1.45' }}>{y.noter}</div>}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -1006,6 +1074,13 @@ export default function Garnlager({ user, onRequestLogin }) {
                     setForm(p => ({ ...p, colorCategory, hex }))
                   }}
                   onExactHexChange={hex => setF('hex', hex)}
+                />
+              </div>
+
+              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <FlereFarverVælger
+                  hexColors={form.hexColors}
+                  onChange={hexColors => setF('hexColors', hexColors)}
                 />
               </div>
 
