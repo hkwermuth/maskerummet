@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 import { toSlug } from '@/lib/slug'
+import { formatDanish } from '@/lib/date/formatDanish'
 import type {
   SubstitutionCandidate,
   SubstitutionSuggestionRow,
@@ -513,7 +514,7 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
                   <div className="flex items-center gap-2">
                     <span className="text-xs uppercase tracking-wider text-striq-link">{shortUser(c.user_id)}</span>
                     <VerdictBadge verdict={c.verdict} />
-                    <span className="text-xs text-striq-muted/60">{new Date(c.created_at).toLocaleDateString('da')}</span>
+                    <span className="text-xs text-striq-muted/60">{formatDanish(c.created_at)}</span>
                   </div>
                   <div className="text-striq-muted mt-1 whitespace-pre-wrap">{c.comment}</div>
                 </div>

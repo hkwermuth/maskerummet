@@ -4,6 +4,7 @@ import { useSupabase } from '@/lib/supabase/client'
 import { uploadFile as uploadFileRaw } from '@/lib/supabase/storage'
 import { PERMIN_CATALOG } from '@/lib/data/perminCatalog'
 import { FILCOLANA_CATALOG } from '@/lib/data/filcolanaCatalog'
+import { formatDanish } from '@/lib/date/formatDanish'
 
 const ALL_YARN = [...PERMIN_CATALOG, ...FILCOLANA_CATALOG]
 
@@ -981,9 +982,7 @@ export default function YarnVisualizer({ user, onRequestLogin }) {
               </div>
 
               <div style={{ fontSize: 11, color: '#8B7D6B', marginBottom: 16 }}>
-                Gemt {new Date(detailViz.created_at).toLocaleDateString('da-DK', {
-                  day: 'numeric', month: 'long', year: 'numeric',
-                })}
+                Gemt {formatDanish(detailViz.created_at)}
               </div>
 
               {/* Actions */}
@@ -1068,9 +1067,7 @@ function VizGrid({ items, onSelect, showDate = true }) {
             </div>
             {showDate && (
               <div style={{ fontSize: 10, color: '#8B7D6B' }}>
-                {new Date(viz.created_at).toLocaleDateString('da-DK', {
-                  day: 'numeric', month: 'short', year: 'numeric',
-                })}
+                {formatDanish(viz.created_at)}
               </div>
             )}
           </div>

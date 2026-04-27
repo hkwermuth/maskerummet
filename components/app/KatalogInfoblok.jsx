@@ -4,8 +4,7 @@ import { displayYarnName, metrageFromYarn, pindstrFromYarn } from '@/lib/catalog
 import { YARN_WEIGHT_LABELS } from '@/lib/yarn-weight'
 
 // Read-only info-blok der viser felter fra det offentlige garn-katalog.
-// Visuelt grøn for at signalere "katalog-data — kan ikke redigeres".
-// Farve-tokens matcher Garnlager.jsx ("Katalog"-chip + primær-knap).
+// Visuelt grøn (datakilde-token "src-catalog") for at signalere "katalog-data — kan ikke redigeres".
 
 export default function KatalogInfoblok({ yarn, onClearLink }) {
   const rows = yarn ? buildRows(yarn) : []
@@ -14,48 +13,17 @@ export default function KatalogInfoblok({ yarn, onClearLink }) {
     <section
       aria-label="Information fra garn-kataloget"
       data-testid="katalog-infoblok"
-      style={{
-        gridColumn: '1 / -1',
-        background: '#D8E8E0',
-        border: '1px solid #61846D',
-        borderRadius: 8,
-        padding: '12px 14px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-      }}
+      className="bg-striq-src-catalog-bg text-striq-src-catalog-fg border border-striq-sage rounded-lg col-span-full flex flex-col gap-2.5 px-3.5 py-3"
     >
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 8,
-      }}>
-        <span style={{
-          fontSize: 10,
-          textTransform: 'uppercase',
-          letterSpacing: '.12em',
-          color: '#1E4D3A',
-          fontWeight: 600,
-        }}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] uppercase tracking-[.12em] font-semibold">
           Importeret fra katalog
         </span>
         {onClearLink && (
           <button
             type="button"
             onClick={onClearLink}
-            style={{
-              fontSize: 12,
-              color: '#1E4D3A',
-              background: '#FFFFFF',
-              border: '1px solid #61846D',
-              borderRadius: 999,
-              cursor: 'pointer',
-              padding: '6px 16px',
-              fontFamily: "'DM Sans', sans-serif",
-              fontWeight: 500,
-              minHeight: 36,
-            }}
+            className="text-xs font-medium bg-white text-striq-src-catalog-fg border border-striq-sage rounded-full cursor-pointer px-4 py-1.5 min-h-[36px] font-sans"
           >
             Skift
           </button>
@@ -64,51 +32,24 @@ export default function KatalogInfoblok({ yarn, onClearLink }) {
 
       {yarn ? (
         <>
-          <dl style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: '10px 16px',
-            margin: 0,
-          }}>
+          <dl className="m-0 grid gap-x-4 gap-y-2.5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))' }}>
             {rows.map(([label, val]) => (
-              <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                <dt style={{
-                  fontSize: 10,
-                  textTransform: 'uppercase',
-                  letterSpacing: '.1em',
-                  color: '#3E6650',
-                  fontWeight: 500,
-                }}>
+              <div key={label} className="flex flex-col gap-0.5 min-w-0">
+                <dt className="text-[10px] uppercase tracking-[.1em] font-medium opacity-80">
                   {label}
                 </dt>
-                <dd style={{
-                  margin: 0,
-                  fontSize: 13,
-                  color: '#2C4A3E',
-                  fontWeight: 500,
-                  wordBreak: 'break-word',
-                }}>
+                <dd className="m-0 text-[13px] font-medium break-words">
                   {val}
                 </dd>
               </div>
             ))}
           </dl>
-          <p style={{
-            margin: 0,
-            fontSize: 11,
-            color: '#3E6650',
-            fontStyle: 'italic',
-          }}>
+          <p className="m-0 text-[11px] italic opacity-80">
             Disse felter er låste og styres fra dit garn-katalog.
           </p>
         </>
       ) : (
-        <p style={{
-          margin: 0,
-          fontSize: 12,
-          color: '#3E6650',
-          fontStyle: 'italic',
-        }}>
+        <p className="m-0 text-xs italic opacity-80">
           Henter katalog-data…
         </p>
       )}

@@ -11,6 +11,7 @@ import {
 import { renderPdfFirstPage } from '@/lib/pdf-thumbnail'
 import { displayYarnName, fetchColorsByIds, fetchColorsForYarn, searchYarnsFull } from '@/lib/catalog'
 import { exportProjekter } from '@/lib/export/exportProjekter'
+import { formatDanish } from '@/lib/date/formatDanish'
 import { DelMedFaellesskabetModal } from '@/components/app/DelMedFaellesskabetModal'
 import {
   PROJECT_STATUSES,
@@ -101,11 +102,7 @@ const PROJECT_STATUS_CHIP_STYLE = {
   letterSpacing: '.02em',
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' })
-}
+const formatDate = formatDanish
 
 const inputStyle = {
   padding: '7px 10px', border: '1px solid #D0C8BA', borderRadius: '6px',

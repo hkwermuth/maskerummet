@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-  content: ['./app/**/*.{ts,tsx}', './components/**/*.{ts,tsx}'],
+  content: ['./app/**/*.{ts,tsx,js,jsx}', './components/**/*.{ts,tsx,js,jsx}'],
   theme: {
     extend: {
       colors: {
@@ -18,6 +18,10 @@ const config: Config = {
           footer:         '#E8DADC',
           input:          '#F9F6F0',
           'input-border': '#D0C8BA',
+          'src-catalog':  { bg: '#EAF3DE', fg: '#173404' },
+          'src-ai':       { bg: '#EEEDFE', fg: '#3C3489' },
+          'src-warning':  { bg: '#FAEEDA', fg: '#633806' },
+          'src-error':    { bg: '#FCEBEB', fg: '#791F1F' },
         },
         cream:      '#FFFCF7',
         moss:       '#C9E6DA',
