@@ -23,6 +23,7 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
   const pathname = usePathname()
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  const [isEditor, setIsEditor] = useState<boolean>(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const supabase = createSupabaseBrowserClient()
 
@@ -35,12 +36,24 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
   }
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    const refreshEditor = async (u: User | null) => {
+      if (!u) { setIsEditor(false); return }
+      const { data, error } = await supabase.rpc('is_editor')
+      // RPC-fejl → skjul admin-link (UX, ikke sikkerhed; pages har egen guard)
+      setIsEditor(error ? false : Boolean(data))
+    }
+    supabase.auth.getUser().then(({ data }) => { setUser(data.user); refreshEditor(data.user) })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null)
+      const u = session?.user ?? null
+      setUser(u)
+      refreshEditor(u)
     })
     return () => subscription.unsubscribe()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const visibleLinks = isEditor
+    ? [...NAV_LINKS, { href: '/garn/admin', label: 'Admin' }]
+    : NAV_LINKS
 
   // Luk drawer ved navigation
   useEffect(() => { setMenuOpen(false) }, [pathname])
@@ -127,7 +140,7 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
 
         {/* Nav-tabs (desktop) */}
         <div className="hidden md:flex" style={{ alignItems: 'center', gap: 2, flexWrap: 'nowrap' }}>
-          {NAV_LINKS.map(link => {
+          {visibleLinks.map(link => {
             const active = isActive(link.href)
             return (
               <Link
@@ -230,7 +243,7 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
             }}
           >
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {NAV_LINKS.map(link => {
+              {visibleLinks.map(link => {
                 const active = isActive(link.href)
                 return (
                   <li key={link.href}>
