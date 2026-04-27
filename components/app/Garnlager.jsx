@@ -15,6 +15,7 @@ import {
 } from '@/lib/catalog'
 import BarcodeScanner from './BarcodeScanner'
 import BrugNoeglerModal from './BrugNoeglerModal'
+import KatalogInfoblok from './KatalogInfoblok'
 import { detectColorFamily, COLOR_FAMILY_LABELS, COLOR_FAMILY_DEFAULT_HEX, yarnMatchesStashSearch } from '@/lib/data/colorFamilies'
 import { exportGarnlager } from '@/lib/export/exportGarnlager'
 import { validateForm } from '@/lib/validators/yarnForm'
@@ -22,6 +23,10 @@ import { validateForm } from '@/lib/validators/yarnForm'
 const WEIGHTS  = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
 const STATUSES = ['På lager', 'I brug', 'Brugt op', 'Ønskeliste']
 const FIBER_PILLS = ['Uld', 'Merino', 'Mohair', 'Alpaka', 'Silke', 'Bomuld', 'Hør', 'Akryl']
+
+// Skanning skjult indtil EAN-koder er fyldt på colors-tabellen i kataloget.
+// Sæt til true for at gen-aktivere scanner-knappen + modal.
+const SHOW_SCANNER = false
 
 const STATUS_COLORS = {
   'På lager': '#D0E8D4',
@@ -121,9 +126,17 @@ function YarnCatalogSearch({ value, onChange, onSelectYarn, placeholder, autoFoc
         value={value}
         onChange={e => onChange(e.target.value)}
         onFocus={() => hits.length > 0 && setOpen(true)}
+        onKeyDown={e => {
+          // Esc lukker dropdown (uden at også lukke den omsluttende modal).
+          if (e.key === 'Escape' && open) {
+            e.stopPropagation()
+            setOpen(false)
+          }
+        }}
         placeholder={placeholder}
         style={inputStyle}
         autoComplete="off"
+        aria-label={placeholder}
       />
       {loading && (
         <div style={{ fontSize: '10px', color: '#8B7D6B', marginTop: '4px' }}>Søger i katalog…</div>
@@ -640,7 +653,7 @@ export default function Garnlager({ user, onRequestLogin }) {
           {saveMsg && (
             <span style={{ fontSize: '11px', color: saving ? '#61846D' : '#4A8A6A', marginRight: 4 }}>{saveMsg}</span>
           )}
-          {yarns.length > 0 && (
+          {SHOW_SCANNER && yarns.length > 0 && (
             <button
               onClick={() => setShowScanner(true)}
               style={{ background: '#FFFFFF', border: '1px solid #61846D', borderRadius: '6px', padding: '6px 11px', fontSize: '12px', color: '#2C4A3E', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px' }}
@@ -818,19 +831,35 @@ export default function Garnlager({ user, onRequestLogin }) {
                     onChange={setCatalogQuery}
                     onSelectYarn={handleSelectCatalogYarn}
                     placeholder="Skriv mærke eller garnnavn fra garn-kataloget…"
-                    autoFocus={modal === 'add'}
+                    autoFocus={!form.catalogYarnId}
                   />
                 </Field>
-                {form.catalogYarnId && (
-                  <button
-                    type="button"
-                    onClick={clearCatalogLink}
-                    style={{ alignSelf: 'flex-start', fontSize: '11px', color: '#8B3A2A', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif", textDecoration: 'underline' }}
-                  >
-                    Fjern katalog-link
-                  </button>
-                )}
               </div>
+
+              {form.catalogYarnId && (
+                <KatalogInfoblok yarn={selectedYarn} onClearLink={clearCatalogLink} />
+              )}
+
+              {form.catalogYarnId && (
+                <div
+                  role="heading"
+                  aria-level={3}
+                  style={{
+                    gridColumn: '1 / -1',
+                    fontSize: 10,
+                    textTransform: 'uppercase',
+                    letterSpacing: '.12em',
+                    color: '#6B5D4F',
+                    fontWeight: 600,
+                    marginTop: 4,
+                    paddingBottom: 4,
+                    borderBottom: '1px solid #E5DDD9',
+                  }}
+                >
+                  Dine egne oplysninger
+                </div>
+              )}
+
               {selectedYarn && colorsForYarn.length >= 1 && (
                 <Field label="Farve fra katalog">
                   <select
@@ -861,11 +890,14 @@ export default function Garnlager({ user, onRequestLogin }) {
                   </select>
                 </Field>
               )}
-              {[
-                ['name', 'Garnnavn', true], ['brand', 'Mærke', true],
-                ['metrage', 'Løbelængde/nøgle (m)', false],
-                ['pindstr', 'Pindstørrelse', false], ['antal', 'Antal nøgler', false],
-              ].map(([k, l, required]) => {
+              {(form.catalogYarnId
+                ? [['antal', 'Antal nøgler', false]]
+                : [
+                    ['name', 'Garnnavn', true], ['brand', 'Mærke', true],
+                    ['metrage', 'Løbelængde/nøgle (m)', false],
+                    ['pindstr', 'Pindstørrelse', false], ['antal', 'Antal nøgler', false],
+                  ]
+              ).map(([k, l, required]) => {
                 const err = fieldErrors[k]
                 return (
                   <Field key={k} label={required ? `${l} *` : l}>
@@ -891,37 +923,39 @@ export default function Garnlager({ user, onRequestLogin }) {
                 )
               })}
 
-              {/* Fiber med hurtigvalg */}
-              <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <Label>Fiber</Label>
-                <input
-                  value={form.fiber ?? ''}
-                  onChange={e => setF('fiber', e.target.value)}
-                  placeholder="F.eks. 80% Uld, 20% Mohair"
-                  style={inputStyle}
-                />
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                  {FIBER_PILLS.map(f => {
-                    const active = (form.fiber || '').toLowerCase().includes(f.toLowerCase())
-                    return (
-                      <button
-                        key={f}
-                        type="button"
-                        onClick={() => toggleFiberInForm(f)}
-                        style={{
-                          minHeight: '32px', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer',
-                          fontFamily: "'DM Sans', sans-serif", border: '1px solid',
-                          background: active ? '#2C4A3E' : 'transparent',
-                          color:      active ? '#fff'    : '#6B5D4F',
-                          borderColor: active ? '#2C4A3E' : '#C8C0B0',
-                        }}
-                      >
-                        {f}
-                      </button>
-                    )
-                  })}
+              {/* Fiber med hurtigvalg — skjult ved katalog-link (vist read-only i KatalogInfoblok) */}
+              {!form.catalogYarnId && (
+                <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <Label>Fiber</Label>
+                  <input
+                    value={form.fiber ?? ''}
+                    onChange={e => setF('fiber', e.target.value)}
+                    placeholder="F.eks. 80% Uld, 20% Mohair"
+                    style={inputStyle}
+                  />
+                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                    {FIBER_PILLS.map(f => {
+                      const active = (form.fiber || '').toLowerCase().includes(f.toLowerCase())
+                      return (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => toggleFiberInForm(f)}
+                          style={{
+                            minHeight: '32px', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', cursor: 'pointer',
+                            fontFamily: "'DM Sans', sans-serif", border: '1px solid',
+                            background: active ? '#2C4A3E' : 'transparent',
+                            color:      active ? '#fff'    : '#6B5D4F',
+                            borderColor: active ? '#2C4A3E' : '#C8C0B0',
+                          }}
+                        >
+                          {f}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               <Field label="Farvenavn">
                 <input
@@ -994,11 +1028,13 @@ export default function Garnlager({ user, onRequestLogin }) {
                 </div>
               </Field>
 
-              <Field label="Garnvægt">
-                <select value={form.weight} onChange={e => setF('weight', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
-                  {WEIGHTS.map(w => <option key={w}>{w}</option>)}
-                </select>
-              </Field>
+              {!form.catalogYarnId && (
+                <Field label="Garnvægt">
+                  <select value={form.weight} onChange={e => setF('weight', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                    {WEIGHTS.map(w => <option key={w}>{w}</option>)}
+                  </select>
+                </Field>
+              )}
 
               <Field label="Status">
                 <select value={form.status} onChange={e => setF('status', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>

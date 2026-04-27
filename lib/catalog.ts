@@ -4,7 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 // så de kan bruges både klient-side (browser client) og server-side (public client).
 
 const YARN_FULL_SELECT =
-  'id,producer,name,series,full_name,fiber_main,thickness_category,ball_weight_g,length_per_100g_m,needle_min_mm,needle_max_mm,gauge_needle_mm,color_count'
+  'id,producer,name,series,full_name,fiber_main,thickness_category,yarn_weight,ball_weight_g,length_per_100g_m,needle_min_mm,needle_max_mm,gauge_needle_mm,color_count'
 
 /** Vis-navn for et garn fra `yarns_full`. */
 export function displayYarnName(yarn: { full_name?: string; name?: string; series?: string | null } | null): string {

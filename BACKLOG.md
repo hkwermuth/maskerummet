@@ -69,6 +69,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - Admin-editor til oprettelse/redigering af garn (`app/garn/admin/`) — med tom tilstand
 - FAQ for garn-katalog (`app/garn/faq/page.tsx`)
 - **F1: yarnWeight-enum på yarns-tabellen (2026-04-27)** — kanonisk vægt-klassifikation som Postgres-enum (`lace`/`fingering`/`sport`/`dk`/`worsted`/`aran`/`bulky`/`super_bulky`) erstatter fri-tekst `thickness_category`. Migration `20260427000003_yarn_weight_enum.sql` opretter enum, tilføjer kolonne, backfiller via alias-mapping (engelsk + dansk + n-ply), eksplicit BC Garn Luxor → fingering override (Luxor-bug fixet). `yarns_full`-view recreates med ny kolonne. Ny `lib/yarn-weight.ts` med `mapToYarnWeight()`-funktion 1:1 med SQL CASE. Admin-editor (`YarnForm.tsx`) får ny "Vægt"-dropdown; gammel "Tykkelse" bevares parallelt med "afløses af Vægt"-label indtil F2-F4 migreres væk fra det. 33 nye Vitest-tests (327/327 grønne).
+- **F2: Read-only katalog-sektion i Tilføj Garn-formular (2026-04-27)** — når et garn vælges fra det offentlige katalog, vises katalog-felter (mærke, navn, fiber, vægt, løbelængde, pind, ball-vægt, gauge-pind) i en grøn read-only info-blok (`components/app/KatalogInfoblok.jsx`) i stedet for som inputs. Bruger-egne felter samles under "Dine egne oplysninger"-heading på neutral baggrund. Visualiserer datakilde-konventionen grøn = katalog (read-only), neutral = bruger-input. Esc lukker katalog-søg-dropdown med `stopPropagation` (modal forbliver åben). Autofokus på søge-input når formen åbner uden katalog-link. `yarn_weight` tilføjet til `YARN_FULL_SELECT` så F1's enum vises via `YARN_WEIGHT_LABELS`. 46 nye Vitest-tests (373/373 grønne).
 
 ### Layout og navigation
 - Glassmorphism-navigation med auth-gating (`components/layout/Nav.tsx`)
@@ -306,7 +307,7 @@ F6 manuel + bidragsflow ──→ F7 AI-opslag (post-launch)
 ```
 
 - ~~**F1 (S)** Datamodel: `yarnWeight`-enum på `yarns`-tabellen~~ — **shippet 2026-04-27** (se "Implementeret → Garn-katalog")
-- **F2 (M)** Read-only katalog-sektion i Tilføj Garn-formular. Når garn vælges fra katalog vises katalog-felter som info-blok (ikke inputs). Kun bruger-egne felter er redigerbare. Inkluderer QW2 (escape lukker modal) + QW3 (autofokus på katalog-søg).
+- ~~**F2 (M)** Read-only katalog-sektion i Tilføj Garn-formular. Når garn vælges fra katalog vises katalog-felter som info-blok (ikke inputs). Kun bruger-egne felter er redigerbare. Inkluderer QW2 (escape lukker modal) + QW3 (autofokus på katalog-søg).~~ — **shippet 2026-04-27** (se "Implementeret → Garn-katalog")
 - **F3 (S)** Felt-forenkling i formular: behold hex-vælger som primær farve-input (fjern separat fritekst-farvenavn-felt), fjern EAN-felt fra brugervendt formular, erstat antal-input med +/− tæller-knapper, required-validering ved gem (QW1).
 - **F4 (S)** Garnkort-redesign på Mit Garnlager: rund hex-fyldt farve-cirkel (ikke tekst-label), dedupe mærkenavn fra korttitel hvis det allerede er i badge, diskret "fra katalog"-ikon på linkede garn.
 - **F5 (S)** "Brugt op"-subflow: bekræftelses-prompt ("antal nøgler nulstilles") + valgfri "hvad brugte du det til?"-note. Genbruger `BrugNoeglerModal`-mønster.
