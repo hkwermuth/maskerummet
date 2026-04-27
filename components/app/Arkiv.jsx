@@ -227,7 +227,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
   async function ensureColorsLoaded(yarnId) {
     if (!yarnId) return []
     if (colorsByYarnId.has(yarnId)) return colorsByYarnId.get(yarnId)
-    const colors = await fetchColorsForYarn(supabase, yarnId)
+    const colors = await fetchColorsForYarn(supabase, yarnId, { includeDiscontinued: true })
     setColorsByYarnId(prev => {
       const next = new Map(prev)
       next.set(yarnId, colors)
@@ -705,7 +705,7 @@ function NytProjektModal({ user, onClose, onSaved }) {
   async function ensureColorsLoaded(yarnId) {
     if (!yarnId) return []
     if (colorsByYarnId.has(yarnId)) return colorsByYarnId.get(yarnId)
-    const colors = await fetchColorsForYarn(supabase, yarnId)
+    const colors = await fetchColorsForYarn(supabase, yarnId, { includeDiscontinued: true })
     setColorsByYarnId(prev => {
       const next = new Map(prev)
       next.set(yarnId, colors)

@@ -114,13 +114,23 @@ export async function fetchYarnFullById(client: SupabaseClient, id: string | nul
   return data
 }
 
-export async function fetchColorsForYarn(client: SupabaseClient, yarnId: string | null): Promise<ColorRow[]> {
+export async function fetchColorsForYarn(
+  client: SupabaseClient,
+  yarnId: string | null,
+  opts?: { includeDiscontinued?: boolean }
+): Promise<ColorRow[]> {
   if (!yarnId) return []
-  const { data, error } = await client
+  let q = client
     .from('colors')
-    .select('id,yarn_id,color_number,color_name,hex_code,barcode,image_url')
+    .select('id,yarn_id,color_number,color_name,color_family,hex_code,status,barcode,image_url')
     .eq('yarn_id', yarnId)
     .order('color_number')
+  if (!opts?.includeDiscontinued) {
+    // Postgres NULL-håndtering: .neq() filtrerer ikke NULL fra. Brug or-filter
+    // så både aktive og status=null farver passerer (kun 'udgaaet' ekskluderes).
+    q = q.or('status.is.null,status.neq.udgaaet')
+  }
+  const { data, error } = await q
   if (error) {
     console.error('fetchColorsForYarn:', error.message)
     return []

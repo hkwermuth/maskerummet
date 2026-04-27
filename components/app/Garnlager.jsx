@@ -463,7 +463,7 @@ export default function Garnlager({ user, onRequestLogin }) {
       if (yarn) {
         setSelectedYarn(yarn)
         setCatalogQuery(displayYarnName(yarn))
-        setColorsForYarn(await fetchColorsForYarn(supabase, yarn.id))
+        setColorsForYarn(await fetchColorsForYarn(supabase, yarn.id, { includeDiscontinued: true }))
       }
     }
   }
@@ -488,7 +488,7 @@ export default function Garnlager({ user, onRequestLogin }) {
   async function handleSelectCatalogYarn(yarn) {
     setSelectedYarn(yarn)
     setCatalogQuery(displayYarnName(yarn))
-    const cols = await fetchColorsForYarn(supabase, yarn.id)
+    const cols = await fetchColorsForYarn(supabase, yarn.id, { includeDiscontinued: true })
     setColorsForYarn(cols)
     setForm(f => applyCatalogYarnOnlyToForm(yarn, { ...f, antal: f.antal || 1 }))
   }
@@ -516,7 +516,7 @@ export default function Garnlager({ user, onRequestLogin }) {
         if (y) {
           setSelectedYarn(y)
           setCatalogQuery(displayYarnName(y))
-          fetchColorsForYarn(supabase, y.id).then(setColorsForYarn)
+          fetchColorsForYarn(supabase, y.id, { includeDiscontinued: true }).then(setColorsForYarn)
         }
       })
     }
