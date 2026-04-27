@@ -163,5 +163,11 @@ on public.substitution_suggestions for delete
 to authenticated
 using (auth.uid() = user_id or public.is_editor());
 
+-- PostgREST kræver eksplicit GRANT ud over RLS-policies.
+grant select on public.substitution_votes to anon, authenticated;
+grant insert, update, delete on public.substitution_votes to authenticated;
+grant select on public.substitution_suggestions to anon, authenticated;
+grant insert, update, delete on public.substitution_suggestions to authenticated;
+
 commit;
 

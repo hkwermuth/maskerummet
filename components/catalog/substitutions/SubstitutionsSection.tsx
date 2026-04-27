@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 import { toSlug } from '@/lib/slug'
 import type {
   SubstitutionCandidate,
@@ -21,10 +22,33 @@ const VERDICT_HELP: Record<Verdict, string> = {
   virker_ikke: 'Matcher dårligt på en eller flere vigtige egenskaber.',
 }
 
+const BADGE_OVERRIDE_NOTE = 'Verdict kan blive overtaget af bruger-stemmer ved 3+ enige.'
+const VERDICT_BADGE_HELP: Record<Verdict, string> = {
+  perfekt: `${VERDICT_HELP.perfekt} ${BADGE_OVERRIDE_NOTE}`,
+  god: `${VERDICT_HELP.god} ${BADGE_OVERRIDE_NOTE}`,
+  forbehold: `${VERDICT_HELP.forbehold} ${BADGE_OVERRIDE_NOTE}`,
+  virker_ikke: `${VERDICT_HELP.virker_ikke} ${BADGE_OVERRIDE_NOTE}`,
+}
+
+const VERDICT_RANK: Verdict[] = ['perfekt', 'god', 'forbehold', 'virker_ikke']
+const VOTE_THRESHOLD = 3
+
 function emptySummary(): VoteSummary { return { perfekt: 0, god: 0, forbehold: 0, virker_ikke: 0 } }
 function shortUser(u: string) { const s = (u || '').replace(/-/g, ''); return s ? `Bruger ${s.slice(0, 6)}` : 'Bruger' }
 
-function VerdictBadge({ verdict }: { verdict: string }) {
+function isVerdict(v: string): v is Verdict {
+  return v === 'perfekt' || v === 'god' || v === 'forbehold' || v === 'virker_ikke'
+}
+
+function effectiveVerdict(aiVerdict: Verdict, summary: VoteSummary): { verdict: Verdict; overridden: boolean } {
+  const atThreshold = VERDICT_RANK.filter((v) => summary[v] >= VOTE_THRESHOLD)
+  if (atThreshold.length === 0) return { verdict: aiVerdict, overridden: false }
+  const best = atThreshold[0]
+  if (best === aiVerdict) return { verdict: aiVerdict, overridden: false }
+  return { verdict: best, overridden: true }
+}
+
+function VerdictBadge({ verdict, asBadge = false }: { verdict: string; asBadge?: boolean }) {
   const map: Record<string, string> = {
     perfekt:     'bg-moss/40 text-striq-sage',
     god:         'bg-sky-100 text-sky-900',
@@ -32,7 +56,7 @@ function VerdictBadge({ verdict }: { verdict: string }) {
     virker_ikke: 'bg-red-100 text-red-900',
   }
   const cls = map[verdict] ?? 'bg-striq-border text-striq-muted'
-  const help = (VERDICT_HELP as Record<string, string>)[verdict]
+  const help = isVerdict(verdict) ? (asBadge ? VERDICT_BADGE_HELP : VERDICT_HELP)[verdict] : undefined
   return (
     <span className={`text-[11px] uppercase tracking-wider px-2 py-1 rounded ${cls}`} title={help ?? verdict.replace(/_/g, ' ')}>
       {verdict.replace(/_/g, ' ')}
@@ -40,16 +64,72 @@ function VerdictBadge({ verdict }: { verdict: string }) {
   )
 }
 
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 function Modal({ open, title, children, onClose }: { open: boolean; title: string; children: React.ReactNode; onClose: () => void }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const previouslyFocused = useRef<HTMLElement | null>(null)
+  const titleId = useId()
+
+  useEscapeKey(open, onClose)
+
+  useEffect(() => {
+    if (!open) return
+    previouslyFocused.current = (document.activeElement as HTMLElement | null) ?? null
+    const root = containerRef.current
+    if (root) {
+      const first = root.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+      first?.focus()
+    }
+    return () => {
+      previouslyFocused.current?.focus?.()
+      previouslyFocused.current = null
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return
+      const root = containerRef.current
+      if (!root) return
+      const focusables = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      const active = document.activeElement as HTMLElement | null
+      if (e.shiftKey && active === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [open])
+
   if (!open) return null
   return (
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-striq-muted/40" onClick={onClose} />
-      <div className="absolute inset-x-0 top-10 mx-auto max-w-xl px-4">
+      <div className="absolute inset-0 bg-striq-muted/40" onClick={onClose} aria-hidden="true" />
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="absolute inset-x-0 top-10 mx-auto max-w-xl px-4"
+      >
         <div className="bg-white rounded-xl border border-striq-border shadow-lg overflow-hidden">
           <div className="px-4 py-3 border-b border-striq-border flex items-center justify-between">
-            <div className="font-serif text-lg text-striq-sage">{title}</div>
-            <button onClick={onClose} className="text-striq-muted/70 hover:text-striq-muted px-2">×</button>
+            <div id={titleId} className="font-serif text-lg text-striq-sage">{title}</div>
+            <button
+              onClick={onClose}
+              aria-label="Luk"
+              className="text-striq-muted/70 hover:text-striq-muted min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >×</button>
           </div>
           <div className="p-4">{children}</div>
         </div>
@@ -70,7 +150,12 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
   const [myPendingExternal, setMyPendingExternal] = useState<SubstitutionSuggestionRow[]>([])
   const [commentsOpenFor, setCommentsOpenFor] = useState<string | null>(null)
   const [commentDraft, setCommentDraft] = useState('')
+  const [draftVerdict, setDraftVerdict] = useState<Verdict | null>(null)
   const [saveErr, setSaveErr] = useState<string | null>(null)
+  const [authErrFor, setAuthErrFor] = useState<string | null>(null)
+  const [authErrInModal, setAuthErrInModal] = useState(false)
+  const [savedFor, setSavedFor] = useState<Record<string, number>>({})
+  const [savedInModal, setSavedInModal] = useState(false)
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [suggestTab, setSuggestTab] = useState<'catalog' | 'external'>('catalog')
   const [catalogQuery, setCatalogQuery] = useState('')
@@ -139,45 +224,89 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
       .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
   }
 
+  // Timer-id-tracking så pending setTimeout-callbacks ikke kører på en unmounted komponent.
+  const savedTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  const modalSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      for (const t of savedTimers.current.values()) clearTimeout(t)
+      savedTimers.current.clear()
+      if (modalSavedTimer.current) {
+        clearTimeout(modalSavedTimer.current)
+        modalSavedTimer.current = null
+      }
+    }
+  }, [])
+
+  function markSavedFor(candidateId: string) {
+    setSavedFor((prev) => ({ ...prev, [candidateId]: Date.now() }))
+    const existing = savedTimers.current.get(candidateId)
+    if (existing) clearTimeout(existing)
+    const t = setTimeout(() => {
+      setSavedFor((prev) => {
+        const next = { ...prev }
+        delete next[candidateId]
+        return next
+      })
+      savedTimers.current.delete(candidateId)
+    }, 2500)
+    savedTimers.current.set(candidateId, t)
+  }
+
   async function setVote(candidateId: string, verdict: Verdict) {
-    if (!userId) { setSaveErr('Du skal være logget ind for at validere.'); return }
-    setSaveErr(null)
+    if (!userId) { setAuthErrFor(candidateId); return }
+    setAuthErrFor(null); setSaveErr(null)
     const existing = (votesByCandidate[candidateId] ?? []).find((v) => v.user_id === userId) ?? null
     if (existing) {
       const { error } = await supabase.from('substitution_votes').update({ verdict }).eq('id', existing.id)
-      if (error) setSaveErr(error.message)
+      if (error) { setSaveErr(error.message); return }
     } else {
       const { error } = await supabase.from('substitution_votes').insert({ target_yarn_id: yarnId, candidate_yarn_id: candidateId, user_id: userId, verdict, comment: null })
-      if (error) setSaveErr(error.message)
+      if (error) { setSaveErr(error.message); return }
     }
     await loadAll()
+    markSavedFor(candidateId)
   }
 
   async function saveComment(candidateId: string) {
-    if (!userId) { setSaveErr('Du skal være logget ind for at skrive kommentarer.'); return }
+    if (!userId) { setAuthErrInModal(true); return }
+    setAuthErrInModal(false)
     const text = commentDraft.trim()
-    if (!text) return
-    const existing = (votesByCandidate[candidateId] ?? []).find((v) => v.user_id === userId) ?? null
+    if (!text || draftVerdict === null) return
     setSaveErr(null)
+    const existing = (votesByCandidate[candidateId] ?? []).find((v) => v.user_id === userId) ?? null
     if (existing) {
-      const { error } = await supabase.from('substitution_votes').update({ comment: text }).eq('id', existing.id)
-      if (error) setSaveErr(error.message)
+      const { error } = await supabase.from('substitution_votes').update({ comment: text, verdict: draftVerdict }).eq('id', existing.id)
+      if (error) { setSaveErr(error.message); return }
     } else {
-      const { error } = await supabase.from('substitution_votes').insert({ target_yarn_id: yarnId, candidate_yarn_id: candidateId, user_id: userId, verdict: 'forbehold', comment: text })
-      if (error) setSaveErr(error.message)
+      const { error } = await supabase.from('substitution_votes').insert({ target_yarn_id: yarnId, candidate_yarn_id: candidateId, user_id: userId, verdict: draftVerdict, comment: text })
+      if (error) { setSaveErr(error.message); return }
     }
-    setCommentDraft(''); await loadAll()
+    setCommentDraft('')
+    await loadAll()
+    setSavedInModal(true)
+    if (modalSavedTimer.current) clearTimeout(modalSavedTimer.current)
+    modalSavedTimer.current = setTimeout(() => {
+      setSavedInModal(false)
+      modalSavedTimer.current = null
+    }, 2500)
   }
 
   async function searchCatalog(q: string) {
     const t = q.trim()
     if (t.length < 2) { setCatalogResults([]); return }
-    const p = `%${t.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')}%`
+    // Escape SQL LIKE-wildcards i bruger-input.
+    const likeEscaped = t.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+    // PostgREST .or() bruger , ( ) . som syntax-tegn — wrap værdien i double-quotes
+    // og escape inner double-quotes for at undgå parser-injection.
+    const p = `"%${likeEscaped.replace(/"/g, '\\"')}%"`
     const { data, error } = await supabase
       .from('yarns_full').select('id,producer,name,series')
       .or(`producer.ilike.${p},name.ilike.${p},full_name.ilike.${p}`).limit(20)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!error) setCatalogResults((data ?? []) as any)
+    if (!error) {
+      setCatalogResults((data ?? []) as Array<{ id: string; producer: string; name: string; series: string | null }>)
+    }
   }
 
   async function submitSuggestion() {
@@ -218,6 +347,25 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
     void fetchYarns()
   }, [approvedCatalogIds.join('|'), supabase]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const orderedSubstitutions = useMemo(() => {
+    return substitutions
+      .map((s, originalIndex) => {
+        // Inline summary-beregning (ikke summaryFor) så useMemo-deps er stabile uden snyde-disable.
+        const rows = votesByCandidate[s.yarn_id] ?? []
+        const summary = emptySummary()
+        for (const r of rows) summary[r.verdict] = (summary[r.verdict] ?? 0) + 1
+        const aiVerdict: Verdict = isVerdict(s.verdict) ? s.verdict : 'forbehold'
+        const eff = effectiveVerdict(aiVerdict, summary)
+        return { sub: s, originalIndex, effectiveVerdict: eff.verdict, overridden: eff.overridden, summary }
+      })
+      .sort((a, b) => {
+        const ar = VERDICT_RANK.indexOf(a.effectiveVerdict)
+        const br = VERDICT_RANK.indexOf(b.effectiveVerdict)
+        if (ar !== br) return ar - br
+        return a.originalIndex - b.originalIndex
+      })
+  }, [substitutions, votesByCandidate])
+
   const inputCls = 'w-full px-3 py-2 rounded-lg border border-striq-border bg-cream'
 
   return (
@@ -226,7 +374,7 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
         <div>
           <h2 className="font-serif text-xl text-striq-sage mb-1">Mulige alternativer</h2>
           <p className="text-xs text-striq-muted/70 mb-3">
-            Forslagene er automatisk beregnet ud fra garnets tykkelse, løbelængde, strikkefasthed, fiberindhold og vaskeanvisning.
+            Forslagene er automatisk beregnet ud fra garnets tykkelse, løbelængde, strikkefasthed, fiberindhold og vaskeanvisning. Bruger-stemmer kan overtage vurderingen ved 3+ enige.
           </p>
           {saveErr && <p className="text-xs text-striq-link mb-2">{saveErr}</p>}
         </div>
@@ -236,11 +384,12 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
       </div>
 
       <ul className="divide-y divide-striq-border border border-striq-border rounded-lg overflow-hidden bg-white">
-        {substitutions.map((s) => {
+        {orderedSubstitutions.map(({ sub: s, effectiveVerdict: effVerdict, overridden, summary: sum }) => {
           const slug = toSlug(s.producer, s.name, s.series)
-          const sum = summaryFor(s.yarn_id)
           const my = myVoteByCandidate[s.yarn_id] ?? null
           const totalVotes = sum.perfekt + sum.god + sum.forbehold + sum.virker_ikke
+          const wasSaved = !!savedFor[s.yarn_id]
+          const showAuthErr = authErrFor === s.yarn_id
           return (
             <li key={s.yarn_id} className="px-4 py-3">
               <div className="flex items-center justify-between gap-3">
@@ -253,7 +402,15 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
                 </Link>
                 <div className="flex items-center gap-2 shrink-0">
                   {s.is_manual && <span title="Verificeret manuelt" className="text-xs text-striq-sage">✓</span>}
-                  <VerdictBadge verdict={s.verdict} />
+                  <VerdictBadge verdict={effVerdict} asBadge />
+                  {overridden && (
+                    <span
+                      title="Bruger-stemmer har overtaget den algoritmiske vurdering"
+                      className="text-[10px] uppercase tracking-wider px-2 py-1 rounded bg-cream text-striq-sage border border-striq-border"
+                    >
+                      Overtaget af brugere
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
@@ -264,7 +421,14 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
                 </span>
                 <span className="mx-1 text-striq-muted/40">•</span>
                 <button
-                  onClick={() => { setCommentsOpenFor(s.yarn_id); const mine = (votesByCandidate[s.yarn_id] ?? []).find((v) => v.user_id === userId)?.comment ?? ''; setCommentDraft(mine || '') }}
+                  onClick={() => {
+                    setCommentsOpenFor(s.yarn_id)
+                    const mine = (votesByCandidate[s.yarn_id] ?? []).find((v) => v.user_id === userId)
+                    setCommentDraft(mine?.comment || '')
+                    setDraftVerdict(mine?.verdict ?? null)
+                    setAuthErrInModal(false)
+                    setSavedInModal(false)
+                  }}
                   className="underline text-striq-muted hover:text-striq-sage"
                 >Se kommentarer</button>
               </div>
@@ -274,14 +438,22 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
                   <button
                     key={v}
                     onClick={() => void setVote(s.yarn_id, v)}
-                    className={`text-xs px-2 py-1 rounded border ${my === v ? 'bg-striq-sage text-cream border-striq-sage' : 'bg-cream border-striq-border hover:bg-striq-bg'}`}
+                    className={`text-xs px-3 py-2 min-h-[44px] rounded border ${my === v ? 'bg-striq-sage text-cream border-striq-sage' : 'bg-cream border-striq-border hover:bg-striq-bg'}`}
                     disabled={loading}
                     title={VERDICT_HELP[v]}
                   >
                     {v === 'virker_ikke' ? 'Virker ikke' : v[0].toUpperCase() + v.slice(1)}
                   </button>
                 ))}
+                {wasSaved && (
+                  <span className="text-xs text-striq-sage" aria-live="polite">Tak — gemt ✓</span>
+                )}
               </div>
+              {showAuthErr && (
+                <div className="mt-2 text-xs text-striq-link">
+                  Du skal være logget ind for at validere. <Link href="/auth/login" className="underline">Log ind</Link>
+                </div>
+              )}
             </li>
           )
         })}
@@ -328,7 +500,11 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
         </section>
       )}
 
-      <Modal open={!!commentsOpenFor} title="Kommentarer og din validering" onClose={() => setCommentsOpenFor(null)}>
+      <Modal
+        open={!!commentsOpenFor}
+        title="Kommentarer og din validering"
+        onClose={() => { setCommentsOpenFor(null); setAuthErrInModal(false); setSavedInModal(false); setDraftVerdict(null); setCommentDraft('') }}
+      >
         {commentsOpenFor ? (
           <div className="space-y-4">
             <div className="space-y-3">
@@ -346,10 +522,44 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
             </div>
             <div className="border-t border-striq-border pt-4">
               <div className="text-xs uppercase tracking-wider text-striq-link mb-2">Skriv en kommentar</div>
-              <textarea value={commentDraft} onChange={(e) => setCommentDraft(e.target.value)} rows={4} placeholder={userId ? 'Del din erfaring (valgfrit).' : 'Log ind for at kommentere.'} className={inputCls} disabled={!userId} />
-              <div className="mt-2 flex items-center justify-between">
-                <div className="text-xs text-striq-muted/60">Tip: din kommentar gemmes på din validering.</div>
-                <button onClick={() => void saveComment(commentsOpenFor)} className="bg-striq-sage text-cream px-4 py-2 rounded-lg text-sm disabled:opacity-50" disabled={!userId || commentDraft.trim().length === 0}>Gem</button>
+              <div className="mb-3">
+                <div className="text-[11px] uppercase tracking-wider text-striq-muted mb-1">Vælg din vurdering</div>
+                <div className="flex flex-wrap gap-2">
+                  {(['perfekt', 'god', 'forbehold', 'virker_ikke'] as Verdict[]).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setDraftVerdict(v)}
+                      className={`text-xs px-3 py-2 min-h-[44px] rounded border ${draftVerdict === v ? 'bg-striq-sage text-cream border-striq-sage' : 'bg-cream border-striq-border hover:bg-striq-bg'}`}
+                      title={VERDICT_HELP[v]}
+                    >
+                      {v === 'virker_ikke' ? 'Virker ikke' : v[0].toUpperCase() + v.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <textarea
+                value={commentDraft}
+                onChange={(e) => setCommentDraft(e.target.value)}
+                rows={4}
+                placeholder={userId ? 'Del din erfaring (valgfrit men hjælpsomt).' : 'Log ind for at kommentere.'}
+                className={inputCls}
+                disabled={!userId}
+              />
+              {authErrInModal && (
+                <div className="mt-2 text-xs text-striq-link">
+                  Du skal være logget ind. <Link href="/auth/login" className="underline">Log ind</Link>
+                </div>
+              )}
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <div className="text-xs text-striq-muted/60" aria-live="polite">
+                  {savedInModal ? 'Tak — kommentar gemt ✓' : 'Tip: din kommentar gemmes på din vurdering.'}
+                </div>
+                <button
+                  onClick={() => void saveComment(commentsOpenFor)}
+                  className="bg-striq-sage text-cream px-4 py-2 rounded-lg text-sm disabled:opacity-50"
+                  disabled={!userId || commentDraft.trim().length === 0 || draftVerdict === null}
+                >Gem</button>
               </div>
             </div>
           </div>
