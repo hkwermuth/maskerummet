@@ -12,7 +12,7 @@ export async function fetchSharedProjects(
 ): Promise<SharedProjectPublic[]> {
   const { data: projects, error: pErr } = await supabase
     .from('public_shared_projects')
-    .select('id,title,project_image_url,project_type,community_description,pattern_name,pattern_designer,shared_at,display_name')
+    .select('id,title,project_image_urls,project_type,community_description,pattern_name,pattern_designer,shared_at,display_name')
     .order('shared_at', { ascending: false })
 
   if (pErr) {

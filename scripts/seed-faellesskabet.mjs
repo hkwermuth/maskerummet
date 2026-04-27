@@ -63,7 +63,7 @@ async function main() {
   const userIds = users.map(u => u.id)
   const { data: projects, error } = await supabase
     .from('projects')
-    .select('id,user_id,title,project_image_url,is_shared,project_type,pattern_name,pattern_designer,created_at')
+    .select('id,user_id,title,project_image_urls,is_shared,project_type,pattern_name,pattern_designer,created_at')
     .in('user_id', userIds)
     .order('created_at', { ascending: true })
   if (error) throw error
@@ -74,7 +74,8 @@ async function main() {
   const plan = []
   const missingPattern = []
   for (const p of projects) {
-    const key = `${(p.title || '').trim().toLowerCase()}|${(p.project_image_url || '').trim()}`
+    const firstImage = (p.project_image_urls ?? [])[0] ?? ''
+    const key = `${(p.title || '').trim().toLowerCase()}|${firstImage.trim()}`
     if (seen.has(key)) {
       console.log(`  − skip duplikat: ${p.title || '(uden titel)'}`)
       continue

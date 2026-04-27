@@ -11,7 +11,7 @@ import type { SharedProjectPublic } from '@/lib/types'
 const makeProject = (overrides: Partial<SharedProjectPublic> = {}): SharedProjectPublic => ({
   id: 'proj-1',
   title: 'Min Trøje',
-  project_image_url: null,
+  project_image_urls: [],
   project_type: 'sweater',
   community_description: null,
   pattern_name: 'Mina',

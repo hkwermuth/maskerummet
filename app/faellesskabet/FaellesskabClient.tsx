@@ -217,10 +217,10 @@ function SharedProjectCard({ project }: { project: SharedProjectPublic }) {
       boxShadow: '0 1px 4px rgba(48,34,24,.06)',
     }}>
       <div style={{ position: 'relative', aspectRatio: '4 / 3', background: '#EDE7D8', overflow: 'hidden' }}>
-        {project.project_image_url ? (
+        {project.project_image_urls?.[0] ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={project.project_image_url}
+            src={project.project_image_urls[0]}
             alt={project.title ?? 'Delt projekt'}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             loading="lazy"

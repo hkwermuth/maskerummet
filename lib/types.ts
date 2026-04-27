@@ -142,6 +142,39 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
   faerdigstrikket: 'Færdigstrikket',
 }
 
+// ── Projekt-medier ────────────────────────────────────────────────────────────
+
+export const MAX_PROJECT_IMAGES = 6
+export const MAX_PATTERN_IMAGES = 10
+export const MAX_UPLOAD_BYTES   = 10 * 1024 * 1024
+export const ALLOWED_IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp'] as const
+export const ALLOWED_PDF_MIME   = ['application/pdf'] as const
+
+export type PatternMode = 'pdf' | 'images' | 'none'
+
+export type Project = {
+  id: string
+  user_id: string
+  title: string | null
+  used_at: string | null
+  needle_size: string | null
+  held_with: string | null
+  notes: string | null
+  status: ProjectStatus
+  project_image_urls: string[]
+  pattern_pdf_url: string | null
+  pattern_pdf_thumbnail_url: string | null
+  pattern_image_urls: string[]
+  is_shared: boolean
+  shared_at: string | null
+  project_type: ProjectType | null
+  pattern_name: string | null
+  pattern_designer: string | null
+  community_description: string | null
+  created_at: string
+  updated_at: string
+}
+
 // ── Fællesskabet (delte projekter) ───────────────────────────────────────────
 
 export const PROJECT_TYPES = [
@@ -187,7 +220,7 @@ export type SharedProjectYarn = {
 export type SharedProjectPublic = {
   id: string
   title: string | null
-  project_image_url: string | null
+  project_image_urls: string[]
   project_type: ProjectType | null
   community_description: string | null
   pattern_name: string | null

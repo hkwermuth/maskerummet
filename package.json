@@ -11,6 +11,7 @@
     "migrate:stash-catalog": "node scripts/migrate-stash-to-catalog.mjs",
     "import:yarns": "node scripts/import-yarns.mjs",
     "import:yarns:dry": "node scripts/import-yarns.mjs --dry",
+    "postinstall": "node scripts/copy-pdf-worker.mjs",
     "test": "vitest",
     "test:run": "vitest run"
   },
@@ -20,6 +21,7 @@
     "@zxing/library": "^0.21.3",
     "leaflet": "^1.9.4",
     "next": "^15.5.14",
+    "pdfjs-dist": "^4.10.38",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-leaflet": "^5.0.0",

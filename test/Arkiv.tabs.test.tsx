@@ -110,10 +110,10 @@ function buildSupabaseMock(projects: object[]) {
 }
 
 const sampleProjects = [
-  { id: 'p1', title: 'Sommersweater', status: 'faerdigstrikket', is_shared: false, used_at: '2024-01-01', created_at: '2024-01-01', needle_size: null, held_with: null, notes: null, project_image_url: null, pattern_pdf_url: null, user_id: 'user-1' },
-  { id: 'p2', title: 'Vinterhue', status: 'i_gang', is_shared: false, used_at: '2024-02-01', created_at: '2024-02-01', needle_size: null, held_with: null, notes: null, project_image_url: null, pattern_pdf_url: null, user_id: 'user-1' },
-  { id: 'p3', title: 'Drømmesokker', status: 'vil_gerne', is_shared: false, used_at: null, created_at: '2024-03-01', needle_size: null, held_with: null, notes: null, project_image_url: null, pattern_pdf_url: null, user_id: 'user-1' },
-  { id: 'p4', title: 'Ekstra færdig', status: 'faerdigstrikket', is_shared: false, used_at: '2024-01-15', created_at: '2024-01-15', needle_size: null, held_with: null, notes: null, project_image_url: null, pattern_pdf_url: null, user_id: 'user-1' },
+  { id: 'p1', title: 'Sommersweater', status: 'faerdigstrikket', is_shared: false, used_at: '2024-01-01', created_at: '2024-01-01', needle_size: null, held_with: null, notes: null, project_image_urls: [], pattern_pdf_url: null, pattern_image_urls: [], pattern_pdf_thumbnail_url: null, user_id: 'user-1' },
+  { id: 'p2', title: 'Vinterhue', status: 'i_gang', is_shared: false, used_at: '2024-02-01', created_at: '2024-02-01', needle_size: null, held_with: null, notes: null, project_image_urls: [], pattern_pdf_url: null, pattern_image_urls: [], pattern_pdf_thumbnail_url: null, user_id: 'user-1' },
+  { id: 'p3', title: 'Drømmesokker', status: 'vil_gerne', is_shared: false, used_at: null, created_at: '2024-03-01', needle_size: null, held_with: null, notes: null, project_image_urls: [], pattern_pdf_url: null, pattern_image_urls: [], pattern_pdf_thumbnail_url: null, user_id: 'user-1' },
+  { id: 'p4', title: 'Ekstra færdig', status: 'faerdigstrikket', is_shared: false, used_at: '2024-01-15', created_at: '2024-01-15', needle_size: null, held_with: null, notes: null, project_image_urls: [], pattern_pdf_url: null, pattern_image_urls: [], pattern_pdf_thumbnail_url: null, user_id: 'user-1' },
 ]
 
 beforeEach(() => {

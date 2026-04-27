@@ -2,11 +2,63 @@
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useSupabase } from '@/lib/supabase/client'
 import { fromUsageDb, toUsageDb } from '@/lib/supabase/mappers'
-import { uploadFile as uploadFileRaw } from '@/lib/supabase/storage'
+import {
+  uploadFile as uploadFileRaw,
+  uploadFilesParallel,
+  deleteFiles,
+  validateUploadFile,
+} from '@/lib/supabase/storage'
+import { renderPdfFirstPage } from '@/lib/pdf-thumbnail'
 import { displayYarnName, fetchColorsByIds, fetchColorsForYarn, searchYarnsFull } from '@/lib/catalog'
 import { exportProjekter } from '@/lib/export/exportProjekter'
 import { DelMedFaellesskabetModal } from '@/components/app/DelMedFaellesskabetModal'
-import { PROJECT_STATUSES, PROJECT_STATUS_LABELS } from '@/lib/types'
+import {
+  PROJECT_STATUSES,
+  PROJECT_STATUS_LABELS,
+  MAX_PROJECT_IMAGES,
+  MAX_PATTERN_IMAGES,
+  MAX_UPLOAD_BYTES,
+  ALLOWED_IMAGE_MIME,
+  ALLOWED_PDF_MIME,
+} from '@/lib/types'
+
+const PROJECT_FIELDS =
+  'id,user_id,title,used_at,needle_size,held_with,notes,' +
+  'project_image_urls,pattern_pdf_url,pattern_pdf_thumbnail_url,pattern_image_urls,' +
+  'is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,' +
+  'status,created_at,updated_at'
+
+const IMAGES_BUCKET   = 'yarn-images'
+const PATTERNS_BUCKET = 'patterns'
+
+function safeExt(name, fallback = 'bin') {
+  const m = (name || '').match(/\.([a-z0-9]+)$/i)
+  return m ? m[1].toLowerCase() : fallback
+}
+
+function makeImagePath(userId, projectId) {
+  // Stabile UUID-baserede paths så reorder ikke kræver rename i Storage.
+  const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return (ext) => `${userId}/projects/${projectId}/${uuid}.${ext}`
+}
+
+function pathFromUrl(url) {
+  // Vi gemmer URL'er i DB; storage.remove kræver path. Vi parser path ud af
+  // signed/public URL'er ved at finde "/<bucket>/" og tage resten frem til "?".
+  if (!url) return null
+  try {
+    const u = new URL(url)
+    const parts = u.pathname.split('/').filter(Boolean)
+    // Format: .../object/{public|sign}/<bucket>/<path...>
+    const idx = parts.findIndex(p => p === IMAGES_BUCKET || p === PATTERNS_BUCKET)
+    if (idx === -1) return null
+    return parts.slice(idx + 1).join('/')
+  } catch {
+    return null
+  }
+}
 
 function StatusChips({ value, onChange }) {
   return (
@@ -153,38 +205,170 @@ function YarnCatalogSearch({ value, onChange, onSelectYarn, placeholder }) {
   )
 }
 
-function FileUploadField({ label, accept, preview, isImage, onChange, onRemove, hint }) {
+// Items i MultiImageGrid: { url, pendingFile, isExisting, _key } hvor url er
+// enten signed/public URL (isExisting=true) eller blob:URL (pending).
+function MultiImageGrid({
+  items,
+  onAdd,
+  onRemove,
+  onReorder,
+  max,
+  label,
+  hint,
+}) {
+  const inputRef = useRef(null)
+  const remaining = Math.max(0, max - items.length)
+
+  function pickFiles(e) {
+    const files = Array.from(e.target.files || [])
+    e.target.value = ''
+    if (files.length === 0) return
+    onAdd(files.slice(0, remaining))
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-      <Label>{label}</Label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', border: '1px dashed #C0B8A8', borderRadius: '8px', cursor: 'pointer', background: '#F4EFE6' }}>
-        <input type="file" accept={accept} onChange={onChange} style={{ display: 'none' }} />
-        {preview ? (
-          isImage
-            ? <img src={preview} alt="preview" style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px' }} />
-            : <div style={{ width: '48px', height: '48px', background: '#2C4A3E', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📄</div>
-        ) : (
-          <div style={{ width: '48px', height: '48px', background: '#EDE7D8', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#8B7D6B' }}>
-            {isImage ? '📷' : '📎'}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <Label>{label}</Label>
+        <span aria-live="polite" style={{ fontSize: '11px', color: '#8B7D6B' }}>{items.length} / {max}</span>
+      </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+        gap: '8px',
+      }}>
+        {items.map((it, i) => (
+          <div
+            key={it._key}
+            style={{
+              position: 'relative',
+              aspectRatio: '1 / 1',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              background: '#EDE7D8',
+              border: i === 0 ? '2px solid #6A5638' : '1px solid #D0C8BA',
+            }}
+          >
+            <img src={it.url} alt={`Billede ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            {i === 0 && (
+              <span style={{
+                position: 'absolute', top: 4, left: 4,
+                padding: '2px 7px', borderRadius: 999,
+                fontSize: 10, background: 'rgba(106,86,56,.92)', color: '#fff',
+                letterSpacing: '.04em',
+              }}>Cover</span>
+            )}
+            <div style={{ position: 'absolute', bottom: 4, left: 4, right: 4, display: 'flex', gap: 4, justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {i > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onReorder(i, i - 1)}
+                    aria-label={`Flyt billede ${i + 1} op`}
+                    style={iconBtnStyle}
+                  >↑</button>
+                )}
+                {i < items.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => onReorder(i, i + 1)}
+                    aria-label={`Flyt billede ${i + 1} ned`}
+                    style={iconBtnStyle}
+                  >↓</button>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemove(i)}
+                aria-label={`Slet billede ${i + 1}`}
+                style={{ ...iconBtnStyle, background: 'rgba(139,58,42,.92)' }}
+              >✕</button>
+            </div>
           </div>
+        ))}
+        {remaining > 0 && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            aria-label={`Tilføj billede${remaining > 1 ? 'r' : ''}`}
+            style={{
+              aspectRatio: '1 / 1',
+              borderRadius: '8px',
+              border: '1px dashed #C0B8A8',
+              background: '#F4EFE6',
+              cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, color: '#6B5D4F',
+              fontFamily: "'DM Sans', sans-serif",
+              minHeight: 110,
+            }}
+          >
+            <span style={{ fontSize: 22, lineHeight: 1, marginBottom: 2 }}>＋</span>
+            Tilføj
+          </button>
         )}
-        <div>
-          <div style={{ fontSize: '12px', color: '#2C2018', fontWeight: 500 }}>{preview ? 'Skift fil' : 'Upload fil'}</div>
-          <div style={{ fontSize: '11px', color: '#8B7D6B' }}>{hint}</div>
-        </div>
-      </label>
-      {preview && (
-        <button type="button" onClick={onRemove} style={{ alignSelf: 'flex-start', fontSize: '11px', color: '#8B3A2A', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif" }}>
-          ✕ Fjern
-        </button>
-      )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple={remaining > 1}
+        onChange={pickFiles}
+        style={{ display: 'none' }}
+      />
+      {hint && <div style={{ fontSize: 11, color: '#8B7D6B' }}>{hint}</div>}
+    </div>
+  )
+}
+
+const iconBtnStyle = {
+  minWidth: 40, minHeight: 40,
+  padding: '0 8px',
+  border: 'none', borderRadius: 6,
+  background: 'rgba(44,32,24,.78)', color: '#fff',
+  fontSize: 14, lineHeight: 1, cursor: 'pointer',
+  fontFamily: "'DM Sans', sans-serif",
+}
+
+function PatternModeToggle({ value, onChange, disabled }) {
+  return (
+    <div role="radiogroup" aria-label="Opskrift-format" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {[
+        { v: 'pdf',    label: 'PDF' },
+        { v: 'images', label: 'Billeder' },
+      ].map(o => {
+        const active = value === o.v
+        return (
+          <button
+            key={o.v}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            disabled={disabled}
+            onClick={() => onChange(o.v)}
+            style={{
+              padding: '7px 14px',
+              borderRadius: 999,
+              border: '1px solid ' + (active ? '#6A5638' : '#D0C8BA'),
+              background: active ? '#6A5638' : '#FFFCF7',
+              color: active ? '#fff' : '#6B5D4F',
+              fontSize: 12,
+              fontFamily: "'DM Sans', sans-serif",
+              fontWeight: active ? 500 : 400,
+              cursor: disabled ? 'default' : 'pointer',
+              minHeight: 36,
+            }}
+          >
+            {o.label}
+          </button>
+        )
+      })}
     </div>
   )
 }
 
 function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
   const supabase = useSupabase()
-  const uploadFile = (bucket, path, file) => uploadFileRaw(supabase, bucket, path, file)
   const [editing, setEditing]         = useState(false)
   const [saving, setSaving]           = useState(false)
   const [deleting, setDeleting]       = useState(false)
@@ -203,13 +387,50 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     status:     entry?.status      ?? 'faerdigstrikket',
     yarnLines:  (entry?.yarnLines ?? []).map(l => ({ ...l, catalogQuery: l.yarnName || '' })),
   })
-  const [imageFile, setImageFile]       = useState(null)
-  const [imagePreview, setImagePreview] = useState(entry?.project_image_url ?? null)
-  const [removeImage, setRemoveImage]   = useState(false)
-  const [pdfFile, setPdfFile]           = useState(null)
-  const [pdfPreview, setPdfPreview]     = useState(entry?.pattern_pdf_url ?? null)
-  const [removePdf, setRemovePdf]       = useState(false)
+
+  // Strik-billeder
+  const [projectImages, setProjectImages] = useState(() =>
+    (entry?.project_image_urls ?? []).map((url, i) => ({
+      url, pendingFile: null, isExisting: true, _key: `e-${i}-${url}`,
+    }))
+  )
+  const [removedProjectImageUrls, setRemovedProjectImageUrls] = useState([])
+
+  // Opskrift
+  const initialPatternMode =
+    entry?.pattern_pdf_url ? 'pdf'
+    : (entry?.pattern_image_urls?.length ?? 0) > 0 ? 'images'
+    : 'pdf'
+  const [patternMode, setPatternMode] = useState(initialPatternMode)
+
+  // PDF-mode state
+  const [pdfFile, setPdfFile]       = useState(null)
+  const [pdfFileName, setPdfFileName] = useState(null)
+  const [existingPdfUrl, setExistingPdfUrl] = useState(entry?.pattern_pdf_url ?? null)
+  const [pdfThumbnailBlob, setPdfThumbnailBlob] = useState(null)
+  const [pdfThumbnailPreview, setPdfThumbnailPreview] = useState(entry?.pattern_pdf_thumbnail_url ?? null)
+  const [removePdf, setRemovePdf]   = useState(false)
+  const [renderingThumb, setRenderingThumb] = useState(false)
+
+  // Billed-mode state
+  const [patternImages, setPatternImages] = useState(() =>
+    (entry?.pattern_image_urls ?? []).map((url, i) => ({
+      url, pendingFile: null, isExisting: true, _key: `pe-${i}-${url}`,
+    }))
+  )
+  const [removedPatternImageUrls, setRemovedPatternImageUrls] = useState([])
+
   const [colorsByYarnId, setColorsByYarnId] = useState(new Map())
+
+  // Cleanup blob URLs ved unmount
+  useEffect(() => {
+    return () => {
+      projectImages.forEach(it => { if (!it.isExisting) URL.revokeObjectURL(it.url) })
+      patternImages.forEach(it => { if (!it.isExisting) URL.revokeObjectURL(it.url) })
+      if (pdfThumbnailPreview && pdfThumbnailPreview.startsWith('blob:')) URL.revokeObjectURL(pdfThumbnailPreview)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function setF(k, v) { setForm(p => ({ ...p, [k]: v })) }
   function setLine(i, patch) {
@@ -236,17 +457,153 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     return colors
   }
 
-  function handleImageFile(e) {
-    const file = e.target.files[0]; if (!file) return
-    setImageFile(file); setImagePreview(URL.createObjectURL(file)); setRemoveImage(false)
+  function addProjectImages(files) {
+    setSaveError(null)
+    const accepted = []
+    for (const file of files) {
+      try {
+        validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME })
+      } catch (e) {
+        setSaveError(e.message)
+        return
+      }
+      accepted.push({
+        url: URL.createObjectURL(file),
+        pendingFile: file,
+        isExisting: false,
+        _key: `n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      })
+    }
+    setProjectImages(prev => [...prev, ...accepted].slice(0, MAX_PROJECT_IMAGES))
   }
-  function handlePdfFile(e) {
-    const file = e.target.files[0]; if (!file) return
-    setPdfFile(file); setPdfPreview(file.name); setRemovePdf(false)
+  function removeProjectImage(index) {
+    setProjectImages(prev => {
+      const next = [...prev]
+      const [removed] = next.splice(index, 1)
+      if (removed.isExisting) {
+        setRemovedProjectImageUrls(rs => [...rs, removed.url])
+      } else {
+        URL.revokeObjectURL(removed.url)
+      }
+      return next
+    })
+  }
+  function reorderProjectImage(from, to) {
+    setProjectImages(prev => {
+      const next = [...prev]
+      const [it] = next.splice(from, 1)
+      next.splice(to, 0, it)
+      return next
+    })
+  }
+
+  function addPatternImages(files) {
+    setSaveError(null)
+    const accepted = []
+    for (const file of files) {
+      try {
+        validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME })
+      } catch (e) {
+        setSaveError(e.message)
+        return
+      }
+      accepted.push({
+        url: URL.createObjectURL(file),
+        pendingFile: file,
+        isExisting: false,
+        _key: `pn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      })
+    }
+    setPatternImages(prev => [...prev, ...accepted].slice(0, MAX_PATTERN_IMAGES))
+  }
+  function removePatternImage(index) {
+    setPatternImages(prev => {
+      const next = [...prev]
+      const [removed] = next.splice(index, 1)
+      if (removed.isExisting) {
+        setRemovedPatternImageUrls(rs => [...rs, removed.url])
+      } else {
+        URL.revokeObjectURL(removed.url)
+      }
+      return next
+    })
+  }
+  function reorderPatternImage(from, to) {
+    setPatternImages(prev => {
+      const next = [...prev]
+      const [it] = next.splice(from, 1)
+      next.splice(to, 0, it)
+      return next
+    })
+  }
+
+  async function handlePdfPick(e) {
+    const file = e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_PDF_MIME })
+    } catch (err) {
+      setSaveError(err.message)
+      return
+    }
+    setSaveError(null)
+    setPdfFile(file)
+    setPdfFileName(file.name)
+    setRemovePdf(false)
+    // Render thumbnail i baggrunden — fejler den, fortsætter vi alligevel.
+    setRenderingThumb(true)
+    try {
+      const blob = await renderPdfFirstPage(file)
+      setPdfThumbnailBlob(blob)
+      if (pdfThumbnailPreview && pdfThumbnailPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(pdfThumbnailPreview)
+      }
+      setPdfThumbnailPreview(URL.createObjectURL(blob))
+    } catch {
+      setPdfThumbnailBlob(null)
+    }
+    setRenderingThumb(false)
+  }
+  function clearPdf() {
+    setPdfFile(null)
+    setPdfFileName(null)
+    setPdfThumbnailBlob(null)
+    if (pdfThumbnailPreview && pdfThumbnailPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(pdfThumbnailPreview)
+    }
+    setPdfThumbnailPreview(null)
+    setRemovePdf(true)
+  }
+
+  function switchPatternMode(next) {
+    if (next === patternMode) return
+    const hasPdf    = patternMode === 'pdf'    && (pdfFile || (existingPdfUrl && !removePdf))
+    const hasImages = patternMode === 'images' && patternImages.length > 0
+    if (hasPdf || hasImages) {
+      const ok = typeof window === 'undefined'
+        ? true
+        : window.confirm('Skift af opskrift-format sletter den nuværende opskrift. Fortsæt?')
+      if (!ok) return
+      if (patternMode === 'pdf') {
+        clearPdf()
+      } else {
+        for (const it of patternImages) {
+          if (it.isExisting) {
+            setRemovedPatternImageUrls(rs => [...rs, it.url])
+          } else {
+            URL.revokeObjectURL(it.url)
+          }
+        }
+        setPatternImages([])
+      }
+    }
+    setPatternMode(next)
   }
 
   async function handleSave() {
     setSaving(true); setSaveError(null)
+    const newlyUploadedPaths = [] // til oprydning hvis DB-update fejler
     try {
       const updates = {
         title:       form.title      || null,
@@ -260,26 +617,97 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         updates.is_shared = false
       }
 
-      if (imageFile) {
-        const ext = imageFile.name.split('.').pop()
-        updates.project_image_url = await uploadFile('yarn-images', `${user.id}/projects/${entry.id}.${ext}`, imageFile)
-      } else if (removeImage) {
-        updates.project_image_url = null
+      // ── Strik-billeder: upload pending, byg endeligt array ──
+      const finalProjectUrls = []
+      for (const it of projectImages) {
+        if (it.isExisting) {
+          finalProjectUrls.push(it.url)
+        } else {
+          const path = makeImagePath(user.id, entry.id)(safeExt(it.pendingFile.name, 'jpg'))
+          const url = await uploadFileRaw(supabase, IMAGES_BUCKET, path, it.pendingFile)
+          newlyUploadedPaths.push({ bucket: IMAGES_BUCKET, path })
+          finalProjectUrls.push(url)
+        }
       }
+      updates.project_image_urls = finalProjectUrls
 
-      if (pdfFile) {
-        updates.pattern_pdf_url = await uploadFile('patterns', `${user.id}/projects/${entry.id}.pdf`, pdfFile)
-      } else if (removePdf) {
+      // ── Opskrift ──
+      if (patternMode === 'pdf') {
+        updates.pattern_image_urls = []
+        if (pdfFile) {
+          // Upload ny PDF (overwriter eksisterende sti)
+          const pdfPath = `${user.id}/projects/${entry.id}.pdf`
+          updates.pattern_pdf_url = await uploadFileRaw(supabase, PATTERNS_BUCKET, pdfPath, pdfFile)
+          newlyUploadedPaths.push({ bucket: PATTERNS_BUCKET, path: pdfPath })
+          if (pdfThumbnailBlob) {
+            const thumbPath = `${user.id}/projects/${entry.id}-thumb.png`
+            const thumbFile = new File([pdfThumbnailBlob], `${entry.id}-thumb.png`, { type: 'image/png' })
+            updates.pattern_pdf_thumbnail_url = await uploadFileRaw(supabase, PATTERNS_BUCKET, thumbPath, thumbFile)
+            newlyUploadedPaths.push({ bucket: PATTERNS_BUCKET, path: thumbPath })
+          } else {
+            updates.pattern_pdf_thumbnail_url = null
+          }
+        } else if (removePdf) {
+          updates.pattern_pdf_url = null
+          updates.pattern_pdf_thumbnail_url = null
+        }
+      } else {
+        // images-mode
         updates.pattern_pdf_url = null
+        updates.pattern_pdf_thumbnail_url = null
+        const finalPatternUrls = []
+        for (const it of patternImages) {
+          if (it.isExisting) {
+            finalPatternUrls.push(it.url)
+          } else {
+            const path = makeImagePath(user.id, entry.id)(safeExt(it.pendingFile.name, 'jpg'))
+            const url = await uploadFileRaw(supabase, PATTERNS_BUCKET, path, it.pendingFile)
+            newlyUploadedPaths.push({ bucket: PATTERNS_BUCKET, path })
+            finalPatternUrls.push(url)
+          }
+        }
+        updates.pattern_image_urls = finalPatternUrls
       }
 
       const { data, error } = await supabase
         .from('projects')
         .update(updates)
         .eq('id', entry.id)
-        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,status,created_at,updated_at')
+        .select(PROJECT_FIELDS)
         .single()
       if (error) throw error
+
+      // ── Oprydning af gamle blobs efter succesfuld DB-update ──
+      const cleanupImages = removedProjectImageUrls
+        .map(pathFromUrl).filter(Boolean)
+      if (cleanupImages.length > 0) {
+        await deleteFiles(supabase, IMAGES_BUCKET, cleanupImages).catch(() => { /* best-effort */ })
+      }
+      const cleanupPatterns = removedPatternImageUrls
+        .map(pathFromUrl).filter(Boolean)
+      // Hvis vi skiftede væk fra PDF, eller PDF blev fjernet, slet gammel PDF + thumb
+      const cleanupPdfPaths = []
+      if (entry.pattern_pdf_url && (patternMode !== 'pdf' || (removePdf && !pdfFile) || pdfFile)) {
+        const oldPdfPath = pathFromUrl(entry.pattern_pdf_url)
+        if (oldPdfPath && oldPdfPath !== `${user.id}/projects/${entry.id}.pdf`) {
+          cleanupPdfPaths.push(oldPdfPath)
+        }
+      }
+      // Ryd gammel thumbnail når mode-skift, PDF er fjernet, ELLER ny PDF er
+      // uploadet uden at thumbnail kunne genereres (graceful fallback) — i den
+      // sidste case skriver vi pattern_pdf_thumbnail_url=null og må derfor
+      // også rydde den gamle fil for at undgå orphan.
+      if (entry.pattern_pdf_thumbnail_url && (
+        patternMode !== 'pdf' ||
+        (removePdf && !pdfFile) ||
+        (pdfFile && !pdfThumbnailBlob)
+      )) {
+        const oldThumbPath = pathFromUrl(entry.pattern_pdf_thumbnail_url)
+        if (oldThumbPath) cleanupPdfPaths.push(oldThumbPath)
+      }
+      if (cleanupPatterns.length > 0 || cleanupPdfPaths.length > 0) {
+        await deleteFiles(supabase, PATTERNS_BUCKET, [...cleanupPatterns, ...cleanupPdfPaths]).catch(() => { /* best-effort */ })
+      }
 
       // Synkroniser yarn_usage-rækker: slet fjernede, upsert resten
       const keptIds = new Set((form.yarnLines ?? []).map(l => l.id).filter(Boolean))
@@ -323,9 +751,27 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         .select()
       if (uErr) throw uErr
 
+      // Reset removal-trackere; lokale URL-objekter overskrives af entry-data
+      setRemovedProjectImageUrls([])
+      setRemovedPatternImageUrls([])
+      setExistingPdfUrl(data.pattern_pdf_url ?? null)
+      setPdfFile(null)
+      setPdfFileName(null)
+      setRemovePdf(false)
+
       onSaved({ ...data, yarnLines: (savedUsages ?? []).map(fromUsageDb) })
       setEditing(false)
     } catch (e) {
+      // Rul nyligt uploadede filer tilbage så vi ikke efterlader orphans.
+      const byBucket = new Map()
+      for (const { bucket, path } of newlyUploadedPaths) {
+        const arr = byBucket.get(bucket) ?? []
+        arr.push(path)
+        byBucket.set(bucket, arr)
+      }
+      for (const [bucket, paths] of byBucket) {
+        await deleteFiles(supabase, bucket, paths).catch(() => { /* best-effort */ })
+      }
       setSaveError('Kunne ikke gemme: ' + e.message)
     }
     setSaving(false)
@@ -333,13 +779,31 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
 
   async function handleDelete() {
     setDeleting(true)
+    // Slet projektet i DB først; cascade fjerner yarn_usage. Storage-filer
+    // ryddes herefter best-effort så vi ikke efterlader orphans.
     await supabase.from('projects').delete().eq('id', entry.id)
+
+    const imagePaths = (entry.project_image_urls ?? []).map(pathFromUrl).filter(Boolean)
+    if (imagePaths.length > 0) {
+      await deleteFiles(supabase, IMAGES_BUCKET, imagePaths).catch(() => { /* best-effort */ })
+    }
+    const patternPaths = [
+      ...(entry.pattern_image_urls ?? []).map(pathFromUrl).filter(Boolean),
+      ...(entry.pattern_pdf_url ? [pathFromUrl(entry.pattern_pdf_url)].filter(Boolean) : []),
+      ...(entry.pattern_pdf_thumbnail_url ? [pathFromUrl(entry.pattern_pdf_thumbnail_url)].filter(Boolean) : []),
+    ]
+    if (patternPaths.length > 0) {
+      await deleteFiles(supabase, PATTERNS_BUCKET, patternPaths).catch(() => { /* best-effort */ })
+    }
+
     onDelete(entry.id)
     onClose()
   }
 
-  const currentImage = removeImage ? null : imagePreview
-  const currentPdf   = removePdf   ? null : pdfPreview
+  const coverImage = projectImages[0]?.url ?? null
+  const galleryImages = projectImages.slice(1)
+  const hasPdf = patternMode === 'pdf' && (pdfFile || (existingPdfUrl && !removePdf))
+  const pdfDisplayName = pdfFile ? pdfFileName : (existingPdfUrl ? 'Eksisterende PDF' : null)
 
   return (
     <div
@@ -347,12 +811,24 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
       style={{ position: 'fixed', inset: 0, background: 'rgba(44,32,24,.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1200, overflowY: 'auto', padding: '20px 16px' }}
     >
       <div style={{ background: '#FFFCF7', borderRadius: '14px', width: '520px', maxWidth: '100%', boxShadow: '0 24px 60px rgba(44,32,24,.25)', margin: 'auto', overflow: 'hidden' }}>
-        {currentImage ? (
+        {coverImage ? (
           <div style={{ aspectRatio: '16/9', overflow: 'hidden', background: '#EDE7D8', position: 'relative' }}>
-            <img src={currentImage} alt="Projekt" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={coverImage} alt="Projekt" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
         ) : (
           <div style={{ height: '8px', background: fallbackHex }} />
+        )}
+        {!editing && galleryImages.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, padding: '8px 12px', background: '#F9F6F0', overflowX: 'auto' }}>
+            {galleryImages.map((it, i) => (
+              <img
+                key={it._key}
+                src={it.url}
+                alt={`Billede ${i + 2}`}
+                style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }}
+              />
+            ))}
+          </div>
         )}
 
         <div style={{ padding: '24px' }}>
@@ -555,25 +1031,56 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                 <textarea value={form.notes} onChange={e => setF('notes', e.target.value)} rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
               </div>
 
-              <FileUploadField
-                label="Billede af projektet"
-                accept="image/*"
-                isImage
-                preview={currentImage}
-                onChange={handleImageFile}
-                onRemove={() => { setImageFile(null); setImagePreview(null); setRemoveImage(true) }}
-                hint="JPG eller PNG"
+              <MultiImageGrid
+                label={`Billeder af projektet (op til ${MAX_PROJECT_IMAGES})`}
+                items={projectImages}
+                max={MAX_PROJECT_IMAGES}
+                onAdd={addProjectImages}
+                onRemove={removeProjectImage}
+                onReorder={reorderProjectImage}
+                hint="JPG, PNG eller WebP. Det første billede bruges som cover."
               />
 
-              <FileUploadField
-                label="Opskrift (PDF)"
-                accept=".pdf,application/pdf"
-                isImage={false}
-                preview={currentPdf}
-                onChange={handlePdfFile}
-                onRemove={() => { setPdfFile(null); setPdfPreview(null); setRemovePdf(true) }}
-                hint={pdfFile ? pdfFile.name : (entry.pattern_pdf_url ? 'Eksisterende PDF' : 'Upload PDF')}
-              />
+              <div style={{ borderTop: '1px solid #EDE7D8', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <Label>Opskrift</Label>
+                <PatternModeToggle value={patternMode} onChange={switchPatternMode} disabled={saving} />
+
+                {patternMode === 'pdf' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', border: '1px dashed #C0B8A8', borderRadius: '8px', cursor: 'pointer', background: '#F4EFE6' }}>
+                      <input type="file" accept=".pdf,application/pdf" onChange={handlePdfPick} style={{ display: 'none' }} />
+                      {pdfThumbnailPreview ? (
+                        <img src={pdfThumbnailPreview} alt="PDF første side" style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px' }} />
+                      ) : hasPdf ? (
+                        <div style={{ width: '48px', height: '48px', background: '#2C4A3E', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📄</div>
+                      ) : (
+                        <div style={{ width: '48px', height: '48px', background: '#EDE7D8', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#8B7D6B' }}>📎</div>
+                      )}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '12px', color: '#2C2018', fontWeight: 500 }}>{hasPdf ? 'Skift PDF' : 'Upload PDF'}</div>
+                        <div style={{ fontSize: '11px', color: '#8B7D6B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {renderingThumb ? 'Genererer thumbnail…' : (pdfDisplayName ?? 'Vælg PDF-fil (maks. 10 MB)')}
+                        </div>
+                      </div>
+                    </label>
+                    {hasPdf && (
+                      <button type="button" onClick={clearPdf} style={{ alignSelf: 'flex-start', fontSize: '11px', color: '#8B3A2A', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif" }}>
+                        ✕ Fjern PDF
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <MultiImageGrid
+                    label={`Opskrift som billeder (op til ${MAX_PATTERN_IMAGES})`}
+                    items={patternImages}
+                    max={MAX_PATTERN_IMAGES}
+                    onAdd={addPatternImages}
+                    onRemove={removePatternImage}
+                    onReorder={reorderPatternImage}
+                    hint="Vælg flere på én gang. JPG, PNG eller WebP."
+                  />
+                )}
+              </div>
 
               {saveError && (
                 <div style={{ padding: '10px 14px', background: '#F5E8E0', borderRadius: '8px', fontSize: '12px', color: '#8B3A2A' }}>{saveError}</div>
@@ -614,9 +1121,26 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
               {entry.pattern_pdf_url && (
                 <a href={entry.pattern_pdf_url} target="_blank" rel="noreferrer"
                   style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#EDE7D8', borderRadius: '8px', textDecoration: 'none', color: '#2C4A3E', fontSize: '13px', fontWeight: 500, marginBottom: '16px' }}>
-                  <span style={{ fontSize: '18px' }}>📄</span>
+                  {entry.pattern_pdf_thumbnail_url
+                    ? <img src={entry.pattern_pdf_thumbnail_url} alt="Opskrift, side 1" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4 }} />
+                    : <span style={{ fontSize: '18px' }}>📄</span>}
                   Åbn opskrift (PDF)
                 </a>
+              )}
+
+              {(entry.pattern_image_urls?.length ?? 0) > 0 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '6px' }}>
+                    Opskrift ({entry.pattern_image_urls.length} {entry.pattern_image_urls.length === 1 ? 'billede' : 'billeder'})
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
+                    {entry.pattern_image_urls.map((url, i) => (
+                      <a key={url} href={url} target="_blank" rel="noreferrer" style={{ flexShrink: 0 }}>
+                        <img src={url} alt={`Opskrift ${i + 1}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 6, display: 'block' }} />
+                      </a>
+                    ))}
+                  </div>
+                </div>
               )}
 
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -678,15 +1202,27 @@ const EMPTY_NEW = {
 
 function NytProjektModal({ user, onClose, onSaved }) {
   const supabase = useSupabase()
-  const uploadFile = (bucket, path, file) => uploadFileRaw(supabase, bucket, path, file)
   const [form, setForm]           = useState(EMPTY_NEW)
-  const [imageFile, setImageFile] = useState(null)
-  const [imagePreview, setImagePreview] = useState(null)
+  const [projectImages, setProjectImages] = useState([])
+  const [patternMode, setPatternMode] = useState('pdf')
   const [pdfFile, setPdfFile]     = useState(null)
-  const [pdfName, setPdfName]     = useState(null)
+  const [pdfFileName, setPdfFileName] = useState(null)
+  const [pdfThumbnailBlob, setPdfThumbnailBlob] = useState(null)
+  const [pdfThumbnailPreview, setPdfThumbnailPreview] = useState(null)
+  const [renderingThumb, setRenderingThumb] = useState(false)
+  const [patternImages, setPatternImages] = useState([])
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState(null)
   const [colorsByYarnId, setColorsByYarnId] = useState(new Map())
+
+  useEffect(() => {
+    return () => {
+      projectImages.forEach(it => { if (!it.isExisting) URL.revokeObjectURL(it.url) })
+      patternImages.forEach(it => { if (!it.isExisting) URL.revokeObjectURL(it.url) })
+      if (pdfThumbnailPreview && pdfThumbnailPreview.startsWith('blob:')) URL.revokeObjectURL(pdfThumbnailPreview)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function setF(k, v) { setForm(p => ({ ...p, [k]: v })) }
   function setLine(i, patch) {
@@ -714,17 +1250,111 @@ function NytProjektModal({ user, onClose, onSaved }) {
     return colors
   }
 
-  function handleImageFile(e) {
-    const file = e.target.files[0]; if (!file) return
-    setImageFile(file); setImagePreview(URL.createObjectURL(file))
+  function addProjectImagesNew(files) {
+    setError(null)
+    const accepted = []
+    for (const file of files) {
+      try { validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME }) }
+      catch (e) { setError(e.message); return }
+      accepted.push({
+        url: URL.createObjectURL(file),
+        pendingFile: file,
+        isExisting: false,
+        _key: `n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      })
+    }
+    setProjectImages(prev => [...prev, ...accepted].slice(0, MAX_PROJECT_IMAGES))
   }
-  function handlePdfFile(e) {
-    const file = e.target.files[0]; if (!file) return
-    setPdfFile(file); setPdfName(file.name)
+  function removeProjectImageNew(index) {
+    setProjectImages(prev => {
+      const next = [...prev]
+      const [removed] = next.splice(index, 1)
+      if (!removed.isExisting) URL.revokeObjectURL(removed.url)
+      return next
+    })
+  }
+  function reorderProjectImageNew(from, to) {
+    setProjectImages(prev => {
+      const next = [...prev]
+      const [it] = next.splice(from, 1); next.splice(to, 0, it); return next
+    })
+  }
+  function addPatternImagesNew(files) {
+    setError(null)
+    const accepted = []
+    for (const file of files) {
+      try { validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME }) }
+      catch (e) { setError(e.message); return }
+      accepted.push({
+        url: URL.createObjectURL(file),
+        pendingFile: file,
+        isExisting: false,
+        _key: `pn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      })
+    }
+    setPatternImages(prev => [...prev, ...accepted].slice(0, MAX_PATTERN_IMAGES))
+  }
+  function removePatternImageNew(index) {
+    setPatternImages(prev => {
+      const next = [...prev]
+      const [removed] = next.splice(index, 1)
+      if (!removed.isExisting) URL.revokeObjectURL(removed.url)
+      return next
+    })
+  }
+  function reorderPatternImageNew(from, to) {
+    setPatternImages(prev => {
+      const next = [...prev]
+      const [it] = next.splice(from, 1); next.splice(to, 0, it); return next
+    })
+  }
+  async function handlePdfPickNew(e) {
+    const file = e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    try { validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_PDF_MIME }) }
+    catch (err) { setError(err.message); return }
+    setError(null)
+    setPdfFile(file)
+    setPdfFileName(file.name)
+    setRenderingThumb(true)
+    try {
+      const blob = await renderPdfFirstPage(file)
+      setPdfThumbnailBlob(blob)
+      if (pdfThumbnailPreview) URL.revokeObjectURL(pdfThumbnailPreview)
+      setPdfThumbnailPreview(URL.createObjectURL(blob))
+    } catch {
+      setPdfThumbnailBlob(null)
+    }
+    setRenderingThumb(false)
+  }
+  function clearPdfNew() {
+    setPdfFile(null); setPdfFileName(null); setPdfThumbnailBlob(null)
+    if (pdfThumbnailPreview) URL.revokeObjectURL(pdfThumbnailPreview)
+    setPdfThumbnailPreview(null)
+  }
+  function switchPatternModeNew(next) {
+    if (next === patternMode) return
+    const hasContent =
+      (patternMode === 'pdf' && pdfFile) ||
+      (patternMode === 'images' && patternImages.length > 0)
+    if (hasContent) {
+      const ok = typeof window === 'undefined'
+        ? true
+        : window.confirm('Skift af opskrift-format sletter den nuværende opskrift. Fortsæt?')
+      if (!ok) return
+      if (patternMode === 'pdf') clearPdfNew()
+      else {
+        for (const it of patternImages) URL.revokeObjectURL(it.url)
+        setPatternImages([])
+      }
+    }
+    setPatternMode(next)
   }
 
   async function save() {
     setSaving(true); setError(null)
+    const newlyUploadedPaths = []
     try {
       const { data: project, error: pErr } = await supabase
         .from('projects')
@@ -742,12 +1372,33 @@ function NytProjektModal({ user, onClose, onSaved }) {
       if (pErr) throw pErr
 
       const pUpdates = {}
-      if (imageFile) {
-        const ext = imageFile.name.split('.').pop()
-        pUpdates.project_image_url = await uploadFile('yarn-images', `${user.id}/projects/${project.id}.${ext}`, imageFile)
+      if (projectImages.length > 0) {
+        const urls = []
+        for (const it of projectImages) {
+          const path = makeImagePath(user.id, project.id)(safeExt(it.pendingFile.name, 'jpg'))
+          urls.push(await uploadFileRaw(supabase, IMAGES_BUCKET, path, it.pendingFile))
+          newlyUploadedPaths.push({ bucket: IMAGES_BUCKET, path })
+        }
+        pUpdates.project_image_urls = urls
       }
-      if (pdfFile) {
-        pUpdates.pattern_pdf_url = await uploadFile('patterns', `${user.id}/projects/${project.id}.pdf`, pdfFile)
+      if (patternMode === 'pdf' && pdfFile) {
+        const pdfPath = `${user.id}/projects/${project.id}.pdf`
+        pUpdates.pattern_pdf_url = await uploadFileRaw(supabase, PATTERNS_BUCKET, pdfPath, pdfFile)
+        newlyUploadedPaths.push({ bucket: PATTERNS_BUCKET, path: pdfPath })
+        if (pdfThumbnailBlob) {
+          const thumbPath = `${user.id}/projects/${project.id}-thumb.png`
+          const thumbFile = new File([pdfThumbnailBlob], `${project.id}-thumb.png`, { type: 'image/png' })
+          pUpdates.pattern_pdf_thumbnail_url = await uploadFileRaw(supabase, PATTERNS_BUCKET, thumbPath, thumbFile)
+          newlyUploadedPaths.push({ bucket: PATTERNS_BUCKET, path: thumbPath })
+        }
+      } else if (patternMode === 'images' && patternImages.length > 0) {
+        const urls = []
+        for (const it of patternImages) {
+          const path = makeImagePath(user.id, project.id)(safeExt(it.pendingFile.name, 'jpg'))
+          urls.push(await uploadFileRaw(supabase, PATTERNS_BUCKET, path, it.pendingFile))
+          newlyUploadedPaths.push({ bucket: PATTERNS_BUCKET, path })
+        }
+        pUpdates.pattern_image_urls = urls
       }
       if (Object.keys(pUpdates).length > 0) {
         const { data: upd, error: uErr } = await supabase
@@ -804,6 +1455,16 @@ function NytProjektModal({ user, onClose, onSaved }) {
       })
       onClose()
     } catch (e) {
+      // Rul nyligt uploadede filer tilbage så vi ikke efterlader orphans.
+      const byBucket = new Map()
+      for (const { bucket, path } of newlyUploadedPaths) {
+        const arr = byBucket.get(bucket) ?? []
+        arr.push(path)
+        byBucket.set(bucket, arr)
+      }
+      for (const [bucket, paths] of byBucket) {
+        await deleteFiles(supabase, bucket, paths).catch(() => { /* best-effort */ })
+      }
       setError('Kunne ikke gemme: ' + e.message)
     }
     setSaving(false)
@@ -976,23 +1637,55 @@ function NytProjektModal({ user, onClose, onSaved }) {
             <textarea value={form.notes} onChange={e => setF('notes', e.target.value)} rows={2} placeholder="Ændringer, tips, erfaringer..." style={{ ...inputStyle, resize: 'vertical' }} />
           </div>
 
+          <MultiImageGrid
+            label={`Billeder af projektet (op til ${MAX_PROJECT_IMAGES})`}
+            items={projectImages}
+            max={MAX_PROJECT_IMAGES}
+            onAdd={addProjectImagesNew}
+            onRemove={removeProjectImageNew}
+            onReorder={reorderProjectImageNew}
+            hint="JPG, PNG eller WebP. Det første billede bruges som cover."
+          />
+
           <div style={{ borderTop: '1px solid #EDE7D8', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <FileUploadField
-              label="Billede af projektet"
-              accept="image/*" isImage
-              preview={imagePreview}
-              onChange={handleImageFile}
-              onRemove={() => { setImageFile(null); setImagePreview(null) }}
-              hint="JPG eller PNG"
-            />
-            <FileUploadField
-              label="Opskrift (PDF)"
-              accept=".pdf,application/pdf" isImage={false}
-              preview={pdfName}
-              onChange={handlePdfFile}
-              onRemove={() => { setPdfFile(null); setPdfName(null) }}
-              hint={pdfName || 'Valgfri PDF'}
-            />
+            <Label>Opskrift</Label>
+            <PatternModeToggle value={patternMode} onChange={switchPatternModeNew} disabled={saving} />
+
+            {patternMode === 'pdf' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', border: '1px dashed #C0B8A8', borderRadius: '8px', cursor: 'pointer', background: '#F4EFE6' }}>
+                  <input type="file" accept=".pdf,application/pdf" onChange={handlePdfPickNew} style={{ display: 'none' }} />
+                  {pdfThumbnailPreview ? (
+                    <img src={pdfThumbnailPreview} alt="PDF første side" style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px' }} />
+                  ) : pdfFile ? (
+                    <div style={{ width: '48px', height: '48px', background: '#2C4A3E', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📄</div>
+                  ) : (
+                    <div style={{ width: '48px', height: '48px', background: '#EDE7D8', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#8B7D6B' }}>📎</div>
+                  )}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '12px', color: '#2C2018', fontWeight: 500 }}>{pdfFile ? 'Skift PDF' : 'Upload PDF'}</div>
+                    <div style={{ fontSize: '11px', color: '#8B7D6B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {renderingThumb ? 'Genererer thumbnail…' : (pdfFileName ?? 'Valgfri PDF (maks. 10 MB)')}
+                    </div>
+                  </div>
+                </label>
+                {pdfFile && (
+                  <button type="button" onClick={clearPdfNew} style={{ alignSelf: 'flex-start', fontSize: '11px', color: '#8B3A2A', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: "'DM Sans', sans-serif" }}>
+                    ✕ Fjern PDF
+                  </button>
+                )}
+              </div>
+            ) : (
+              <MultiImageGrid
+                label={`Opskrift som billeder (op til ${MAX_PATTERN_IMAGES})`}
+                items={patternImages}
+                max={MAX_PATTERN_IMAGES}
+                onAdd={addPatternImagesNew}
+                onRemove={removePatternImageNew}
+                onReorder={reorderPatternImageNew}
+                hint="Vælg flere på én gang. JPG, PNG eller WebP."
+              />
+            )}
           </div>
 
           {error && <div style={{ padding: '10px 14px', background: '#F5E8E0', borderRadius: '8px', fontSize: '12px', color: '#8B3A2A' }}>{error}</div>}
@@ -1033,7 +1726,7 @@ export default function Arkiv({ user, onRequestLogin }) {
       // otherwise make the entire UI appear empty even though data exists.
       const { data: pData, error: pErr } = await supabase
         .from('projects')
-        .select('id,user_id,title,used_at,needle_size,held_with,notes,project_image_url,pattern_pdf_url,is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,status,created_at,updated_at')
+        .select(PROJECT_FIELDS)
         .eq('user_id', user.id)
         .order('used_at', { ascending: false })
         .order('created_at', { ascending: false })
@@ -1260,9 +1953,19 @@ export default function Arkiv({ user, onRequestLogin }) {
               onMouseEnter={el => { el.currentTarget.style.transform = 'translateY(-2px)'; el.currentTarget.style.boxShadow = '0 6px 20px rgba(44,32,24,.13)' }}
               onMouseLeave={el => { el.currentTarget.style.transform = ''; el.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
             >
-              {p.project_image_url ? (
-                <div style={{ height: '140px', overflow: 'hidden' }}>
-                  <img src={p.project_image_url} alt="Projekt" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {p.project_image_urls?.[0] ? (
+                <div style={{ height: '140px', overflow: 'hidden', position: 'relative' }}>
+                  <img src={p.project_image_urls[0]} alt="Projekt" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {p.project_image_urls.length > 1 && (
+                    <span style={{
+                      position: 'absolute', bottom: 6, right: 6,
+                      padding: '2px 7px', borderRadius: 999, fontSize: 10,
+                      background: 'rgba(44,32,24,.78)', color: '#fff',
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}>
+                      +{p.project_image_urls.length - 1}
+                    </span>
+                  )}
                 </div>
               ) : (
                 <div style={{ height: '6px', background: fallbackHex }} />

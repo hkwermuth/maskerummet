@@ -46,7 +46,7 @@ describe('A1 fetchSharedProjects — field whitelist', () => {
     await fetchSharedProjects(supabase as never)
 
     expect(projectSelectSpy).toHaveBeenCalledWith(
-      'id,title,project_image_url,project_type,community_description,pattern_name,pattern_designer,shared_at,display_name',
+      'id,title,project_image_urls,project_type,community_description,pattern_name,pattern_designer,shared_at,display_name',
     )
     const selectArg: string = projectSelectSpy.mock.calls[0][0]
     expect(selectArg).not.toContain('notes')
@@ -64,7 +64,7 @@ describe('A1 fetchSharedProjects — field whitelist', () => {
       {
         id: 'proj-1',
         title: 'Blå trøje',
-        project_image_url: null,
+        project_image_urls: [],
         project_type: 'sweater',
         community_description: null,
         pattern_name: 'Mina',
@@ -104,7 +104,7 @@ describe('A1 fetchSharedProjects — field whitelist', () => {
       {
         id: 'proj-1',
         title: 'Blå trøje',
-        project_image_url: null,
+        project_image_urls: [],
         project_type: 'sweater',
         community_description: null,
         pattern_name: 'Mina',

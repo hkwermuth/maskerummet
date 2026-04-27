@@ -75,8 +75,10 @@ const sharedFinishedProject = {
   needle_size: '4',
   held_with: null,
   notes: null,
-  project_image_url: null,
+  project_image_urls: [],
   pattern_pdf_url: null,
+  pattern_image_urls: [],
+  pattern_pdf_thumbnail_url: null,
   user_id: 'user-1',
 }
 
@@ -91,8 +93,10 @@ const inProgressProject = {
   needle_size: null,
   held_with: null,
   notes: null,
-  project_image_url: null,
+  project_image_urls: [],
   pattern_pdf_url: null,
+  pattern_image_urls: [],
+  pattern_pdf_thumbnail_url: null,
   user_id: 'user-1',
 }
 
