@@ -41,11 +41,16 @@ update public.projects
  where project_image_url is not null
    and project_image_urls = '{}'::text[];
 
--- ── 4. Drop gammel kolonne ──────────────────────────────────────────────────
+-- ── 4. Drop view der peger på gamle kolonne (genskabes i trin 6) ────────────
+-- CREATE OR REPLACE VIEW kan ikke ændre kolonne-type/navn, så vi dropper
+-- viewet eksplicit før vi fjerner kolonnen og skriver den nye definition.
+drop view if exists public.public_shared_projects;
+
+-- ── 5. Drop gammel kolonne ──────────────────────────────────────────────────
 alter table public.projects
   drop column if exists project_image_url;
 
--- ── 5. Kolonne-niveau GRANT til anon — udskift project_image_url med arrayet
+-- ── 6. Kolonne-niveau GRANT til anon — udskift project_image_url med arrayet
 -- pattern_pdf_url, pattern_image_urls, pattern_pdf_thumbnail_url er BEVIDST udeladt.
 revoke select on public.projects from anon;
 grant select (
@@ -58,8 +63,8 @@ grant select (
   created_at, updated_at
 ) on public.projects to anon;
 
--- ── 6. Opdatér view: eksponer arrayet i stedet for skalar-feltet ────────────
-create or replace view public.public_shared_projects
+-- ── 7. Genskab view: eksponer arrayet i stedet for skalar-feltet ────────────
+create view public.public_shared_projects
 with (security_invoker = true) as
 select
   p.id,
