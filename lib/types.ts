@@ -47,6 +47,25 @@ export type SubstitutionCandidate = {
   notes: string | null
 }
 
+export type YarnPartner = {
+  id: string
+  producer: string
+  name: string
+  series: string | null
+}
+
+export type YarnCombination = {
+  id: string
+  partner: YarnPartner
+  isSameYarn: boolean
+  combined_needle_min_mm: number | null
+  combined_needle_max_mm: number | null
+  combined_gauge_stitches_10cm: number | null
+  combined_thickness_category: string | null
+  use_cases: string[]
+  notes: string | null
+}
+
 export type Verdict = 'perfekt' | 'god' | 'forbehold' | 'virker_ikke'
 
 export type SubstitutionVoteRow = {

@@ -5,8 +5,10 @@ import { createSupabasePublicClient } from '@/lib/supabase/public'
 import { toSlug } from '@/lib/slug'
 import { FiberBar } from '@/components/catalog/FiberBar'
 import { SubstitutionsSection } from '@/components/catalog/substitutions/SubstitutionsSection'
+import { CombinationsSection } from '@/components/catalog/combinations/CombinationsSection'
 import type { Yarn, Color } from '@/lib/types'
 import { getSubstitutions } from '@/lib/substitutions'
+import { getCombinationsForYarn } from '@/lib/combinations'
 import {
   labelThickness, labelSpin, labelFinish, labelWash, labelStatus,
   da, joinDa,
@@ -122,7 +124,10 @@ export default async function YarnDetailPage(
   const result = await fetchYarnBySlug(slug)
   if (!result) notFound()
   const { yarn, colors } = result
-  const substitutions = await getSubstitutions(yarn.id, 8)
+  const [substitutions, combinations] = await Promise.all([
+    getSubstitutions(yarn.id, 8),
+    getCombinationsForYarn(yarn.id),
+  ])
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://maskerummet.vercel.app'
   const absoluteHeroImage = yarn.hero_image_url ? `${siteUrl}${yarn.hero_image_url}` : undefined
@@ -235,6 +240,13 @@ export default async function YarnDetailPage(
           </div>
         </section>
       )}
+
+      <CombinationsSection
+        targetProducer={yarn.producer}
+        targetName={yarn.name}
+        targetSeries={yarn.series}
+        combinations={combinations}
+      />
 
       {substitutions.length > 0 && (
         <SubstitutionsSection yarnId={yarn.id} substitutions={substitutions} />
