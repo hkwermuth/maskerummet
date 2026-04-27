@@ -9,6 +9,7 @@ import { CombinationsSection } from '@/components/catalog/combinations/Combinati
 import type { Yarn, Color } from '@/lib/types'
 import { getSubstitutions } from '@/lib/substitutions'
 import { getCombinationsForYarn } from '@/lib/combinations'
+import { fetchColorsForYarn } from '@/lib/catalog'
 import {
   labelThickness, labelSpin, labelFinish, labelWash, labelStatus,
   da, joinDa,
@@ -82,8 +83,10 @@ async function fetchYarnBySlug(slug: string): Promise<{ yarn: Yarn; colors: Colo
   const yarn = yarns.find((y) => toSlug(y.producer, y.name, y.series) === slug)
   if (!yarn) return null
   const supabase = createSupabasePublicClient()
-  const { data: colors } = await supabase.from('colors').select('*').eq('yarn_id', yarn.id)
-  return { yarn, colors: sortColorsByVisualHue((colors ?? []) as Color[]) }
+  // Offentlig garnvisning: skjul udgåede farver (de vises kun i scanner-resultat
+  // og lager-redigering hvor brugeren har det fysiske garn liggende).
+  const colors = await fetchColorsForYarn(supabase, yarn.id)
+  return { yarn, colors: sortColorsByVisualHue(colors as Color[]) }
 }
 
 export async function generateStaticParams() {
@@ -118,9 +121,14 @@ export async function generateMetadata(
 // ── Side ───────────────────────────────────────────────────────────────────────
 
 export default async function YarnDetailPage(
-  { params }: { params: Promise<{ slug: string }> }
+  { params, searchParams }: {
+    params: Promise<{ slug: string }>
+    searchParams?: Promise<{ farve?: string | string[] }>
+  }
 ) {
   const { slug } = await params
+  const sp = (await searchParams) ?? {}
+  const highlightedColorId = Array.isArray(sp.farve) ? sp.farve[0] : sp.farve ?? null
   const result = await fetchYarnBySlug(slug)
   if (!result) notFound()
   const { yarn, colors } = result
@@ -224,19 +232,36 @@ export default async function YarnDetailPage(
       )}
 
       {colors.length > 0 && (
-        <section className="mt-6">
+        <section id="farver" className="mt-6">
           <h2 className="font-serif text-xl text-striq-sage mb-2">Farver ({colors.length})</h2>
           <div className="flex flex-wrap gap-2">
-            {colors.map((c) => (
-              <div key={c.id} className="flex items-center gap-2 text-xs">
-                {c.image_url ? (
-                  <img src={c.image_url} alt="" className="w-8 h-8 rounded object-cover border border-striq-border shrink-0" />
-                ) : c.hex_code ? (
-                  <span className="w-5 h-5 rounded-full border border-striq-border shrink-0" style={{ background: c.hex_code }} />
-                ) : null}
-                <span>{c.color_name ?? c.color_number}</span>
-              </div>
-            ))}
+            {colors.map((c) => {
+              const isHighlighted = c.id === highlightedColorId
+              return (
+                <div
+                  key={c.id}
+                  className={
+                    'flex items-center gap-2 text-xs px-2 py-1 rounded ' +
+                    (isHighlighted
+                      ? 'bg-moss/30 ring-2 ring-striq-sage'
+                      : 'bg-transparent')
+                  }
+                  aria-current={isHighlighted ? 'true' : undefined}
+                >
+                  {c.image_url ? (
+                    <img src={c.image_url} alt="" className="w-8 h-8 rounded object-cover border border-striq-border shrink-0" />
+                  ) : c.hex_code ? (
+                    <span className="w-5 h-5 rounded-full border border-striq-border shrink-0" style={{ background: c.hex_code }} />
+                  ) : null}
+                  <span>{c.color_name ?? c.color_number}</span>
+                  {isHighlighted && (
+                    <span className="ml-1 text-[10px] uppercase tracking-wider text-striq-sage font-semibold">
+                      Skannet
+                    </span>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </section>
       )}

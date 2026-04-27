@@ -105,6 +105,29 @@ export type Color = {
   hex_code: string | null
   status: string | null
   image_url: string | null
+  barcode: string | null
+}
+
+export type BarcodeSuggestionStatus = 'new' | 'approved' | 'rejected'
+
+export type BarcodeSuggestion = {
+  id: string
+  barcode: string
+  user_id: string
+  suggested_yarn_id: string | null
+  suggested_color_id: string | null
+  suggested_producer: string | null
+  suggested_yarn_name: string | null
+  suggested_color_name: string | null
+  suggested_color_number: string | null
+  banderole_image_url: string | null
+  comment: string | null
+  status: BarcodeSuggestionStatus
+  resolved_color_id: string | null
+  resolved_by: string | null
+  resolved_at: string | null
+  created_at: string
+  updated_at: string
 }
 
 // ── Projekt-stadier ───────────────────────────────────────────────────────────

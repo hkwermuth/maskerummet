@@ -126,6 +126,7 @@ async function upsertColor(row, lookupCache) {
     hex_code: row.hex_code || null,
     status: row.status || null,
     image_url: row.image_url || null,
+    barcode: row.barcode ? String(row.barcode).trim() || null : null,
   }
 
   if (row.id) {

@@ -29,8 +29,17 @@ Alternativt: kør `pg_dump --schema-only` direkte mod dev og ryd outputtet op s�
 7. `20260101000006_fix_permin_bella.sql` — data-fix (hvis katalog kopieres fra dev, er dette allerede anvendt — verificer)
 8. `20260419000001_rls_yarn_items_and_usage.sql` — RLS på yarn_items + yarn_usage
 9. `20260420000001_yarns_hero_image.sql` — hero_image_url på yarns + recreate af yarns_full-view. Seed sker via `npm run import:yarns`
+10. `20260424000001_yarn_combinations.sql` — held-together-combos
+11. `20260424000002_is_editor_function.sql` — `is_editor()` SQL-funktion til RLS-gates
+12. `20260427000001_barcode_suggestions.sql` — community-bidrag af manglende EAN-koder + atomic approve-RPC. **Kræver manuel opsætning af Storage-bucket** (se nedenfor).
 
 Timestamps er rekonstrueret — præcis historisk dato kendes ikke. Nye migrations fremover: brug `date -u +%Y%m%d%H%M%S` eller `supabase migration new <name>` så tidsstemplerne er ægte.
+
+## Manuelle Storage-buckets (kan ikke scriptes uden service-role)
+
+Følgende buckets skal oprettes manuelt i Supabase Studio inden den respektive feature kan bruges:
+
+- `banderole-suggestions` (privat) — bruges af bidrags-flowet i `BarcodeSuggestionForm` til at uploade fotos af banderoler. Path-konvention: `{user_id}/<uuid>.jpg`. Authenticated kan upload til egen path; kun editors kan slette.
 
 ## Data-kopi til prod (éngang, ved split)
 

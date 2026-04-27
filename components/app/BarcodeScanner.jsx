@@ -6,12 +6,22 @@ import { lookupTiliaByBarcode } from '@/lib/data/filcolanaCatalog'
 import { useSupabase } from '@/lib/supabase/client'
 import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 import { resolveBarcodeToCatalog, applyCatalogYarnColorToForm, displayYarnName } from '@/lib/catalog'
+import BarcodeSuggestionForm from './BarcodeSuggestionForm'
+import ColorNumberOcr from './ColorNumberOcr'
 
 function lookupAllCatalogs(code) {
   return lookupByBarcode(code) || lookupTiliaByBarcode(code)
 }
 
-export default function BarcodeScanner({ onClose, onAddToLager }) {
+/**
+ * Scanner-modal til at identificere garn ud fra banderole-stregkode.
+ *
+ * @param {object} props
+ * @param {() => void} props.onClose - luk modal
+ * @param {(payload: any) => void} [props.onAddToLager] - hvis givet, viser primær-knap "Tilføj til lager" og kalder med en form-payload (eksisterende garnlager-flow)
+ * @param {(yarn: any, color: any) => void} [props.onSelectYarn] - alternativ — hvis givet, viser primær-knap "Åbn i katalog" og kalder med (yarn, color) uden at gå via lager
+ */
+export default function BarcodeScanner({ onClose, onAddToLager, onSelectYarn }) {
   const supabase = useSupabase()
   useEscapeKey(true, onClose)
   const videoRef = useRef(null)
@@ -23,6 +33,8 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
   const [scanHint, setScanHint] = useState('')
   const [error, setError] = useState(null)
   const [manualCode, setManualCode] = useState('')
+  const [fallback, setFallback] = useState(null) // 'ocr' | 'suggest' | null
+  const [submittedSuggestion, setSubmittedSuggestion] = useState(false)
 
   async function resolveCode(code) {
     const trimmed = (code || '').trim()
@@ -99,9 +111,15 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
     resolveCode(manualCode.trim())
   }
 
-  function handleAddToLager() {
+  function handlePrimary() {
     if (!result || result.notFound || resolving) return
     if (result.source === 'catalog') {
+      // Indgang fra garn-katalog: returnér garn+farve direkte uden lager-flow.
+      if (onSelectYarn) {
+        onSelectYarn(result.yarn, result.color)
+        onClose()
+        return
+      }
       const payload = applyCatalogYarnColorToForm(result.yarn, result.color, {
         antal: 1,
         status: 'På lager',
@@ -109,11 +127,11 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
         barcode: result.scannedCode,
         imageUrl: null,
       })
-      onAddToLager(payload)
+      onAddToLager?.(payload)
       onClose()
       return
     }
-    if (result.source === 'local') {
+    if (result.source === 'local' && onAddToLager) {
       const r = result.local
       onAddToLager({
         name:      r.series,
@@ -137,6 +155,18 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
     }
   }
 
+  function handleOcrMatched(yarn, color) {
+    // Bruger valgte den rigtige farve fra OCR-kandidatlisten — behandl
+    // som et katalog-match (samme flow som EAN-match).
+    setFallback(null)
+    setResult({
+      source: 'catalog',
+      yarn,
+      color,
+      scannedCode: manualCode || result?.scannedCode || '',
+    })
+  }
+
   function rescan() {
     try { readerRef.current?.reset() } catch {}
     setResult(null)
@@ -158,6 +188,10 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
   const catalogHex = result?.source === 'catalog' && result.color?.hex_code
     ? (String(result.color.hex_code).startsWith('#') ? result.color.hex_code : `#${result.color.hex_code}`)
     : '#A8C4C4'
+
+  const isDiscontinued = result?.source === 'catalog' && result.color?.status === 'udgaaet'
+
+  const primaryLabel = onSelectYarn ? 'Åbn i katalog' : 'Tilføj til lager'
 
   return (
     <div
@@ -249,17 +283,62 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
             </div>
           )}
 
-          {result && result.notFound && !resolving && (
+          {result && result.notFound && !resolving && !submittedSuggestion && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{
+                background: '#FFF3E0', borderRadius: '10px',
+                padding: '16px', textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '20px', marginBottom: '6px' }}>🔍</div>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10' }}>
+                  Garn ikke fundet i kataloget
+                </div>
+                <div style={{ fontSize: '11px', color: '#9A6A30', marginTop: '4px' }}>
+                  Skannet kode: <code style={{ background: '#FFE0B0', borderRadius: '3px', padding: '1px 5px' }}>{result.scannedCode}</code>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+                <button
+                  onClick={() => setFallback('ocr')}
+                  style={{
+                    padding: '10px 14px', background: '#C16B47', color: '#fff',
+                    border: 'none', borderRadius: '6px', fontSize: '13px',
+                    fontWeight: 500, cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  Find via farvenummer i stedet
+                </button>
+                <button
+                  onClick={() => setFallback('suggest')}
+                  style={{
+                    padding: '10px 14px', background: 'transparent', color: '#2C4A3E',
+                    border: '1px solid #2C4A3E', borderRadius: '6px', fontSize: '13px',
+                    cursor: 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  Hjælp os: registrér denne stregkode
+                </button>
+                <p style={{ fontSize: '11px', color: '#8B7D6B', margin: '4px 0 0', textAlign: 'center' }}>
+                  Tag et foto af banderolen — vi læser farvenummeret automatisk
+                </p>
+              </div>
+            </div>
+          )}
+
+          {submittedSuggestion && (
             <div style={{
-              background: '#FFF3E0', borderRadius: '10px',
+              background: '#D0E8D4', borderRadius: '10px',
               padding: '16px', marginBottom: '16px', textAlign: 'center',
             }}>
-              <div style={{ fontSize: '20px', marginBottom: '6px' }}>🔍</div>
-              <div style={{ fontSize: '13px', fontWeight: 500, color: '#7A4A10' }}>
-                Garn ikke fundet i kataloget
+              <div style={{ fontSize: '24px', marginBottom: '6px' }}>✓</div>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: '#2C4A3E' }}>
+                Tak — vi tjekker det og tilføjer det til kataloget
               </div>
-              <div style={{ fontSize: '11px', color: '#9A6A30', marginTop: '4px' }}>
-                Skannet kode: <code style={{ background: '#FFE0B0', borderRadius: '3px', padding: '1px 5px' }}>{result.scannedCode}</code>
+              <div style={{ fontSize: '11px', color: '#5A6E5C', marginTop: '4px' }}>
+                Du kan stadig tilføje garnet til dit lager nu.
               </div>
             </div>
           )}
@@ -273,7 +352,9 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
                 <div style={{
                   height: '80px', background: catalogHex,
                   display: 'flex', alignItems: 'flex-end',
+                  justifyContent: 'space-between',
                   padding: '10px 14px',
+                  position: 'relative',
                 }}>
                   <span style={{
                     fontSize: '10px', fontWeight: 600, letterSpacing: '.08em',
@@ -284,6 +365,21 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
                   }}>
                     {result.color?.color_number}
                   </span>
+                  {isDiscontinued && (
+                    <span
+                      role="status"
+                      aria-label="Denne farve er udgået"
+                      style={{
+                        fontSize: '9px', fontWeight: 700, letterSpacing: '.1em',
+                        textTransform: 'uppercase',
+                        color: '#FFE0B0',
+                        background: '#7A4A10', borderRadius: '4px',
+                        padding: '2px 7px',
+                      }}
+                    >
+                      Udgået
+                    </span>
+                  )}
                 </div>
                 <div style={{ padding: '14px', background: '#FFFCF7' }}>
                   <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.1em' }}>
@@ -398,7 +494,7 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
             )}
             {result && !result.notFound && !resolving && (
               <button
-                onClick={handleAddToLager}
+                onClick={handlePrimary}
                 style={{
                   padding: '8px 18px', background: '#C16B47', color: '#fff',
                   border: 'none', borderRadius: '6px', fontSize: '13px',
@@ -406,12 +502,26 @@ export default function BarcodeScanner({ onClose, onAddToLager }) {
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               >
-                Tilføj til lager
+                {primaryLabel}
               </button>
             )}
           </div>
         </div>
       </div>
+
+      {fallback === 'ocr' && (
+        <ColorNumberOcr
+          onMatched={handleOcrMatched}
+          onCancel={() => setFallback(null)}
+        />
+      )}
+      {fallback === 'suggest' && (
+        <BarcodeSuggestionForm
+          scannedCode={result?.scannedCode || manualCode}
+          onSubmitted={() => { setFallback(null); setSubmittedSuggestion(true) }}
+          onCancel={() => setFallback(null)}
+        />
+      )}
     </div>
   )
 }

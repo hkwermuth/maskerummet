@@ -60,6 +60,7 @@ export const COLOR_COLUMNS = [
   'hex_code',
   'status',
   'image_url',
+  'barcode',
 ]
 
 export function loadEnv() {

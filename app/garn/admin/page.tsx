@@ -29,9 +29,12 @@ export default async function AdminPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-serif text-3xl text-striq-sage">Editor: garn</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link href="/garn/admin/suggestions" className="bg-striq-border text-striq-muted px-4 py-2 rounded-lg text-sm">
-            Moderation
+            Subs-forslag
+          </Link>
+          <Link href="/admin/barcode-forslag" className="bg-striq-border text-striq-muted px-4 py-2 rounded-lg text-sm">
+            Stregkode-forslag
           </Link>
           <Link href="/garn/admin/new" className="bg-striq-sage text-cream px-4 py-2 rounded-lg text-sm">
             + Nyt garn

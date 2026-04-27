@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react'
 import type { Yarn } from '@/lib/types'
 import { YarnCard } from './YarnCard'
+import { ScanFraKatalogButton } from './ScanFraKatalogButton'
 
 export function YarnFilters({ yarns }: { yarns: Yarn[] }) {
   const [q, setQ] = useState('')
@@ -47,6 +48,9 @@ export function YarnFilters({ yarns }: { yarns: Yarn[] }) {
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
+        <div className="w-full sm:w-auto">
+          <ScanFraKatalogButton />
+        </div>
       </div>
       <div className="text-xs text-striq-muted mb-3">{filtered.length} garner</div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
