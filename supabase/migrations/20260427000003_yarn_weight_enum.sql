@@ -33,7 +33,7 @@ create index if not exists yarns_yarn_weight_idx on public.yarns (yarn_weight);
 -- 4) Backfill via case-mapping. Konservativ: tvivl → NULL.
 --    Kun rækker uden yarn_weight overskrives (idempotent ved gen-kørsel).
 update public.yarns
-   set yarn_weight = (case lower(btrim(thickness_category))
+   set yarn_weight = (case lower(btrim(thickness_category::text))
      -- Lace
      when 'lace'           then 'lace'
      when 'cobweb'         then 'lace'
