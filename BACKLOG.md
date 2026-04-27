@@ -283,6 +283,23 @@ Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
 
 ### BØR-HAVE (giver tillid og værdi til testbrugere)
 
+**Alternativer / substitutions — opfølgning efter combos-launch (2026-04-25):**
+
+Tilføjet efter at vote-override-systemet og held-together-combos shippede. Hannah testede selv flowet som `hannah@leanmind.dk` og opdagede flere huller.
+
+- **Redigering af inputfeltet til "Foreslå alternativ"** — den nuværende formular i `SubstitutionsSection.tsx`-modalen mangler UX-pas: tydeligere felt-labels, evt. autosuggest på producent, hjælp til at udfylde URL korrekt, validering af om garnet allerede findes i kataloget. Hannah oplever at det er uklart hvordan man bedst beskriver et nyt alternativ.
+
+- **Synlighed: hvor lander forslaget til godkendelse** — `/garn/admin/suggestions` findes (Next.js editor-only via `EDITOR_EMAILS`), men er ikke linket fra noget sted i UI'et. Bruger der har sendt et forslag får ingen klar bekræftelse om hvor det er på vej hen eller hvornår det vises offentligt. Minimum: tak-besked med "dit forslag sendes til moderation, vises offentligt når en editor godkender" + status-visning af brugerens egne pending forslag (delvist på plads via `myPendingExternal`-state). Bemærk separat bug: `user_profiles`-tabellen er tom i prod, så `is_editor()` returnerer false for alle — editorer kan tilgå moderations-siden men får permission denied ved godkend. Skal fixes som del af dette eller separat.
+
+- **Notifikations-feature ved nyt forslag** — i dag intet. Editor opdager kun nye forslag ved at åbne `/garn/admin/suggestions` manuelt. Hannah kan ikke beslutte hvordan endnu. Realistiske paths:
+  - **A)** Supabase Database Webhook → Resend API (gratis op til 3000 mails/md)
+  - **B)** Postgres trigger + pg_net + Resend
+  - **C)** Vercel Cron der poller DB hver 5 min og sender digest
+  - **D)** Supabase Edge Function ved INSERT
+  Modtager-email: muligvis dedikeret alias som `hkwermuth+godkendelse@gmail.com` (oprettes når feature bygges). Beslutning udskudt.
+
+- **Flere held-together-combos på pind 4, 4½, 5, 5½** — efter at de første 4 kuraterede combos er seedet (Sandnes Tynn Merinoull + Tynn Silk Mohair pind 5-6, Drops Kid-Silk + Alpaca pind 4.5-6, 2× Drops Flora pind 4-5, 2× Filcolana Highland Wool pind 4.5-5), mangler vi bredere dækning på de mellem-tykke pind-størrelser. **Skal sammenholdes med de mest populære opskrifter (fx PetiteKnit)** hvor disse pind-størrelser er typiske. Konkret kuraterings-arbejde: gennemgå topopskrifter, identificér garn-kombinationer designerne anbefaler, indsæt via `scripts/seed-combinations.mjs` (eller udvid med admin-UI når behov opstår). Inkluderer formentligt også at importere de garner combos kræver, hvis de ikke er i kataloget endnu.
+
 **"Prøv garn"-side mere indbydende (2026-04-20):**
 - **Prøv garn tilgængelig uden login** — `app/visualizer/page.tsx` er p.t. wrappet i `LoginGate`, så ikke-indloggede kun ser login-skærm. Eksempler skal kunne ses af alle, generering/gem kræver stadig login. Hero-banner øverst i om-striq-stil (gradient dustyPink → sage) med intro + CTA "Log ind for at prøve — og gemme — dine egne visualiseringer".
 - **Slank upload drop-zone i visualizer** — nuværende drop-zone (`YarnVisualizer.jsx:525-555`) er for dominerende (padding 48px, 48px emoji). Omskriv til kompakt horizontal layout: ikon 28px, padding 20px, tekst ved siden af. Bevar drag-drop-affordance.
@@ -374,3 +391,4 @@ Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
 
 - Har `find_stores_near` RPC faktisk butiks-data at returnere?
 - Dark mode: ikke startet — beslut om det skal med til launch eller vente
+- **Garn-hero-billeder: hvor skal de bo?** I dag ligger de som statiske filer i `public/garn-eksempler/` (Next.js static), og DB'en gemmer kun stien. Alternativ: upload til Supabase Storage bucket, så billederne følger DB og er tilgængelige uden git-deploy. Trade-off: Storage giver "billederne i databasen", men kræver migration, upload-script, opdatering af URL'er, evt. signed URLs hvis bucket er privat. Beslut inden launch — påvirker hvordan nye garner får billeder fremover (admin-UI upload vs. commit til repo).

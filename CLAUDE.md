@@ -42,16 +42,21 @@ supabase/       DB-migrations og RLS-policies
 - **Tilgængelighed**: WCAG AA minimum. Alle ikon-knapper har `aria-label`.
 - **Dark mode**: Via Tailwind `dark:`-varianter. Halv-implementeret dark mode er værre end ingen — gør færdig eller fjern.
 - **Mobile-first**: Touch-targets ≥ 44px. Test ved < 640px.
-- **Supabase RLS**: Alle tabeller med brugerdata SKAL have RLS-policies. Aldrig `service_role` i klient-kode.
+- **Supabase RLS + GRANT**: Alle tabeller med brugerdata SKAL have RLS-policies. **OG eksplicit `GRANT SELECT/INSERT/UPDATE/DELETE` til `anon`/`authenticated`** — RLS alene er ikke nok, PostgREST kræver table-level grants først. Aldrig `service_role` i klient-kode.
 - **TypeScript strict**. Ingen `any` uden kommentar der forklarer hvorfor.
 - **Commits**: Kort, imperativ, dansk. Fx "Tilføj glemt-password flow".
 
-## Agent-orkester
+## Agent-orkester (PÅBUDT)
 
-Denne repo bruger et orkester af specialiserede Claude Code sub-agenter i `.claude/agents/`:
+**Enhver kode-ændring i denne repo der ikke er en triviel rettelse (typo, enkeltlinje-fix, rename) SKAL gå via orkestret.** Auto-mode ophæver ikke dette — auto betyder "udfør planen autonomt", ikke "spring planlægningen over".
 
-- **`/ny-feature <beskrivelse>`** — kører fuld udviklings-cyklus: arkitekt → token-opt → UX → implementering → test → review
-- **`/backlog [sync | prioriter <milepæl> | nedbryd <titel> | status]`** — backlog-arbejde mod `STRIQ_ideer.xlsx` og `BACKLOG.md`
+- **Ny feature** → `/ny-feature <beskrivelse>` (kører arkitekt → token-opt → UX → implementering → test → review)
+- **Mindre ændring** → spawn mindst `software-arkitekt` (plan) → derefter `tester` → derefter `software-reviewer`
+- **Backlog-arbejde** → `/backlog [sync | prioriter <milepæl> | nedbryd <titel> | status]`
+
+Plan-mode med Explore-agent tæller IKKE som arkitekt-fasen — `software-arkitekt` har en specifik rolle (decompose + interfaces + acceptkriterier + risici + genbrug).
+
+Hvis brugeren tilføjer scope mid-stream ("og så også X"), STOP og overvej om det udløser en ny `/ny-feature`-cyklus i stedet for at patche videre.
 
 Sub-agenter arver denne fil automatisk som kontekst.
 
