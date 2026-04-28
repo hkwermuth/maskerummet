@@ -424,6 +424,9 @@ Tilføjet efter at vote-override-systemet og held-together-combos shippede. Hann
 - **AI-substitutions-strategi** — pre-compute ved yarn-insert + nightly refresh vs. on-demand. Arkitekturel beslutning, udskudt til efter launch.
 - **Code hardening fase 2** — bredere audit: CSP-tuning, dependency-scanning i CI, secrets-scanner
 
+**Brug nøgler-modal — kun PDF, ikke billed-kæde-opskrift (2026-04-28):**
+- "Brug nøgler"-flowet i Mit Garnlager understøtter kun upload af opskrift som PDF, ikke som billed-kæde (som "+ Nyt projekt"-formen i Arkiv gør). Inkonsistens mellem de to opret-projekt-stier. Bevidst udskudt: modalen er en hurtig forbrugs-logger, ikke et fuldt projekt-redaktørflow. Hvis testbrugere klager: tilføj patternMode-tabber + multi-billed-håndtering (~halvdelen af Arkiv-formen).
+
 **Fra Hannah (nye ønsker, 2026-04-20):**
 - **Søgning på konkrete garntyper pr. garnbutik** — brugeren vælger én eller flere specifikke garner fra katalog, finder butikker der fører netop dem. Kræver fuld mapping af butik↔garn i DB (brug/udvid `stores`-tabel og katalog-relation). Erstatning for den gamle brand-pill-filtrering der blev fjernet i Find garnbutikker-redesignet.
 

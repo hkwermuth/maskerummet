@@ -149,16 +149,20 @@ export default function BrugNoeglerModal({
         projectId = selectedProjectId
         // Læs nuværende projekt for konflikt-check inden upload
         const { data: p, error: pErr } = await supabase.from('projects')
-          .select('project_image_urls,pattern_image_urls')
+          .select('project_image_urls,pattern_image_urls,pattern_pdf_url')
           .eq('id', projectId).single()
         if (pErr) throw pErr
         existingImages = (p as any)?.project_image_urls ?? []
         existingPatternImages = (p as any)?.pattern_image_urls ?? []
+        const existingPdfUrl: string | null = (p as any)?.pattern_pdf_url ?? null
         if (imageFile && existingImages.length >= MAX_PROJECT_IMAGES) {
           throw new Error(`Projektet har allerede ${MAX_PROJECT_IMAGES} billeder. Slet et i Arkiv før du tilføjer flere.`)
         }
         if (pdfFile && existingPatternImages.length > 0) {
           throw new Error('Projektet har allerede en opskrift som billed-kæde. Fjern den i Arkiv før du tilføjer en PDF.')
+        }
+        if (pdfFile && existingPdfUrl) {
+          throw new Error('Projektet har allerede en opskrift som PDF. Fjern eller udskift den i Arkiv før du tilføjer en ny.')
         }
       } else {
         const { data: project, error: pErr } = await supabase.from('projects')

@@ -42,12 +42,14 @@ const existingProject = {
 function buildSupabaseMock(opts: {
   existingImages?: string[]
   existingPatternImages?: string[]
+  existingPdfUrl?: string | null
 } = {}) {
   const projectsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
   const projectsLoadSingle = vi.fn().mockResolvedValue({
     data: {
       project_image_urls: opts.existingImages ?? [],
       pattern_image_urls: opts.existingPatternImages ?? [],
+      pattern_pdf_url: opts.existingPdfUrl ?? null,
     },
     error: null,
   })
@@ -325,6 +327,35 @@ describe('BrugNoeglerModal — media gemmes på projects-tabellen', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/allerede 6 billeder/i)).toBeInTheDocument()
+    })
+    expect(mock._projectsUpdate).not.toHaveBeenCalled()
+  })
+
+  it('blokerer PDF-upload hvis projektet allerede har en PDF (forhindrer overskrivning)', async () => {
+    const user = userEvent.setup()
+    const mock = buildSupabaseMock({
+      existingPdfUrl: 'https://example.com/old.pdf',
+    })
+    vi.mocked(useSupabase).mockReturnValue(mock as never)
+
+    const { container } = render(
+      <BrugNoeglerModal
+        yarn={sampleYarn}
+        user={{ id: 'user-1' }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument())
+
+    const pdfInput = container.querySelector('input[type="file"][accept*="pdf"]') as HTMLInputElement
+    await user.upload(pdfInput, new File(['x'], 'ny.pdf', { type: 'application/pdf' }))
+
+    await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/allerede en opskrift som PDF/i)).toBeInTheDocument()
     })
     expect(mock._projectsUpdate).not.toHaveBeenCalled()
   })
