@@ -36,29 +36,52 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function FileUploadField({ label, accept, preview, onChange, hint }: {
-  label: string; accept: string; preview: string | null; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; hint: string
+function FileUploadField({ label, accept, preview, onChange, onClear, hint }: {
+  label: string; accept: string; preview: string | null;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onClear: () => void;
+  hint: string
 }) {
   return (
     <Field label={label}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', border: '1px dashed #C0B8A8', borderRadius: 8, cursor: 'pointer', background: '#F4EFE6' }}>
-        <input type="file" accept={accept} onChange={onChange} style={{ display: 'none' }} />
-        {preview ? (
-          accept.includes('image') ? (
-            <img src={preview} alt="preview" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', border: '1px dashed #C0B8A8', borderRadius: 8, background: '#F4EFE6' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', flex: 1, minWidth: 0 }}>
+          <input type="file" accept={accept} onChange={onChange} style={{ display: 'none' }} />
+          {preview ? (
+            accept.includes('image') ? (
+              <img src={preview} alt="preview" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+            ) : (
+              <div style={{ width: 48, height: 48, background: '#61846D', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>📄</div>
+            )
           ) : (
-            <div style={{ width: 48, height: 48, background: '#61846D', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>📄</div>
-          )
-        ) : (
-          <div style={{ width: 48, height: 48, background: '#EDE7D8', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#8C7E74' }}>
-            {accept.includes('image') ? '📷' : '📎'}
+            <div style={{ width: 48, height: 48, background: '#EDE7D8', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#8C7E74', flexShrink: 0 }}>
+              {accept.includes('image') ? '📷' : '📎'}
+            </div>
+          )}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: '#302218', fontWeight: 500 }}>{preview ? 'Skift fil' : 'Vælg fil'}</div>
+            <div style={{ fontSize: 11, color: '#8C7E74', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hint}</div>
           </div>
+        </label>
+        {preview && (
+          <button
+            type="button"
+            onClick={onClear}
+            aria-label={accept.includes('image') ? 'Fjern valgt billede' : 'Fjern valgt PDF'}
+            style={{
+              minWidth: 44, minHeight: 44,
+              border: 'none', background: 'transparent',
+              color: '#8B3A2A', cursor: 'pointer',
+              fontSize: 18, fontFamily: "'DM Sans', sans-serif",
+              padding: 0, flexShrink: 0,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 6,
+            }}
+          >
+            ✕
+          </button>
         )}
-        <div>
-          <div style={{ fontSize: 12, color: '#302218', fontWeight: 500 }}>{preview ? 'Skift fil' : 'Vælg fil'}</div>
-          <div style={{ fontSize: 11, color: '#8C7E74' }}>{hint}</div>
-        </div>
-      </label>
+      </div>
     </Field>
   )
 }
@@ -135,6 +158,13 @@ export default function BrugNoeglerModal({
     const file = e.target.files?.[0]
     if (!file) return
     setPdfFile(file); setPdfName(file.name)
+  }
+  function clearImage() {
+    if (imagePreview && imagePreview.startsWith('blob:')) URL.revokeObjectURL(imagePreview)
+    setImageFile(null); setImagePreview(null); setError(null)
+  }
+  function clearPdf() {
+    setPdfFile(null); setPdfName(null); setError(null)
   }
 
   async function save() {
@@ -303,8 +333,8 @@ export default function BrugNoeglerModal({
           <Field label="Pindestørrelse brugt"><input value={form.needleSize} onChange={e => setF('needleSize', e.target.value)} placeholder={yarn.pindstr || 'mm'} style={inputStyle} /></Field>
 
           <div style={{ borderTop: '1px solid #EDE7D8', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <FileUploadField label="Billede af projektet" accept="image/*" preview={imagePreview} onChange={handleImage} hint="JPG, PNG — vises i arkivet" />
-            <FileUploadField label="Opskrift (PDF)" accept=".pdf,application/pdf" preview={pdfName} onChange={handlePdf} hint={pdfName || 'PDF gemmes privat i dit arkiv'} />
+            <FileUploadField label="Billede af projektet" accept="image/*" preview={imagePreview} onChange={handleImage} onClear={clearImage} hint="JPG, PNG — vises i arkivet" />
+            <FileUploadField label="Opskrift (PDF)" accept=".pdf,application/pdf" preview={pdfName} onChange={handlePdf} onClear={clearPdf} hint={pdfName || 'PDF gemmes privat i dit arkiv'} />
           </div>
 
           <Field label="Noter">

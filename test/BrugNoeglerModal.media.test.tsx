@@ -331,6 +331,43 @@ describe('BrugNoeglerModal — media gemmes på projects-tabellen', () => {
     expect(mock._projectsUpdate).not.toHaveBeenCalled()
   })
 
+  it('Fjern-knap rydder valgt PDF efter konflikt-besked så brugeren kan komme videre', async () => {
+    const user = userEvent.setup()
+    const mock = buildSupabaseMock({
+      existingPdfUrl: 'https://example.com/old.pdf',
+    })
+    vi.mocked(useSupabase).mockReturnValue(mock as never)
+
+    const { container } = render(
+      <BrugNoeglerModal
+        yarn={sampleYarn}
+        user={{ id: 'user-1' }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument())
+
+    // Upload PDF og prøv at gemme → får konflikt-besked
+    const pdfInput = container.querySelector('input[type="file"][accept*="pdf"]') as HTMLInputElement
+    await user.upload(pdfInput, new File(['x'], 'min.pdf', { type: 'application/pdf' }))
+    await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/allerede en opskrift som PDF/i)).toBeInTheDocument()
+    })
+
+    // Fjern-knap skal være tilgængelig
+    const clearBtn = screen.getByRole('button', { name: /fjern valgt pdf/i })
+    expect(clearBtn).toBeInTheDocument()
+
+    // Klik fjerner PDF og fejlbesked
+    await user.click(clearBtn)
+    expect(screen.queryByText(/allerede en opskrift som PDF/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /fjern valgt pdf/i })).not.toBeInTheDocument()
+  })
+
   it('blokerer PDF-upload hvis projektet allerede har en PDF (forhindrer overskrivning)', async () => {
     const user = userEvent.setup()
     const mock = buildSupabaseMock({
