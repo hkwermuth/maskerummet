@@ -5,6 +5,20 @@ import { useSupabase } from '@/lib/supabase/client'
 import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 import { toUsageDb } from '@/lib/supabase/mappers'
 import { uploadFile } from '@/lib/supabase/storage'
+import { renderPdfFirstPage } from '@/lib/pdf-thumbnail'
+import { MAX_PROJECT_IMAGES } from '@/lib/types'
+
+function safeExt(name: string, fallback = 'bin'): string {
+  const m = (name || '').match(/\.([a-z0-9]+)$/i)
+  return m ? m[1].toLowerCase() : fallback
+}
+
+function imagePath(userId: string, projectId: string, ext: string): string {
+  const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  return `${userId}/projects/${projectId}/${uuid}.${ext}`
+}
 
 const inputStyle: React.CSSProperties = {
   padding: '7px 10px', border: '1px solid #D0C8BA',
@@ -116,10 +130,26 @@ export default function BrugNoeglerModal({
   async function save() {
     setSaving(true); setError(null)
     try {
+      // ── 1) Bestem projekt ──────────────────────────────────────────────────
       let projectId: string
+      let existingImages: string[] = []
+      let existingPatternImages: string[] = []
       if (projectMode === 'existing') {
         if (!selectedProjectId) throw new Error('Vælg et projekt.')
         projectId = selectedProjectId
+        // Læs nuværende projekt for konflikt-check inden upload
+        const { data: p, error: pErr } = await supabase.from('projects')
+          .select('project_image_urls,pattern_image_urls')
+          .eq('id', projectId).single()
+        if (pErr) throw pErr
+        existingImages = (p as any)?.project_image_urls ?? []
+        existingPatternImages = (p as any)?.pattern_image_urls ?? []
+        if (imageFile && existingImages.length >= MAX_PROJECT_IMAGES) {
+          throw new Error(`Projektet har allerede ${MAX_PROJECT_IMAGES} billeder. Slet et i Arkiv før du tilføjer flere.`)
+        }
+        if (pdfFile && existingPatternImages.length > 0) {
+          throw new Error('Projektet har allerede en opskrift som billed-kæde. Fjern den i Arkiv før du tilføjer en PDF.')
+        }
       } else {
         const { data: project, error: pErr } = await supabase.from('projects')
           .insert([{ user_id: user.id, title: newProject.title || null, used_at: newProject.usedAt || null, needle_size: newProject.needleSize || null, notes: newProject.notes || null }])
@@ -128,6 +158,43 @@ export default function BrugNoeglerModal({
         projectId = (project as { id: string }).id
       }
 
+      // ── 2) Upload billede + PDF + thumbnail til Storage ────────────────────
+      let projectImageUrl: string | null = null
+      let patternPdfUrl: string | null = null
+      let patternPdfThumbnailUrl: string | null = null
+
+      if (imageFile) {
+        const path = imagePath(user.id, projectId, safeExt(imageFile.name, 'jpg'))
+        projectImageUrl = await uploadFile(supabase, 'yarn-images', path, imageFile)
+      }
+      if (pdfFile) {
+        const pdfPath = `${user.id}/projects/${projectId}.pdf`
+        patternPdfUrl = await uploadFile(supabase, 'patterns', pdfPath, pdfFile)
+        try {
+          const thumbBlob = await renderPdfFirstPage(pdfFile)
+          const thumbPath = `${user.id}/projects/${projectId}-thumb.png`
+          const thumbFile = new File([thumbBlob], `${projectId}-thumb.png`, { type: 'image/png' })
+          patternPdfThumbnailUrl = await uploadFile(supabase, 'patterns', thumbPath, thumbFile)
+        } catch {
+          // Thumbnail-fejl er ikke fatal — PDF'en er stadig uploadet.
+        }
+      }
+
+      // ── 3) Gem media-felter på projekt-rækken ──────────────────────────────
+      if (projectImageUrl || patternPdfUrl) {
+        const projectUpdates: Record<string, unknown> = {}
+        if (projectImageUrl) {
+          projectUpdates.project_image_urls = [...existingImages, projectImageUrl]
+        }
+        if (patternPdfUrl) {
+          projectUpdates.pattern_pdf_url = patternPdfUrl
+          projectUpdates.pattern_pdf_thumbnail_url = patternPdfThumbnailUrl
+        }
+        const { error: updErr } = await supabase.from('projects').update(projectUpdates).eq('id', projectId)
+        if (updErr) throw updErr
+      }
+
+      // ── 4) Insert yarn_usage (UDEN media-felter — de bor på projektet) ─────
       const usageData = toUsageDb({
         ...form,
         projectId,
@@ -145,26 +212,7 @@ export default function BrugNoeglerModal({
         .insert([{ ...usageData, user_id: user.id }]).select().single()
       if (insertErr) throw insertErr
 
-      const usageId = (usageRow as any).id
-      let projectImageUrl: string | null = null
-      let patternPdfUrl: string | null = null
-
-      if (imageFile) {
-        const ext = imageFile.name.split('.').pop()
-        projectImageUrl = await uploadFile(supabase, 'yarn-images', `${user.id}/${usageId}.${ext}`, imageFile)
-      }
-      if (pdfFile) {
-        patternPdfUrl = await uploadFile(supabase, 'patterns', `${user.id}/${usageId}.pdf`, pdfFile)
-      }
-      if (projectImageUrl || patternPdfUrl) {
-        await supabase.from('yarn_usage').update({
-          ...(projectImageUrl && { project_image_url: projectImageUrl }),
-          ...(patternPdfUrl   && { pattern_pdf_url:   patternPdfUrl }),
-        }).eq('id', usageId)
-        ;(usageRow as any).project_image_url = projectImageUrl
-        ;(usageRow as any).pattern_pdf_url   = patternPdfUrl
-      }
-
+      // ── 5) Opdatér yarn_items quantity ─────────────────────────────────────
       const newQty = Math.max(0, (parseFloat(String(yarn.antal)) || 0) - parseFloat(String(form.quantityUsed) || '0'))
       const updates: any = { quantity: newQty }
       if (newQty === 0) updates.status = 'Brugt op'
