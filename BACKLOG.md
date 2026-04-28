@@ -45,6 +45,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - Kommentar/noter-felt per garn
 - "Brug nøgler"-modal (`BrugNoeglerModal.tsx`) — log forbrug + opdater antal
 - **CSV-eksport af garnlager** (`lib/export/exportGarnlager.ts`) — eksportknap i header, UTF-8 BOM, danske kolonner, Excel-kompatibel
+- **Lager-kort uden katalog-thumbnail (2026-04-28)** — fjernet foto/swatch-rendering fra grid-kort i Mit Garnlager; kort viser nu altid kun farve/farve-gradient (`gradientFromHexColors`) som baggrund. Foto-upload-blokken i edit-modal bevares — bruger kan stadig gemme et eget foto. Dækker også B-fix: `YarnCatalogSearch`-dropdown åbner ikke længere automatisk når søgefeltet pre-udfyldes ved redigering af catalog-linket garn (kun bruger-initieret typing/focus trigger søgning).
 
 ### Projekter / Arkiv
 - Tilføj og se projekter (`components/app/Arkiv.jsx`)
@@ -372,8 +373,6 @@ Tilføjet efter at vote-override-systemet og held-together-combos shippede. Hann
   Kør med: `/ny-feature Onboarding: velkomst-modal til ny bruger ved første login`
 
 - **Sortering af garnlager (2026-04-27, fra Hannah)** — brugere skal kunne sortere efter farve, navn, garntype (fra Excel: "Man skal kunne sortere i garnlageret"). **Default-visning: farvesorteret** — når brugeren åbner Mit Garnlager, skal listen være sorteret efter farve som standard. Der er kun filter i dag, ingen sortering.
-
-- **Fjern katalog-farve-thumbnail i Mit Garnlager (2026-04-27, fra Hannah)** — i dag vises en lille thumbnail/produktbillede fra garnkataloget som "farveforslag" på hver garn-post i Mit Garnlager. Det skal fjernes. Brugeren skal i stedet enten (a) selv uploade et foto af sit konkrete garn eller (b) blot se farvevisningen (den farvede cirkel/swatch). Begrundelse: katalog-billedet repræsenterer ikke nødvendigvis den specifikke farve brugeren har, og kan være misvisende. Tjek `components/app/Garnlager.jsx` for hvor thumbnail'en rendes (sandsynligvis i listevisning + detalje-modal). Bevar bruger-uploadet billede og hex-cirklen.
 
 - ~~**Kun hele nøgler i Garnlager — ingen kvarte/halve (2026-04-27)**~~ — **revurderet 2026-04-28**: Hannah valgte i stedet at tillade **hele + halve nøgler** (step=0.5) globalt — både i Mit Garnlager og i projekter. Implementeret som del af F11. Kvarte (0.25/0.75) er ikke længere mulige; eksisterende historisk data rundes til nærmeste 0.5 ved visning.
 
