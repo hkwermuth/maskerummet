@@ -100,6 +100,140 @@ function buildSupabaseMock(opts: {
 
 beforeEach(() => vi.clearAllMocks())
 
+describe('BrugNoeglerModal — note appendes til projects.notes med dato-stamp', () => {
+  it('eksisterende projekt med eksisterende noter: ny note appendes med dato + separator', async () => {
+    const user = userEvent.setup()
+    const projectsLoadSingle = vi.fn().mockResolvedValue({
+      data: {
+        project_image_urls: [],
+        pattern_image_urls: [],
+        pattern_pdf_url: null,
+        notes: 'Eksisterende noter her.',
+      },
+      error: null,
+    })
+    const projectsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
+
+    const supabaseMock = {
+      from: vi.fn((table: string) => {
+        if (table === 'projects') {
+          return {
+            select: vi.fn((cols: string) => {
+              if (cols.includes('notes')) {
+                return { eq: vi.fn(() => ({ single: projectsLoadSingle })) }
+              }
+              return {
+                eq: vi.fn(() => ({
+                  in: vi.fn(() => ({
+                    order: vi.fn().mockReturnThis(),
+                    limit: vi.fn().mockResolvedValue({ data: [existingProject], error: null }),
+                  })),
+                })),
+              }
+            }),
+            update: projectsUpdate,
+          }
+        }
+        if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
+        if (table === 'yarn_items') return { update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })) }
+        return {}
+      }),
+    }
+    vi.mocked(useSupabase).mockReturnValue(supabaseMock as never)
+
+    render(
+      <BrugNoeglerModal
+        yarn={sampleYarn}
+        user={{ id: 'user-1' }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument())
+
+    // Skriv en note i forbrugs-formen
+    const notesField = screen.getByPlaceholderText(/ændringer til opskriften/i)
+    await user.type(notesField, 'brugte 4 ngl til ærmer')
+
+    await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
+
+    await waitFor(() => expect(projectsUpdate).toHaveBeenCalled())
+    const updatePayload = projectsUpdate.mock.calls[0][0]
+    expect(updatePayload).toHaveProperty('notes')
+    const savedNotes = updatePayload.notes as string
+    expect(savedNotes.startsWith('Eksisterende noter her.')).toBe(true)
+    expect(savedNotes).toMatch(/—\s*\d{4}-\d{2}-\d{2}:\s*brugte 4 ngl til ærmer$/m)
+    expect(savedNotes).toContain('\n\n')
+  })
+
+  it('eksisterende projekt uden tidligere noter: ny note skrives uden separator', async () => {
+    const user = userEvent.setup()
+    const projectsLoadSingle = vi.fn().mockResolvedValue({
+      data: { project_image_urls: [], pattern_image_urls: [], pattern_pdf_url: null, notes: null },
+      error: null,
+    })
+    const projectsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
+    const supabaseMock = {
+      from: vi.fn((table: string) => {
+        if (table === 'projects') {
+          return {
+            select: vi.fn((cols: string) => {
+              if (cols.includes('notes')) return { eq: vi.fn(() => ({ single: projectsLoadSingle })) }
+              return { eq: vi.fn(() => ({ in: vi.fn(() => ({ order: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue({ data: [existingProject], error: null }) })) })) }
+            }),
+            update: projectsUpdate,
+          }
+        }
+        if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
+        if (table === 'yarn_items') return { update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })) }
+        return {}
+      }),
+    }
+    vi.mocked(useSupabase).mockReturnValue(supabaseMock as never)
+
+    render(
+      <BrugNoeglerModal
+        yarn={sampleYarn}
+        user={{ id: 'user-1' }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    )
+    await waitFor(() => expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument())
+    await user.type(screen.getByPlaceholderText(/ændringer til opskriften/i), 'kort note')
+    await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
+
+    await waitFor(() => expect(projectsUpdate).toHaveBeenCalled())
+    const savedNotes = projectsUpdate.mock.calls[0][0].notes as string
+    expect(savedNotes).toMatch(/^—\s*\d{4}-\d{2}-\d{2}:\s*kort note$/)
+  })
+
+  it('tom note → projects.notes opdateres ikke', async () => {
+    const user = userEvent.setup()
+    const mock = buildSupabaseMock()
+    vi.mocked(useSupabase).mockReturnValue(mock as never)
+
+    render(
+      <BrugNoeglerModal
+        yarn={sampleYarn}
+        user={{ id: 'user-1' }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    )
+    await waitFor(() => expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument())
+    // Skriv ingen note, klik gem
+    await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
+
+    // Ingen projects-update bør ske (ingen media, ingen note)
+    await waitFor(() => {
+      expect(mock._usageInsert).toHaveBeenCalled()
+    })
+    expect(mock._projectsUpdate).not.toHaveBeenCalled()
+  })
+})
+
 describe('BrugNoeglerModal — yarn_items status-opdatering ved forbrug', () => {
   it('sætter status til "I brug" når antal stadig er > 0', async () => {
     const user = userEvent.setup()

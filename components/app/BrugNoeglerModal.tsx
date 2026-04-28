@@ -171,19 +171,27 @@ export default function BrugNoeglerModal({
     setSaving(true); setError(null)
     try {
       // ── 1) Bestem projekt ──────────────────────────────────────────────────
+      const stampedNote = (() => {
+        const trimmed = (form.notes || '').trim()
+        if (!trimmed) return null
+        return `— ${today}: ${trimmed}`
+      })()
+
       let projectId: string
       let existingImages: string[] = []
       let existingPatternImages: string[] = []
+      let existingNotes = ''
       if (projectMode === 'existing') {
         if (!selectedProjectId) throw new Error('Vælg et projekt.')
         projectId = selectedProjectId
-        // Læs nuværende projekt for konflikt-check inden upload
+        // Læs nuværende projekt for konflikt-check inden upload + notes-append
         const { data: p, error: pErr } = await supabase.from('projects')
-          .select('project_image_urls,pattern_image_urls,pattern_pdf_url')
+          .select('project_image_urls,pattern_image_urls,pattern_pdf_url,notes')
           .eq('id', projectId).single()
         if (pErr) throw pErr
         existingImages = (p as any)?.project_image_urls ?? []
         existingPatternImages = (p as any)?.pattern_image_urls ?? []
+        existingNotes = ((p as any)?.notes ?? '').toString()
         const existingPdfUrl: string | null = (p as any)?.pattern_pdf_url ?? null
         if (imageFile && existingImages.length >= MAX_PROJECT_IMAGES) {
           throw new Error(`Projektet har allerede ${MAX_PROJECT_IMAGES} billeder. Slet et i Arkiv før du tilføjer flere.`)
@@ -195,8 +203,13 @@ export default function BrugNoeglerModal({
           throw new Error('Projektet har allerede en opskrift som PDF. Fjern eller udskift den i Arkiv før du tilføjer en ny.')
         }
       } else {
+        // Kombinér initial newProject.notes + stempled forbrugs-note ved insert
+        const initialNotes = (newProject.notes || '').trim()
+        const combinedNotes = stampedNote
+          ? (initialNotes ? `${initialNotes}\n\n${stampedNote}` : stampedNote)
+          : (initialNotes || null)
         const { data: project, error: pErr } = await supabase.from('projects')
-          .insert([{ user_id: user.id, title: newProject.title || null, used_at: newProject.usedAt || null, needle_size: newProject.needleSize || null, notes: newProject.notes || null }])
+          .insert([{ user_id: user.id, title: newProject.title || null, used_at: newProject.usedAt || null, needle_size: newProject.needleSize || null, notes: combinedNotes }])
           .select().single()
         if (pErr) throw pErr
         projectId = (project as { id: string }).id
@@ -224,16 +237,24 @@ export default function BrugNoeglerModal({
         }
       }
 
-      // ── 3) Gem media-felter på projekt-rækken ──────────────────────────────
-      if (projectImageUrl || patternPdfUrl) {
-        const projectUpdates: Record<string, unknown> = {}
-        if (projectImageUrl) {
-          projectUpdates.project_image_urls = [...existingImages, projectImageUrl]
-        }
-        if (patternPdfUrl) {
-          projectUpdates.pattern_pdf_url = patternPdfUrl
-          projectUpdates.pattern_pdf_thumbnail_url = patternPdfThumbnailUrl
-        }
+      // ── 3) Gem media-felter + appendet note på projekt-rækken ──────────────
+      // For eksisterende projekt: appendér forbrugs-noten med dato-stamp så
+      // brugeren kan se den i Arkiv (projects.notes er det felt der vises der).
+      const shouldAppendNote = projectMode === 'existing' && stampedNote !== null
+      const projectUpdates: Record<string, unknown> = {}
+      if (projectImageUrl) {
+        projectUpdates.project_image_urls = [...existingImages, projectImageUrl]
+      }
+      if (patternPdfUrl) {
+        projectUpdates.pattern_pdf_url = patternPdfUrl
+        projectUpdates.pattern_pdf_thumbnail_url = patternPdfThumbnailUrl
+      }
+      if (shouldAppendNote) {
+        projectUpdates.notes = existingNotes.trim()
+          ? `${existingNotes.trim()}\n\n${stampedNote}`
+          : stampedNote
+      }
+      if (Object.keys(projectUpdates).length > 0) {
         const { error: updErr } = await supabase.from('projects').update(projectUpdates).eq('id', projectId)
         if (updErr) throw updErr
       }
