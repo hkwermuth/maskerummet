@@ -45,7 +45,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - Kommentar/noter-felt per garn
 - "Brug nøgler"-modal (`BrugNoeglerModal.tsx`) — log forbrug + opdater antal
 - **CSV-eksport af garnlager** (`lib/export/exportGarnlager.ts`) — eksportknap i header, UTF-8 BOM, danske kolonner, Excel-kompatibel
-- **Lager-kort uden katalog-thumbnail (2026-04-28)** — fjernet foto/swatch-rendering fra grid-kort i Mit Garnlager; kort viser nu altid kun farve/farve-gradient (`gradientFromHexColors`) som baggrund. Foto-upload-blokken i edit-modal bevares — bruger kan stadig gemme et eget foto. Dækker også B-fix: `YarnCatalogSearch`-dropdown åbner ikke længere automatisk når søgefeltet pre-udfyldes ved redigering af catalog-linket garn (kun bruger-initieret typing/focus trigger søgning).
+- **Lager-kort: kun bruger-fotos, ingen katalog-thumbnails (2026-04-28)** — kort i Mit Garnlager viser nu bruger-uploadet foto (`y.imageUrl`) hvis det findes, ellers farve/farve-gradient (`gradientFromHexColors`) som baggrund. Katalog-thumbnails (`y.catalogImageUrl`) rendres ikke længere — de var misvisende fordi de ikke nødvendigvis matchede den specifikke farve brugeren har. Foto-upload i edit-modal bevares. Dækker også B-fix: `YarnCatalogSearch`-dropdown åbner ikke længere automatisk når søgefeltet pre-udfyldes ved redigering af catalog-linket garn (kun bruger-initieret typing/focus trigger søgning).
 
 ### Projekter / Arkiv
 - Tilføj og se projekter (`components/app/Arkiv.jsx`)
@@ -108,6 +108,28 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - **Navigation**: Strikkeskolen erstattet med Fællesskabet i Nav + forsidens feature-kort (strikkeskolen-siden bevaret unlinked)
 - **Seed-script** (`scripts/seed-faellesskabet.mjs`) — finder projekter hos hkwermuth@gmail.com + hannah@leanmind.dk, deduplikerer på (titel, foto), `--dry-run` default
 - **Tests** (39 nye): `lib/community.ts`, `FaellesskabClient`, `DelMedFaellesskabetModal`, navigation — 88/88 passerer
+
+### Fællesskabet — tilretninger Runde 1-3 (2026-04-28, fra Hannahs dok "Fælleskabet - tilretninger.docx")
+
+**Runde 1 — projekt-forbedringer på egne projekter (commit `43592b1`):**
+- **Farve-placeholder på projektkort uden foto** (`components/app/ProjectCardPlaceholder.tsx`) — 140 px label med status-tekst ("Projekt jeg overvejer" / "Projekt i gang" / "Færdigt projekt"), baggrund er garnets farve (solid 1 farve, 135°-gradient 2-4 farver, +N-overlay 5+). Tekst-kontrast WCAG-baseret via worst-case-kontrast over alle gradient-stops (`lib/colorContrast.ts`).
+- **Mobil-skærpet billedkarrusel** (`components/app/ImageCarousel.tsx`) — i Arkiv detail-modal til opskrifts-billedkæde (`pattern_image_urls`). Native pointer-events, swipe ≥50px ELLER 30% af bredde, vinkel-check så modal-scroll ikke kapres, ArrowLeft/Right, prikker + pile (44×44 touch-targets), pre-load nabobilleder, tap åbner i ny tab.
+- **Fri farve-tekst i "Fra kataloget"-tab** (`components/app/GarnLinjeVælger.jsx`) — select-dropdown erstattet med fri-tekst-input + klikbare farve-pills (max 6 + "Vis alle"). Skriv → catalog_color_id=null. Dækker projekt-delen af 2026-04-27-ønsket "Egen farve når katalog ikke har den".
+- **Bonus**: luk-knap på Arkiv detail-modal udvidet til 44×44 + dansk aria-label "Luk projekt".
+
+**Runde 2 — små rettelser på Fællesskabet (commit `2a70cf3`):**
+- **Stort F i synlig copy** — alle 12 forekomster af "Fællesskabet" / "Fællesskabets" på tværs af 7 filer (Arkiv-knap, del-modal, Fællesskabet-side, onboarding).
+- **Fire nye projekttyper**: Bluse, Sommerbluse, Babytøj, Børnetøj. Udvidet `PROJECT_TYPES` + DB CHECK-constraint via migration `20260428000004`.
+- **Valgfrit "Vist i str."-felt** — ny nullable kolonne `community_size_shown`, input i del-modal med maxLength=50, lille "str. {value}"-pille på SharedProjectCard.
+- **Dedupe garn-label** (`lib/yarn-display.ts:yarnDisplayLabel`) — fjerner duplikeret leverandørnavn på Fællesskabet-kort. Resultater verificeret mod faktisk DB-data: "Drops Drops Air" → "Drops Air", "Filcolana Filcolana Tilia" → "Filcolana Tilia", "Permin Permin Bella Color (Bella Color by Permin)" → "Bella Color by Permin".
+
+**Runde 3 — multi-billede + detail-pop-up (commit `b30cd31`):**
+- **Primær billede-valg** i del-modalen — thumbnail-grid (kun ved ≥2 billeder) hvor brugeren klikker for at vælge hvilket billede der vises som hovedbillede på Fællesskabet. Gemt i ny kolonne `community_primary_image_index` (default 0, fallback til 0 hvis index ud af range).
+- **Detail-pop-up** (`components/app/SharedProjectDetailModal.tsx`) — klik/Enter/Space på SharedProjectCard åbner pop-up med karrusel over alle billeder, str-pille, forfatter, pattern-info, opskriftens forside (PDF-thumb foretrækkes over `pattern_cover_url`), community_description, garn-liste med farve-swatches. Sticky "← Tilbage til Fællesskabet"-knap øverst (≥44px), focus-trap, Escape + backdrop lukker, focus returnerer til kortet ved luk.
+- **Klikbar SharedProjectCard** — role=button, dansk aria-label, viser primær billede med fallback til [0], +N-tæller hvis flere billeder.
+- **Sikker forside-eksponering** (migration `20260428000005`) — view bruger `security_invoker=false` så anon kan læse computed `pattern_image_urls[1] AS pattern_cover_url` UDEN at hele opskrifts-arrayet eksponeres. Copyright-mur bevares via `WHERE is_shared = true` i view-definitionen. `pattern_pdf_thumbnail_url` tilføjet til anon GRANT (lille forside-thumb, ikke selve mønsterskema).
+
+**Tests**: 92 nye tests på tværs af de tre runder (964 grønne i alt mod 781 før). Migrationer kørt mod prod-DB.
 
 ### Indhold
 - Kalender med strikke-events april–oktober 2026 (`app/kalender/page.tsx`)
@@ -384,8 +406,7 @@ Tilføjet efter at vote-override-systemet og held-together-combos shippede. Hann
 
 - **Redesign eksport i Mit Garnlager til printvenlig udgave (2026-04-27, fra Hannah)** — i dag eksporteres garnlageret som CSV (`lib/export/exportGarnlager.ts`, Excel-kompatibel). Hannah ønsker en printvenlig udgave — overblik der ser pænt ud på papir, ikke kun rådata. Sandsynligvis en HTML- eller PDF-baseret rapport med sektioner pr. status, billeder/farve-pille, antal/total-summering. CSV bevares parallelt for dataportabilitet (GDPR art. 20). ⚠️ **Spørg Hannah ved opstart**: PDF (klient-side via fx pdf-lib eller server-side route) eller print-optimeret HTML der bruger browserens "Udskriv → Gem som PDF"? Skal layoutet matche garnkortene fra F4 (mini-thumbnails med farve), eller kompakt tabel? Hvilke felter skal med (kun navn+antal+farve, eller også løbelængde+pind+noter)? Sortering — alfabetisk, efter status, efter dato? Skal skannede billeder med, eller kun farvepiller?
 
-**Egen farve når katalog ikke har den — Garnlager + Projekter (2026-04-27, fra Hannah):**
-- I dag kan brugeren ikke vælge en farve på et garn, hvis farven ikke findes i `colors`-tabellen i Garn-kataloget. Skal udvikles så brugeren kan **skrive farven selv** når den ikke er i kataloget. Gælder både **Mit Garnlager** (Tilføj/Rediger garn) og **Projekter** (garn-i-projekt-felt). ⚠️ **Spørg Hannah ved opstart**: i Garnlager er `colorName`/`colorCode`/`hex` allerede frit-skrivbare når et katalog-garn er linket — er det fordi UI'et ikke er tydeligt, eller fordi katalog-farve-dropdown'en føles "påkrævet"? Eller er det specifikt i Projekter (NytProjektModal/Arkiv) der er en hård blok? Find præcist hvor i flowet hun løber ind i muren før implementering. Mulige løsninger: (1) tydeligere "Skriv selv"-affordance ved siden af dropdown, (2) "Kan ikke finde farven? Skriv den selv"-link, (3) altid vise frit colorName-felt parallelt med dropdown og lade dropdown-valg udfylde det automatisk.
+~~**Egen farve når katalog ikke har den — Garnlager + Projekter (2026-04-27, fra Hannah):**~~ — **dækket 2026-04-28**: projekt-delen implementeret i Runde 1 af Fællesskabet-tilretninger (`GarnLinjeVælger.jsx` "Fra kataloget"-tab har nu fri-tekst-input + klikbare farve-pills). Garnlager-delen var allerede teknisk fri-tekst — hvis den stadig opleves som blokeret, åbn nyt punkt med konkret friction-rapport.
 
 **Projekter — felter og inputfelt-tilpasning (2026-04-27, fra Hannah):**
 - **Designer + opskriftsnavn på projekter** — under "Hvad er strikket" på Projekter skal man kunne skrive navn på designeren og navnet på opskriften. Felter eksisterer allerede på `projects`-tabellen som `pattern_designer` og `pattern_name` (brugt af Fællesskabet/del-flow), men er ikke eksponeret i selve projekt-redigeringen. ⚠️ **Spørg Hannah ved opstart**: skal felterne også være på vil_gerne / i_gang, eller kun færdigstrikket? Skal de være krævede ved deling? Skal designer-navn auto-suggestes fra eksisterende `content/designere.md`-liste?
@@ -393,9 +414,7 @@ Tilføjet efter at vote-override-systemet og held-together-combos shippede. Hann
 - **Paritet Garnlager ↔ Projekter ved garn-input (2026-04-27, fra Hannah)** — alle ændringer vi laver til garn-input-felterne i **Mit Garnlager** (Tilføj/Rediger garn) skal også afspejles i **Projekter** når man opretter eller redigerer et projekt og tilføjer garn til det. Dvs. samme felter, samme validering, samme UI-mønstre. Konkret gælder det de aktuelle Hannah-ønsker fra 2026-04-27: **kun hele nøgler** (ingen kvarte/halve), **egen-farve-skrivning** når katalog ikke har farven, **fjernet katalog-thumbnail** (hvis "Garn i projektet" viser samme thumbnail), og **default farvesortering** hvor relevant. Tjek både `NytProjektModal` og `Arkiv.jsx`/DetailModal — garn-tilføjelses-flowet eksisterer begge steder. Fremadrettet bør al garn-input-arbejde behandle Garnlager og Projekter som én sammenhængende feature, ikke to.
 - **Designer-database (top 100)** — opbyg database over de 100 største danske strikdesignere + designere som danske strikkere bruger (også udenlandske). Skal afløse den nuværende `content/designere.md` (top 20). Ny tabel `designers` i Supabase (navn, evt. alias/hjemmeside/instagram, nationalitet, status), seed-script + admin-UI til kuratering. Driver auto-suggest på designer-feltet (forrige bullet) og lægger fundament for fremtidig opskrifts-katalog (`patterns.designer_id`-FK). ⚠️ **Spørg Hannah ved opstart**: hvilke datapunkter skal vi have ud over navn (hjemmeside? signatur-stil?)? Er der en kilde-liste at starte fra (Ravelry, Instagram, dansk strikkesammenslutning)? Skal udenlandske designere markeres separat, eller bare være med i samme tabel? Skal der være et offentligt designer-katalog ligesom garn-kataloget, eller er det kun intern reference til auto-suggest + opskrifts-FK?
 
-**Fællesskabet — tilretninger Runde 2 + 3 (2026-04-28, fra Hannah, dok: "Fælleskabet - tilretninger.docx"):**
-- **Runde 2 — små rettelser**: "Fællesskabet" med stort F i topbanneret; nye projekttyper (Bluse, Sommerbluse, Babytøj, Børnetøj); valgfrit "Vist i str."-felt på del-modal; fjern duplikering af leverandørnavn i visning ("Drops Drops Air" → "Drops Air", "Filcolana Filcolana Tilia" → "Filcolana Tilia", "Permin Permin Bella Color (Bella Color by Permin)" → "Bella Color by Permin").
-- **Runde 3 — flere billeder + pop-up**: Flere billeder pr. delt projekt med valg af primær (default = første). Ved klik på kortet/billedet: pop-up/detail-visning med karrusel over alle billeder + noter + opskriftens forside. **Mobil-krav fra Hannah (2026-04-28)**: tydelig, mobil-venlig "tilbage til Fællesskabet"-knap eller pil øverst i pop-up — de fleste brugere er på mobil og skal nemt komme tilbage til feed'et. Genbrug `<ImageCarousel>` fra Runde 1.
+~~**Fællesskabet — tilretninger Runde 2 + 3**~~ — **implementeret 2026-04-28** (commits `2a70cf3` + `b30cd31`). Se "Fællesskabet — tilretninger Runde 1-3" i Implementeret-sektionen ovenfor.
 
 ### KAN-VENTE (efter testbrugere)
 
