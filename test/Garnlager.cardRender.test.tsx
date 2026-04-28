@@ -2,8 +2,10 @@
  * Kort-render-tests for Garnlager (F4).
  *
  * Dækker acceptkriterierne:
- * AC1  — Billedfelt: ALDRIG <img> på kortet uanset imageUrl/catalogImageUrl;
- *         header bruger altid gradientFromHexColors som baggrund
+ * AC1-revideret — Billedfelt:
+ *   - bruger-uploadede fotos (imageUrl) VISES på kortet med <img>
+ *   - katalog-thumbnails (catalogImageUrl) vises ALDRIG på kortet
+ *   - header-baggrund er #F4EFE6 når bruger-foto vises, ellers gradientFromHexColors
  * AC2  — Farvenavn-pille: colorName, eller "Multi (N)" ved hexColors≥2, tomt colorName
  * AC3  — Mærke i UPPERCASE over garnnavn
  * AC7  — Tags: vægt-chip + fiber-chip; ingen "Katalog"-chip
@@ -123,26 +125,24 @@ async function renderAndWait(yarns = [BASE_YARN]) {
   })
 }
 
-// ── AC1: Billedfelt — ingen <img> på garnkortet ──────────────────────────────
+// ── AC1-revideret: Billedfelt ─────────────────────────────────────────────────
+// Bruger-uploadede fotos (imageUrl) VISES på kortet.
+// Katalog-thumbnails (catalogImageUrl) vises ALDRIG på kortet.
 
 describe('Garnlager kort — AC1: billedfelt', () => {
-  it('A1: garn med imageUrl renderer ALDRIG <img> på kortet', async () => {
-    const yarn = { ...BASE_YARN, imageUrl: 'https://example.com/garn.jpg' }
+  it('A1: garn med imageUrl (og ingen catalogImageUrl) → <img src=imageUrl> vises på kortet', async () => {
+    const yarn = { ...BASE_YARN, imageUrl: 'https://example.com/garn.jpg', catalogImageUrl: null }
     await renderAndWait([yarn])
 
-    // Efter ændringen vises ingen foto-img på kortet uanset imageUrl
-    const imgs = screen.queryAllByRole('img', { name: yarn.name })
-    expect(imgs).toHaveLength(0)
-    // Heller ingen img der bruger imageUrl som src
     const allImgs = document.querySelectorAll('img')
     const fotoImg = Array.from(allImgs).find(el =>
       el.getAttribute('src') === 'https://example.com/garn.jpg'
     )
-    expect(fotoImg).toBeUndefined()
+    expect(fotoImg).toBeDefined()
   })
 
-  it('A1: garn med catalogImageUrl renderer ALDRIG <img> på kortet', async () => {
-    const yarn = { ...BASE_YARN, catalogImageUrl: 'https://catalog.example.com/swatch.png' }
+  it('A1: garn med catalogImageUrl (og ingen imageUrl) → INGEN <img> på kortet', async () => {
+    const yarn = { ...BASE_YARN, imageUrl: null, catalogImageUrl: 'https://catalog.example.com/swatch.png' }
     await renderAndWait([yarn])
 
     const allImgs = document.querySelectorAll('img')
@@ -152,7 +152,7 @@ describe('Garnlager kort — AC1: billedfelt', () => {
     expect(swatchImg).toBeUndefined()
   })
 
-  it('A1: garn med både imageUrl og catalogImageUrl → ingen <img> på kortet', async () => {
+  it('A1: garn med både imageUrl og catalogImageUrl → bruger-foto vinder (<img src=imageUrl>), ingen katalog-img', async () => {
     const yarn = {
       ...BASE_YARN,
       imageUrl: 'https://example.com/foto.jpg',
@@ -161,11 +161,50 @@ describe('Garnlager kort — AC1: billedfelt', () => {
     await renderAndWait([yarn])
 
     const allImgs = document.querySelectorAll('img')
+    // Bruger-foto vises
     const fotoImg = Array.from(allImgs).find(el =>
-      el.getAttribute('src') === 'https://example.com/foto.jpg' ||
+      el.getAttribute('src') === 'https://example.com/foto.jpg'
+    )
+    expect(fotoImg).toBeDefined()
+    // Katalog-thumbnail vises ikke
+    const swatchImg = Array.from(allImgs).find(el =>
       el.getAttribute('src') === 'https://catalog.example.com/swatch.png'
     )
-    expect(fotoImg).toBeUndefined()
+    expect(swatchImg).toBeUndefined()
+  })
+
+  it('A1: header-baggrund er #F4EFE6 (rgb(244,239,230)) når bruger-foto vises (showUserPhoto)', async () => {
+    const yarn = { ...BASE_YARN, imageUrl: 'https://example.com/garn.jpg' }
+    await renderAndWait([yarn])
+
+    // jsdom konverterer #F4EFE6 til rgb(244, 239, 230) i el.style.background
+    // Vi tjekker style-attributten direkte da den indeholder den konverterede rgb-streng
+    const header = document.querySelector('[style*="height: 120px"]') as HTMLElement | null
+    expect(header).not.toBeNull()
+    const bg = header!.style.background
+    // Accepter både hex (#F4EFE6) og rgb (jsdom-konverteret)
+    const isWarmBeige =
+      bg === '#F4EFE6' ||
+      bg === '#f4efe6' ||
+      bg.includes('rgb(244, 239, 230)') ||
+      bg.includes('rgb(244,239,230)')
+    expect(isWarmBeige).toBe(true)
+  })
+
+  it('A1: header-baggrund er IKKE #F4EFE6 når intet bruger-foto (kun katalog-url)', async () => {
+    const yarn = { ...BASE_YARN, imageUrl: null, catalogImageUrl: 'https://catalog.example.com/swatch.png', hex: '#C14B3A', hexColors: [] }
+    await renderAndWait([yarn])
+
+    // Ingen foto → baggrunden er gradientFromHexColors (hex-farven), ikke #F4EFE6
+    const header = document.querySelector('[style*="height: 120px"]') as HTMLElement | null
+    expect(header).not.toBeNull()
+    const bg = header!.style.background
+    const isWarmBeige =
+      bg === '#F4EFE6' ||
+      bg === '#f4efe6' ||
+      bg.includes('rgb(244, 239, 230)') ||
+      bg.includes('rgb(244,239,230)')
+    expect(isWarmBeige).toBe(false)
   })
 
   it('garn uden foto og uden hexColors: billedfelts background bruger hex-farven', async () => {
@@ -173,7 +212,6 @@ describe('Garnlager kort — AC1: billedfelt', () => {
     await renderAndWait([yarn])
 
     // Ingen <img> til foto — background er sat til hex-farven via gradientFromHexColors
-    // Vi verificerer at ingen foto-img er i kortet (swatch-img er muligvis til stede fra catalogImageUrl)
     const imgs = screen.queryAllByRole('img', { name: yarn.name })
     expect(imgs).toHaveLength(0)
   })

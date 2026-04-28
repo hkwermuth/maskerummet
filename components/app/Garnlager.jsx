@@ -771,6 +771,9 @@ export default function Garnlager({ user, onRequestLogin }) {
             const displayName = dedupeYarnNameFromBrand(y.name, y.brand)
             const colorBg = gradientFromHexColors(y.hexColors, y.hex)
             const isMulti = Array.isArray(y.hexColors) && y.hexColors.length >= 2
+            // Vis kun bruger-uploadede fotos (y.imageUrl). Katalog-thumbnails (y.catalogImageUrl)
+            // vises aldrig på kortet — de repræsenterer ikke nødvendigvis brugerens specifikke farve.
+            const showUserPhoto = Boolean(y.imageUrl)
             const colorPillText = y.colorName || (isMulti ? `Multi (${y.hexColors.length})` : '')
             const weightLabel = (y.weight && YARN_WEIGHT_LABELS[String(y.weight).toLowerCase()])
               || y.weight
@@ -784,15 +787,22 @@ export default function Garnlager({ user, onRequestLogin }) {
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(44,32,24,.13)' }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
               >
-                {/* Farvefelt — viser altid garnets farve(r) som baggrund. */}
+                {/* Header — bruger-foto hvis uploadet, ellers farve/farve-gradient. */}
                 {/* "Brugt op"-status: greyscale + badge så kortet visuelt læses som arkiveret */}
                 <div style={{
                   position: 'relative',
                   height: '120px',
-                  background: colorBg,
+                  background: showUserPhoto ? '#F4EFE6' : colorBg,
                   overflow: 'hidden',
                   filter: y.status === 'Brugt op' ? 'grayscale(1)' : 'none',
                 }}>
+                  {showUserPhoto && (
+                    <img
+                      src={y.imageUrl}
+                      alt={y.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  )}
                   {/* "Brugt op"-badge — øverste venstre, F9 src-warning-tokens */}
                   {y.status === 'Brugt op' && (
                     <span
@@ -1196,7 +1206,7 @@ export default function Garnlager({ user, onRequestLogin }) {
                       )}
                       <div>
                         <div style={{ fontSize: '12px', color: '#2C2018', fontWeight: 500 }}>{imagePreview ? 'Skift billede' : 'Upload billede'}</div>
-                        <div style={{ fontSize: '11px', color: '#8B7D6B' }}>JPG eller PNG — gemmes på dit garn</div>
+                        <div style={{ fontSize: '11px', color: '#8B7D6B' }}>JPG eller PNG — vises på garnkortet</div>
                       </div>
                     </label>
                     {!imagePreview && form.catalogImageUrl && isCatalogSwatchUrl(form.catalogImageUrl) && (
