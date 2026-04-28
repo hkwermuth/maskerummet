@@ -30,6 +30,8 @@ import { toISODate } from '@/lib/date/formatDanish'
 
 const WEIGHTS  = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
 const STATUSES = ['På lager', 'I brug', 'Brugt op', 'Ønskeliste']
+// Default-sortering på Mit Garnlager: På lager → I brug → Brugt op → Ønskeliste.
+const STATUS_SORT_ORDER = { 'På lager': 0, 'I brug': 1, 'Brugt op': 2, 'Ønskeliste': 3 }
 const FIBER_PILLS = ['Uld', 'Merino', 'Mohair', 'Alpaka', 'Silke', 'Bomuld', 'Hør', 'Akryl']
 
 // Skanning skjult indtil EAN-koder er fyldt på colors-tabellen i kataloget.
@@ -560,18 +562,27 @@ export default function Garnlager({ user, onRequestLogin }) {
     setModal('add')
   }
 
-  // ── Filtering ───────────────────────────────────────────────────────────────
+  // ── Filtering + sortering ──────────────────────────────────────────────────
   // Default-visning skjuler "Brugt op"-garn så lageret viser hvad brugeren har.
   // Brugeren kan eksplicit vælge "Brugt op" i status-dropdown for at se dem.
-  const filtered = yarns.filter(y => {
-    const matchesSearch = yarnMatchesStashSearch(y, q)
-    const matchesWeight = !filterWeight || y.weight === filterWeight
-    const matchesStatus = filterStatus
-      ? y.status === filterStatus
-      : y.status !== 'Brugt op'
-    const matchesFiber  = !filterFiber  || (y.fiber ?? '').toLowerCase().includes(filterFiber.toLowerCase())
-    return matchesSearch && matchesWeight && matchesStatus && matchesFiber
-  })
+  // Sortering: status (På lager → I brug → Brugt op → Ønskeliste), så alfabetisk på navn.
+  const filtered = yarns
+    .filter(y => {
+      const matchesSearch = yarnMatchesStashSearch(y, q)
+      const matchesWeight = !filterWeight || y.weight === filterWeight
+      const matchesStatus = filterStatus
+        ? y.status === filterStatus
+        : y.status !== 'Brugt op'
+      const matchesFiber  = !filterFiber  || (y.fiber ?? '').toLowerCase().includes(filterFiber.toLowerCase())
+      return matchesSearch && matchesWeight && matchesStatus && matchesFiber
+    })
+    .slice()
+    .sort((a, b) => {
+      const sa = STATUS_SORT_ORDER[a.status] ?? 99
+      const sb = STATUS_SORT_ORDER[b.status] ?? 99
+      if (sa !== sb) return sa - sb
+      return (a.name || '').localeCompare(b.name || '', 'da')
+    })
 
   const totalNgl    = yarns.reduce((s, y) => s + Number(y.antal || 0), 0)
   const brugtOpCount = yarns.filter(y => y.status === 'Brugt op').length
@@ -803,11 +814,11 @@ export default function Garnlager({ user, onRequestLogin }) {
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   )}
-                  {/* "Brugt op"-badge — øverste venstre, F9 src-warning-tokens */}
-                  {y.status === 'Brugt op' && (
+                  {/* Status-badge — øverste venstre, diskret label for alle 4 statusser */}
+                  {y.status && (
                     <span
-                      data-testid="brugt-op-badge"
-                      className="bg-striq-src-warning-bg text-striq-src-warning-fg"
+                      data-status-badge={y.status}
+                      {...(y.status === 'Brugt op' ? { 'data-testid': 'brugt-op-badge' } : {})}
                       style={{
                         position: 'absolute',
                         top: 8,
@@ -819,9 +830,11 @@ export default function Garnlager({ user, onRequestLogin }) {
                         fontWeight: 500,
                         letterSpacing: '.02em',
                         boxShadow: '0 1px 3px rgba(44,32,24,.15)',
+                        background: STATUS_COLORS[y.status] ?? '#FFFCF7',
+                        color: STATUS_TEXT[y.status] ?? '#302218',
                       }}
                     >
-                      Brugt op
+                      {y.status}
                     </span>
                   )}
 
