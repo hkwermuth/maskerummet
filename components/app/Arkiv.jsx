@@ -1,7 +1,7 @@
 'use client'
 import { useMemo, useRef, useState, useEffect } from 'react'
 import { useSupabase } from '@/lib/supabase/client'
-import { fromUsageDb, toUsageDb } from '@/lib/supabase/mappers'
+import { fromDb, fromUsageDb, toUsageDb } from '@/lib/supabase/mappers'
 import {
   uploadFile as uploadFileRaw,
   uploadFilesParallel,
@@ -13,6 +13,7 @@ import { displayYarnName, fetchColorsByIds, fetchColorsForYarn, searchYarnsFull 
 import { exportProjekter } from '@/lib/export/exportProjekter'
 import { formatDanish } from '@/lib/date/formatDanish'
 import { DelMedFaellesskabetModal } from '@/components/app/DelMedFaellesskabetModal'
+import GarnLinjeVælger from '@/components/app/GarnLinjeVælger'
 import {
   PROJECT_STATUSES,
   PROJECT_STATUS_LABELS,
@@ -376,14 +377,18 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
   const fallbackHex = yarns[0]?.hex || '#A8C4C4'
 
   const [form, setForm] = useState({
-    title:      entry?.title       ?? '',
-    usedAt:     entry?.used_at     ?? '',
-    needleSize: entry?.needle_size ?? '',
-    heldWith:   entry?.held_with   ?? '',
-    notes:      entry?.notes       ?? '',
-    status:     entry?.status      ?? 'faerdigstrikket',
-    yarnLines:  (entry?.yarnLines ?? []).map(l => ({ ...l, catalogQuery: l.yarnName || '' })),
+    title:           entry?.title            ?? '',
+    usedAt:          entry?.used_at          ?? '',
+    needleSize:      entry?.needle_size      ?? '',
+    heldWith:        entry?.held_with        ?? '',
+    notes:           entry?.notes            ?? '',
+    status:          entry?.status           ?? 'faerdigstrikket',
+    patternName:     entry?.pattern_name     ?? '',
+    patternDesigner: entry?.pattern_designer ?? '',
+    yarnLines:       (entry?.yarnLines ?? []).map(l => ({ ...l, catalogQuery: l.yarnName || '' })),
   })
+
+  const [userYarnItems, setUserYarnItems] = useState([])
 
   // Strik-billeder
   const [projectImages, setProjectImages] = useState(() =>
@@ -427,6 +432,22 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
       if (pdfThumbnailPreview && pdfThumbnailPreview.startsWith('blob:')) URL.revokeObjectURL(pdfThumbnailPreview)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // F11: hent brugerens lager én gang så "Fra mit garn"-tab kan vise det
+  useEffect(() => {
+    async function loadStash() {
+      try {
+        const { data } = await supabase
+          .from('yarn_items')
+          .select('*')
+          .order('brand', { ascending: true })
+        setUserYarnItems((data ?? []).map(fromDb))
+      } catch {
+        setUserYarnItems([])
+      }
+    }
+    loadStash()
   }, [])
 
   function setF(k, v) { setForm(p => ({ ...p, [k]: v })) }
@@ -603,12 +624,14 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     const newlyUploadedPaths = [] // til oprydning hvis DB-update fejler
     try {
       const updates = {
-        title:       form.title      || null,
-        used_at:     form.usedAt     || null,
-        needle_size: form.needleSize || null,
-        held_with:   form.heldWith   || null,
-        notes:       form.notes      || null,
-        status:      form.status     || 'faerdigstrikket',
+        title:            form.title           || null,
+        used_at:          form.usedAt          || null,
+        needle_size:      form.needleSize      || null,
+        held_with:        form.heldWith        || null,
+        notes:            form.notes           || null,
+        status:           form.status          || 'faerdigstrikket',
+        pattern_name:     form.patternName     || null,
+        pattern_designer: form.patternDesigner || null,
       }
       if (form.status !== 'faerdigstrikket' && entry.is_shared) {
         updates.is_shared = false
@@ -724,7 +747,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         ...(l.id ? { id: l.id } : {}),
         ...toUsageDb({
           projectId: data.id,
-          yarnItemId: null,
+          yarnItemId: l.yarnItemId ?? null,
           yarnName: l.yarnName,
           yarnBrand: l.yarnBrand,
           colorName: l.colorName,
@@ -903,119 +926,71 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
               </div>
 
               <div>
-                <Label>Strikket med</Label>
+                <Label>Følgetråd</Label>
                 <input value={form.heldWith} onChange={e => setF('heldWith', e.target.value)} style={inputStyle} />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+                <div>
+                  <Label>Opskriftsnavn</Label>
+                  <input value={form.patternName} onChange={e => setF('patternName', e.target.value)} placeholder="F.eks. Sierraknit Diamond Top" style={inputStyle} />
+                </div>
+                <div>
+                  <Label>Designer</Label>
+                  <input value={form.patternDesigner} onChange={e => setF('patternDesigner', e.target.value)} placeholder="F.eks. Sanne Fjalland" style={inputStyle} />
+                </div>
               </div>
 
               <div>
                 <Label>Garn i projektet</Label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {(form.yarnLines ?? []).map((l, i) => (
-                    <div key={l.id ?? `new-${i}`} style={{ border: '1px solid #EDE7D8', background: '#F9F6F0', borderRadius: '10px', padding: '10px' }}>
-                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
-                        <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: l.hex || '#A8C4C4', border: '1px solid rgba(0,0,0,.08)', flexShrink: 0, overflow: 'hidden', marginTop: '4px' }}>
-                          {l.catalogColorId && (() => {
-                            const colors = colorsByYarnId.get(l.catalogYarnId) ?? []
-                            const c = colors.find(x => x.id === l.catalogColorId)
-                            return c?.image_url
-                              ? <img src={c.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                              : null
-                          })()}
-                        </div>
-                        <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                          <div style={{ gridColumn: '1 / -1' }}>
-                            <Label>Søg i garn-katalog</Label>
-                            <YarnCatalogSearch
-                              value={l.catalogQuery ?? ''}
-                              onChange={(v) => setLine(i, { catalogQuery: v })}
-                              placeholder="Søg producent, navn eller serie…"
-                              onSelectYarn={async (y) => {
-                                setLine(i, {
-                                  catalogQuery: displayYarnName(y),
-                                  catalogYarnId: y.id,
-                                  catalogColorId: null,
-                                  yarnBrand: y.producer ?? '',
-                                  yarnName: displayYarnName(y),
-                                  colorName: '',
-                                  colorCode: '',
-                                })
-                                const colors = await ensureColorsLoaded(y.id)
-                                if (colors.length === 1) {
-                                  const c = colors[0]
-                                  setLine(i, {
-                                    catalogColorId: c.id,
-                                    colorName: c.color_name ?? '',
-                                    colorCode: c.color_number ?? '',
-                                    hex: normalizeHex(c.hex_code) || l.hex || '#A8C4C4',
-                                  })
-                                }
-                              }}
-                            />
-                          </div>
-                          {l.catalogYarnId && (
-                            <div style={{ gridColumn: '1 / -1' }}>
-                              <Label>Farve (fra katalog)</Label>
-                              <select
-                                value={l.catalogColorId ?? ''}
-                                onChange={(e) => {
-                                  const id = e.target.value || null
-                                  const colors = colorsByYarnId.get(l.catalogYarnId) ?? []
-                                  const c = colors.find(x => x.id === id) || null
-                                  setLine(i, {
-                                    catalogColorId: id,
-                                    colorName: c?.color_name ?? '',
-                                    colorCode: c?.color_number ?? '',
-                                    hex: c?.hex_code ? normalizeHex(c.hex_code) : (l.hex || '#A8C4C4'),
-                                  })
-                                }}
-                                onFocus={() => ensureColorsLoaded(l.catalogYarnId)}
-                                style={inputStyle}
-                              >
-                                <option value="">Vælg farve…</option>
-                                {(colorsByYarnId.get(l.catalogYarnId) ?? []).map(c => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.color_number ? `${c.color_number} · ` : ''}{c.color_name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                          <div>
-                            <Label>Mærke</Label>
-                            <input value={l.yarnBrand ?? ''} onChange={e => setLine(i, { yarnBrand: e.target.value })} style={inputStyle} />
-                          </div>
-                          <div>
-                            <Label>Garn</Label>
-                            <input value={l.yarnName ?? ''} onChange={e => setLine(i, { yarnName: e.target.value })} style={inputStyle} />
-                          </div>
-                          <div>
-                            <Label>Farvenavn</Label>
-                            <input value={l.colorName ?? ''} onChange={e => setLine(i, { colorName: e.target.value })} style={inputStyle} />
-                          </div>
-                          <div>
-                            <Label>Farvenr.</Label>
-                            <input value={l.colorCode ?? ''} onChange={e => setLine(i, { colorCode: e.target.value })} style={inputStyle} />
-                          </div>
-                          <div>
-                            <Label>Antal nøgler brugt</Label>
-                            <input type="number" step="0.25" min="0" value={l.quantityUsed ?? ''} onChange={e => setLine(i, { quantityUsed: e.target.value })} style={inputStyle} />
-                          </div>
-                          <div style={{ display: 'flex', gap: '10px' }}>
-                            <div style={{ flex: 1 }}>
-                              <Label>Farve (hex)</Label>
-                              <input value={l.hex ?? ''} onChange={e => setLine(i, { hex: e.target.value })} placeholder="#A8C4C4" style={inputStyle} />
-                            </div>
-                            <div style={{ flexShrink: 0 }}>
-                              <Label>&nbsp;</Label>
-                              <input type="color" value={l.hex || '#A8C4C4'} onChange={e => setLine(i, { hex: e.target.value })} style={{ width: '40px', height: '38px', border: '1px solid #D0C8BA', borderRadius: '6px', background: 'transparent' }} />
-                            </div>
-                          </div>
-                        </div>
-                        <button type="button" onClick={() => removeLine(i)} style={{ background: 'none', border: 'none', color: '#8B3A2A', cursor: 'pointer', fontSize: '12px', padding: '4px', flexShrink: 0 }}>
-                          Fjern
-                        </button>
-                      </div>
-                    </div>
+                    <GarnLinjeVælger
+                      key={l.id ?? `new-${i}`}
+                      line={l}
+                      onChange={updated => setLine(i, updated)}
+                      onRemove={() => removeLine(i)}
+                      canRemove={true}
+                      status={form.status}
+                      userYarnItems={userYarnItems}
+                      catalogColors={colorsByYarnId.get(l.catalogYarnId) ?? []}
+                      onSelectCatalogColor={c => {
+                        setLine(i, {
+                          catalogColorId: c?.id ?? null,
+                          colorName:      c?.color_name   ?? '',
+                          colorCode:      c?.color_number ?? '',
+                          hex:            c?.hex_code ? normalizeHex(c.hex_code) : (l.hex || '#A8C4C4'),
+                        })
+                      }}
+                      catalogSearch={
+                        <YarnCatalogSearch
+                          value={l.catalogQuery ?? ''}
+                          onChange={v => setLine(i, { catalogQuery: v })}
+                          placeholder="Søg producent, navn eller serie…"
+                          onSelectYarn={async y => {
+                            setLine(i, {
+                              catalogQuery:   displayYarnName(y),
+                              catalogYarnId:  y.id,
+                              catalogColorId: null,
+                              yarnBrand:      y.producer ?? '',
+                              yarnName:       displayYarnName(y),
+                              colorName:      '',
+                              colorCode:      '',
+                            })
+                            const colors = await ensureColorsLoaded(y.id)
+                            if (colors.length === 1) {
+                              const c = colors[0]
+                              setLine(i, {
+                                catalogColorId: c.id,
+                                colorName:      c.color_name   ?? '',
+                                colorCode:      c.color_number ?? '',
+                                hex:            normalizeHex(c.hex_code) || l.hex || '#A8C4C4',
+                              })
+                            }
+                          }}
+                        />
+                      }
+                    />
                   ))}
                   <button type="button" onClick={addLine} style={{ alignSelf: 'flex-start', padding: '7px 12px', borderRadius: '8px', border: '1px dashed #C0B8A8', background: '#F4EFE6', cursor: 'pointer', fontSize: '12px', color: '#2C2018', fontFamily: "'DM Sans', sans-serif" }}>
                     + Tilføj garn
@@ -1103,8 +1078,20 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                 )}
                 {entry.held_with && (
                   <div>
-                    <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '3px' }}>Strikket med</div>
+                    <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '3px' }}>Følgetråd</div>
                     <div style={{ fontSize: '13px', color: '#2C2018' }}>{entry.held_with}</div>
+                  </div>
+                )}
+                {entry.pattern_name && (
+                  <div>
+                    <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '3px' }}>Opskrift</div>
+                    <div style={{ fontSize: '13px', color: '#2C2018' }}>{entry.pattern_name}</div>
+                  </div>
+                )}
+                {entry.pattern_designer && (
+                  <div>
+                    <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '3px' }}>Designer</div>
+                    <div style={{ fontSize: '13px', color: '#2C2018' }}>{entry.pattern_designer}</div>
                   </div>
                 )}
               </div>
@@ -1194,12 +1181,15 @@ const EMPTY_NEW = {
   heldWith: '',
   notes: '',
   status: 'faerdigstrikket',
+  patternName: '',
+  patternDesigner: '',
   yarnLines: [EMPTY_YARN_LINE],
 }
 
 function NytProjektModal({ user, onClose, onSaved }) {
   const supabase = useSupabase()
   const [form, setForm]           = useState(EMPTY_NEW)
+  const [userYarnItems, setUserYarnItems] = useState([])
   const [projectImages, setProjectImages] = useState([])
   const [patternMode, setPatternMode] = useState('pdf')
   const [pdfFile, setPdfFile]     = useState(null)
@@ -1219,6 +1209,22 @@ function NytProjektModal({ user, onClose, onSaved }) {
       if (pdfThumbnailPreview && pdfThumbnailPreview.startsWith('blob:')) URL.revokeObjectURL(pdfThumbnailPreview)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // F11: hent brugerens lager én gang så "Fra mit garn"-tab kan vise det
+  useEffect(() => {
+    async function loadStash() {
+      try {
+        const { data } = await supabase
+          .from('yarn_items')
+          .select('*')
+          .order('brand', { ascending: true })
+        setUserYarnItems((data ?? []).map(fromDb))
+      } catch {
+        setUserYarnItems([])
+      }
+    }
+    loadStash()
   }, [])
 
   function setF(k, v) { setForm(p => ({ ...p, [k]: v })) }
@@ -1356,13 +1362,15 @@ function NytProjektModal({ user, onClose, onSaved }) {
       const { data: project, error: pErr } = await supabase
         .from('projects')
         .insert([{
-          user_id: user.id,
-          title: form.title || null,
-          used_at: form.usedAt || null,
-          needle_size: form.needleSize || null,
-          held_with: form.heldWith || null,
-          notes: form.notes || null,
-          status: form.status || 'faerdigstrikket',
+          user_id:          user.id,
+          title:            form.title           || null,
+          used_at:          form.usedAt          || null,
+          needle_size:      form.needleSize      || null,
+          held_with:        form.heldWith        || null,
+          notes:            form.notes           || null,
+          status:           form.status          || 'faerdigstrikket',
+          pattern_name:     form.patternName     || null,
+          pattern_designer: form.patternDesigner || null,
         }])
         .select()
         .single()
@@ -1418,7 +1426,7 @@ function NytProjektModal({ user, onClose, onSaved }) {
       const usageRows = lines.map(l => ({
         ...toUsageDb({
           projectId: project.id,
-          yarnItemId: null,
+          yarnItemId: l.yarnItemId ?? null,
           yarnName: l.yarnName,
           yarnBrand: l.yarnBrand,
           colorName: l.colorName,
@@ -1502,8 +1510,19 @@ function NytProjektModal({ user, onClose, onSaved }) {
               <input type="date" value={form.usedAt} onChange={e => setF('usedAt', e.target.value)} style={inputStyle} />
             </div>
             <div>
-              <Label>Strikket med</Label>
-              <input value={form.heldWith} onChange={e => setF('heldWith', e.target.value)} placeholder="F.eks. følgetråd" style={inputStyle} />
+              <Label>Følgetråd</Label>
+              <input value={form.heldWith} onChange={e => setF('heldWith', e.target.value)} placeholder="F.eks. mohair-tråd" style={inputStyle} />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+            <div>
+              <Label>Opskriftsnavn</Label>
+              <input value={form.patternName} onChange={e => setF('patternName', e.target.value)} placeholder="F.eks. Sierraknit Diamond Top" style={inputStyle} />
+            </div>
+            <div>
+              <Label>Designer</Label>
+              <input value={form.patternDesigner} onChange={e => setF('patternDesigner', e.target.value)} placeholder="F.eks. Sanne Fjalland" style={inputStyle} />
             </div>
           </div>
 
@@ -1511,117 +1530,52 @@ function NytProjektModal({ user, onClose, onSaved }) {
             <Label>Garn i projektet</Label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {(form.yarnLines ?? []).map((l, i) => (
-                <div key={i} style={{ border: '1px solid #EDE7D8', background: '#F9F6F0', borderRadius: '10px', padding: '10px' }}>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <div style={{ width: '22px', height: '22px', borderRadius: '6px', background: l.hex || '#A8C4C4', border: '1px solid rgba(0,0,0,.08)', flexShrink: 0, overflow: 'hidden' }}>
-                      {l.catalogColorId && (() => {
-                        const colors = colorsByYarnId.get(l.catalogYarnId) ?? []
-                        const c = colors.find(x => x.id === l.catalogColorId)
-                        return c?.image_url
-                          ? <img src={c.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                          : null
-                      })()}
-                    </div>
-                    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <div style={{ gridColumn: '1 / -1' }}>
-                        <Label>Søg i garn-katalog</Label>
-                        <YarnCatalogSearch
-                          value={l.catalogQuery ?? ''}
-                          onChange={(v) => setLine(i, { catalogQuery: v })}
-                          placeholder="Søg producent, navn eller serie…"
-                          onSelectYarn={async (y) => {
-                            setLine(i, {
-                              catalogQuery: displayYarnName(y),
-                              catalogYarnId: y.id,
-                              catalogColorId: null,
-                              yarnBrand: y.producer ?? '',
-                              yarnName: displayYarnName(y),
-                              colorName: '',
-                              colorCode: '',
-                            })
-                            const colors = await ensureColorsLoaded(y.id)
-                            if (colors.length === 1) {
-                              const c = colors[0]
-                              setLine(i, {
-                                catalogColorId: c.id,
-                                colorName: c.color_name ?? '',
-                                colorCode: c.color_number ?? '',
-                                hex: normalizeHex(c.hex_code) || l.hex || '#A8C4C4',
-                              })
-                            }
-                          }}
-                        />
-                      </div>
-
-                      {l.catalogYarnId && (
-                        <div style={{ gridColumn: '1 / -1' }}>
-                          <Label>Farve (fra katalog)</Label>
-                          <select
-                            value={l.catalogColorId ?? ''}
-                            onChange={(e) => {
-                              const id = e.target.value || null
-                              const colors = colorsByYarnId.get(l.catalogYarnId) ?? []
-                              const c = colors.find(x => x.id === id) || null
-                              setLine(i, {
-                                catalogColorId: id,
-                                colorName: c?.color_name ?? '',
-                                colorCode: c?.color_number ?? '',
-                                hex: c?.hex_code ? normalizeHex(c.hex_code) : (l.hex || '#A8C4C4'),
-                              })
-                            }}
-                            style={inputStyle}
-                          >
-                            <option value="">Vælg farve…</option>
-                            {(colorsByYarnId.get(l.catalogYarnId) ?? []).map(c => (
-                              <option key={c.id} value={c.id}>
-                                {c.color_number ? `${c.color_number} · ` : ''}{c.color_name}
-                              </option>
-                            ))}
-                          </select>
-                          <div style={{ fontSize: '10px', color: '#8B7D6B', marginTop: '4px' }}>
-                            Tip: hvis farven har billede i kataloget, bruges det automatisk som “garn-klip”.
-                          </div>
-                        </div>
-                      )}
-
-                      <div>
-                        <Label>Mærke</Label>
-                        <input value={l.yarnBrand} onChange={e => setLine(i, { yarnBrand: e.target.value })} placeholder="F.eks. Permin" style={inputStyle} />
-                      </div>
-                      <div>
-                        <Label>Garn</Label>
-                        <input value={l.yarnName} onChange={e => setLine(i, { yarnName: e.target.value })} placeholder="F.eks. Bella" style={inputStyle} />
-                      </div>
-                      <div>
-                        <Label>Farvenavn</Label>
-                        <input value={l.colorName} onChange={e => setLine(i, { colorName: e.target.value })} placeholder="F.eks. Blå/Beige/Brun" style={inputStyle} />
-                      </div>
-                      <div>
-                        <Label>Farvenr.</Label>
-                        <input value={l.colorCode} onChange={e => setLine(i, { colorCode: e.target.value })} placeholder="F.eks. 883174" style={inputStyle} />
-                      </div>
-                      <div>
-                        <Label>Antal nøgler brugt</Label>
-                        <input type="number" step="0.25" min="0" value={l.quantityUsed} onChange={e => setLine(i, { quantityUsed: e.target.value })} style={inputStyle} />
-                      </div>
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        <div style={{ flex: 1 }}>
-                          <Label>Farve (hex)</Label>
-                          <input value={l.hex} onChange={e => setLine(i, { hex: e.target.value })} placeholder="#A8C4C4" style={inputStyle} />
-                        </div>
-                        <div style={{ flexShrink: 0 }}>
-                          <Label>&nbsp;</Label>
-                          <input type="color" value={l.hex || '#A8C4C4'} onChange={e => setLine(i, { hex: e.target.value })} style={{ width: '40px', height: '38px', border: '1px solid #D0C8BA', borderRadius: '6px', background: 'transparent' }} />
-                        </div>
-                      </div>
-                    </div>
-                    {(form.yarnLines?.length ?? 0) > 1 && (
-                      <button type="button" onClick={() => removeLine(i)} style={{ background: 'none', border: 'none', color: '#8B3A2A', cursor: 'pointer', fontSize: '12px' }}>
-                        Fjern
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <GarnLinjeVælger
+                  key={i}
+                  line={l}
+                  onChange={updated => setLine(i, updated)}
+                  onRemove={() => removeLine(i)}
+                  canRemove={(form.yarnLines?.length ?? 0) > 1}
+                  status={form.status}
+                  userYarnItems={userYarnItems}
+                  catalogColors={colorsByYarnId.get(l.catalogYarnId) ?? []}
+                  onSelectCatalogColor={c => {
+                    setLine(i, {
+                      catalogColorId: c?.id ?? null,
+                      colorName:      c?.color_name   ?? '',
+                      colorCode:      c?.color_number ?? '',
+                      hex:            c?.hex_code ? normalizeHex(c.hex_code) : (l.hex || '#A8C4C4'),
+                    })
+                  }}
+                  catalogSearch={
+                    <YarnCatalogSearch
+                      value={l.catalogQuery ?? ''}
+                      onChange={v => setLine(i, { catalogQuery: v })}
+                      placeholder="Søg producent, navn eller serie…"
+                      onSelectYarn={async y => {
+                        setLine(i, {
+                          catalogQuery:   displayYarnName(y),
+                          catalogYarnId:  y.id,
+                          catalogColorId: null,
+                          yarnBrand:      y.producer ?? '',
+                          yarnName:       displayYarnName(y),
+                          colorName:      '',
+                          colorCode:      '',
+                        })
+                        const colors = await ensureColorsLoaded(y.id)
+                        if (colors.length === 1) {
+                          const c = colors[0]
+                          setLine(i, {
+                            catalogColorId: c.id,
+                            colorName:      c.color_name   ?? '',
+                            colorCode:      c.color_number ?? '',
+                            hex:            normalizeHex(c.hex_code) || l.hex || '#A8C4C4',
+                          })
+                        }
+                      }}
+                    />
+                  }
+                />
               ))}
               <button type="button" onClick={addLine} style={{ alignSelf: 'flex-start', padding: '7px 12px', borderRadius: '8px', border: '1px dashed #C0B8A8', background: '#F4EFE6', cursor: 'pointer', fontSize: '12px', color: '#2C2018', fontFamily: "'DM Sans', sans-serif" }}>
                 + Tilføj garn

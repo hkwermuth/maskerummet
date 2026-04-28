@@ -222,7 +222,7 @@ export default function BrugNoeglerModal({
                   <Field label="Dato"><input type="date" value={newProject.usedAt} onChange={e => setNP('usedAt', e.target.value)} style={inputStyle} /></Field>
                   <Field label="Pindestørrelse"><input value={newProject.needleSize} onChange={e => setNP('needleSize', e.target.value)} placeholder="mm" style={inputStyle} /></Field>
                 </div>
-                <Field label="Strikket med"><input value={newProject.heldWith} onChange={e => setNP('heldWith', e.target.value)} style={inputStyle} /></Field>
+                <Field label="Følgetråd"><input value={newProject.heldWith} onChange={e => setNP('heldWith', e.target.value)} style={inputStyle} /></Field>
                 <Field label="Noter"><textarea value={newProject.notes} onChange={e => setNP('notes', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></Field>
               </div>
             )}
@@ -230,7 +230,7 @@ export default function BrugNoeglerModal({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             <Field label={`Antal nøgler brugt (max ${maxQty})`}>
-              <input type="number" step="0.25" min="0.25" max={maxQty} value={form.quantityUsed} onChange={e => setF('quantityUsed', parseFloat(e.target.value))} style={inputStyle} />
+              <input type="number" step="0.5" min="0.5" max={maxQty} value={form.quantityUsed} onChange={e => setF('quantityUsed', parseFloat(e.target.value))} style={inputStyle} />
             </Field>
             <Field label="Dato"><input type="date" value={form.usedAt} onChange={e => setF('usedAt', e.target.value)} style={inputStyle} /></Field>
           </div>
@@ -241,7 +241,7 @@ export default function BrugNoeglerModal({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
             <Field label="Pindestørrelse brugt"><input value={form.needleSize} onChange={e => setF('needleSize', e.target.value)} placeholder={yarn.pindstr || 'mm'} style={inputStyle} /></Field>
-            <Field label="Strikket sammen med"><input value={form.heldWith} onChange={e => setF('heldWith', e.target.value)} placeholder="F.eks. Bella 883174" style={inputStyle} /></Field>
+            <Field label="Følgetråd"><input value={form.heldWith} onChange={e => setF('heldWith', e.target.value)} placeholder="F.eks. Bella 883174" style={inputStyle} /></Field>
           </div>
 
           <div style={{ borderTop: '1px solid #EDE7D8', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -1,8 +1,8 @@
 /**
- * Tests for AntalStepper (F3).
+ * Tests for AntalStepper (F3 + F11).
  *
  * Dækker acceptkriterierne:
- * AC8  — −/+ med min 0, step 0.25, komma-input accepteres
+ * AC8  — −/+ med min 0, step 0.5 (default fra F11), komma-input accepteres
  */
 
 import { describe, it, expect, vi } from 'vitest'
@@ -69,29 +69,29 @@ describe('AntalStepper — AC8: − stopper ved min=0', () => {
   it('klik på − kalder onChange med (value - step) men aldrig under min', async () => {
     const AntalStepper = await importAntalStepper()
     const onChange = vi.fn()
-    render(<AntalStepper value={0.25} onChange={onChange} />)
+    render(<AntalStepper value={0.5} onChange={onChange} />)
 
     const decBtn = screen.getByRole('button', { name: /mindsk antal nøgler/i })
     fireEvent.click(decBtn)
 
-    // 0.25 - 0.25 = 0 (ikke negativt)
+    // 0.5 - 0.5 = 0 (ikke negativt)
     expect(onChange).toHaveBeenCalledWith(0)
   })
 
-  it('klik på − fra value=1 giver 0.75 (step=0.25)', async () => {
+  it('klik på − fra value=1 giver 0.5 (step=0.5 default)', async () => {
     const AntalStepper = await importAntalStepper()
     const onChange = vi.fn()
     render(<AntalStepper value={1} onChange={onChange} />)
 
     fireEvent.click(screen.getByRole('button', { name: /mindsk antal nøgler/i }))
 
-    expect(onChange).toHaveBeenCalledWith(0.75)
+    expect(onChange).toHaveBeenCalledWith(0.5)
   })
 })
 
 // ── AC8: + inkrement ─────────────────────────────────────────────────────────
 
-describe('AntalStepper — AC8: + inkrementerer med step=0.25', () => {
+describe('AntalStepper — AC8: + inkrementerer med step=0.5 (F11 default)', () => {
   it('klik på + kalder onChange med (value + step)', async () => {
     const AntalStepper = await importAntalStepper()
     const onChange = vi.fn()
@@ -99,17 +99,17 @@ describe('AntalStepper — AC8: + inkrementerer med step=0.25', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /forøg antal nøgler/i }))
 
-    expect(onChange).toHaveBeenCalledWith(1.25)
+    expect(onChange).toHaveBeenCalledWith(1.5)
   })
 
-  it('klik på + fra 0 giver 0.25', async () => {
+  it('klik på + fra 0 giver 0.5', async () => {
     const AntalStepper = await importAntalStepper()
     const onChange = vi.fn()
     render(<AntalStepper value={0} onChange={onChange} />)
 
     fireEvent.click(screen.getByRole('button', { name: /forøg antal nøgler/i }))
 
-    expect(onChange).toHaveBeenCalledWith(0.25)
+    expect(onChange).toHaveBeenCalledWith(0.5)
   })
 
   it('+ knap er aldrig disabled', async () => {

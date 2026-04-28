@@ -2,12 +2,13 @@
 
 // −/n/+ stepper til "Antal nøgler".
 // Touch-targets ≥ 44px på knapper. Accepterer komma som decimal (da-locale).
+// Default-step er 0.5 (hele + halve nøgler) — gælder Mit Garnlager + projekt-form.
 
 export default function AntalStepper({
   value,
   onChange,
   min = 0,
-  step = 0.25,
+  step = 0.5,
   ariaLabel = 'Antal nøgler',
 }) {
   const num = parseDanishNumber(value)

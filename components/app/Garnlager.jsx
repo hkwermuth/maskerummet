@@ -21,6 +21,7 @@ import FarvekategoriCirkler from './FarvekategoriCirkler'
 import FlereFarverVælger from './FlereFarverVælger'
 import AntalStepper from './AntalStepper'
 import { detectColorFamily, COLOR_FAMILY_DEFAULT_HEX, yarnMatchesStashSearch } from '@/lib/data/colorFamilies'
+import { parseCombinedColorInput, combineColorDisplay } from '@/lib/colorInput'
 import { dedupeYarnNameFromBrand, gradientFromHexColors, primaryFiberLabel } from '@/lib/yarn-display'
 import { YARN_WEIGHT_LABELS } from '@/lib/yarn-weight'
 import { exportGarnlager } from '@/lib/export/exportGarnlager'
@@ -65,28 +66,6 @@ function isCatalogSwatchUrl(url) {
   // Permin uses 100x100 swatches at /img/spec/<hash>.png
   if (s.includes('/img/spec/')) return true
   return false
-}
-
-// Splitter et kombineret farve-input til separate {colorName, colorCode}.
-// Heuristik: 3+ sammenhængende cifre er nummer, resten er navn.
-// "883174 Rosa" → { colorCode: '883174', colorName: 'Rosa' }
-// "Rosa 883174" → { colorCode: '883174', colorName: 'Rosa' }
-// "Rosa"        → { colorCode: '',       colorName: 'Rosa' }
-// "883174"      → { colorCode: '883174', colorName: '' }
-function parseCombinedColorInput(input) {
-  const s = String(input || '').trim()
-  if (!s) return { colorName: '', colorCode: '' }
-  const codeMatch = s.match(/(\d{3,})/)
-  if (codeMatch) {
-    const code = codeMatch[1]
-    const name = s.replace(code, '').replace(/\s+/g, ' ').trim()
-    return { colorName: name, colorCode: code }
-  }
-  return { colorName: s, colorCode: '' }
-}
-
-function combineColorDisplay(colorCode, colorName) {
-  return [colorCode, colorName].filter(s => s && String(s).trim()).join(' ').trim()
 }
 
 // ─── Garn-katalog søgning (Supabase `yarns_full`) ─────────────────────────────

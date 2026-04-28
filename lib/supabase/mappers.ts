@@ -136,7 +136,9 @@ export function fromUsageDb(row: Record<string, any>) {
     hex:             row.hex_color        ?? '#A8C4C4',
     catalogYarnId:   row.catalog_yarn_id  ?? null,
     catalogColorId:  row.catalog_color_id ?? null,
-    quantityUsed:    row.quantity_used,
+    // F11 2026-04-28: rund til nærmeste 0.5 så historisk 0.25/0.75-data
+    // vises konsistent med ny step=0.5-stepper. DB-værdien bevares uændret.
+    quantityUsed:    roundToHalfStep(row.quantity_used),
     usedFor:         row.used_for,
     needleSize:      row.needle_size,
     heldWith:        row.held_with,
@@ -146,4 +148,11 @@ export function fromUsageDb(row: Record<string, any>) {
     usedAt:          row.used_at,
     createdAt:       row.created_at,
   }
+}
+
+function roundToHalfStep(v: unknown): number | null {
+  if (v == null || v === '') return null
+  const n = typeof v === 'number' ? v : parseFloat(String(v))
+  if (!Number.isFinite(n)) return null
+  return Math.round(n * 2) / 2
 }
