@@ -2,7 +2,8 @@
  * Kort-render-tests for Garnlager (F4).
  *
  * Dækker acceptkriterierne:
- * AC1  — Billedfelt: foto vises med <img>, single hex = solid bg, hexColors≥2 = gradient
+ * AC1  — Billedfelt: ALDRIG <img> på kortet uanset imageUrl/catalogImageUrl;
+ *         header bruger altid gradientFromHexColors som baggrund
  * AC2  — Farvenavn-pille: colorName, eller "Multi (N)" ved hexColors≥2, tomt colorName
  * AC3  — Mærke i UPPERCASE over garnnavn
  * AC7  — Tags: vægt-chip + fiber-chip; ingen "Katalog"-chip
@@ -10,10 +11,13 @@
  * AC9  — Detaljelinje "{colorCode} · {antal} ngl · {status}" med · separator
  * AC10 — Pille har border + boxShadow (WCAG kontrast)
  * Dedupe — brand fjernes fra garnnavn på kortet
+ * B1  — Edit-modal: garn med catalogYarnId viser katalog-navn i søgefeltet UDEN dropdown
+ * B2  — Søgefeltet åbner dropdown ved bruger-input (add-flow uændret)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import React from 'react'
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
@@ -119,15 +123,49 @@ async function renderAndWait(yarns = [BASE_YARN]) {
   })
 }
 
-// ── AC1: Billedfelt ──────────────────────────────────────────────────────────
+// ── AC1: Billedfelt — ingen <img> på garnkortet ──────────────────────────────
 
 describe('Garnlager kort — AC1: billedfelt', () => {
-  it('garn med imageUrl: <img> rendres med src = imageUrl', async () => {
+  it('A1: garn med imageUrl renderer ALDRIG <img> på kortet', async () => {
     const yarn = { ...BASE_YARN, imageUrl: 'https://example.com/garn.jpg' }
     await renderAndWait([yarn])
 
-    const img = screen.getByRole('img', { name: yarn.name })
-    expect(img).toHaveAttribute('src', 'https://example.com/garn.jpg')
+    // Efter ændringen vises ingen foto-img på kortet uanset imageUrl
+    const imgs = screen.queryAllByRole('img', { name: yarn.name })
+    expect(imgs).toHaveLength(0)
+    // Heller ingen img der bruger imageUrl som src
+    const allImgs = document.querySelectorAll('img')
+    const fotoImg = Array.from(allImgs).find(el =>
+      el.getAttribute('src') === 'https://example.com/garn.jpg'
+    )
+    expect(fotoImg).toBeUndefined()
+  })
+
+  it('A1: garn med catalogImageUrl renderer ALDRIG <img> på kortet', async () => {
+    const yarn = { ...BASE_YARN, catalogImageUrl: 'https://catalog.example.com/swatch.png' }
+    await renderAndWait([yarn])
+
+    const allImgs = document.querySelectorAll('img')
+    const swatchImg = Array.from(allImgs).find(el =>
+      el.getAttribute('src') === 'https://catalog.example.com/swatch.png'
+    )
+    expect(swatchImg).toBeUndefined()
+  })
+
+  it('A1: garn med både imageUrl og catalogImageUrl → ingen <img> på kortet', async () => {
+    const yarn = {
+      ...BASE_YARN,
+      imageUrl: 'https://example.com/foto.jpg',
+      catalogImageUrl: 'https://catalog.example.com/swatch.png',
+    }
+    await renderAndWait([yarn])
+
+    const allImgs = document.querySelectorAll('img')
+    const fotoImg = Array.from(allImgs).find(el =>
+      el.getAttribute('src') === 'https://example.com/foto.jpg' ||
+      el.getAttribute('src') === 'https://catalog.example.com/swatch.png'
+    )
+    expect(fotoImg).toBeUndefined()
   })
 
   it('garn uden foto og uden hexColors: billedfelts background bruger hex-farven', async () => {
@@ -422,5 +460,114 @@ describe('Garnlager kort — to garn i grid', () => {
 
     const manuelIkoner = screen.getAllByTitle('Manuelt tilføjet')
     expect(manuelIkoner).toHaveLength(1)
+  })
+})
+
+// ── B1: Edit-modal viser katalog-navn uden dropdown ──────────────────────────
+
+describe('Garnlager — B1: edit-modal viser katalog-navn uden at åbne dropdown', () => {
+  it('B1: søgefeltet er udfyldt med katalog-navn men dropdown er lukket', async () => {
+    const { fetchYarnFullById } = await import('@/lib/catalog')
+    const CATALOG_YARN = {
+      id: 'cat-yarn-1',
+      name: 'Alpaca 1',
+      full_name: 'Isager Alpaca 1',
+      producer: 'Isager',
+      thickness_category: 'fingering',
+    }
+    vi.mocked(fetchYarnFullById).mockResolvedValue(CATALOG_YARN)
+
+    const yarnWithCatalog = {
+      ...BASE_YARN,
+      id: 'yarn-cat',
+      name: 'Isager Alpaca 1',
+      brand: 'Isager',
+      catalogYarnId: 'cat-yarn-1',
+    }
+
+    const user = userEvent.setup()
+    mockFrom.mockImplementation(() => ({
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [yarnWithCatalog], error: null }),
+      delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: yarnWithCatalog, error: null }),
+    }))
+
+    render(<Garnlager user={FAKE_USER} onRequestLogin={() => {}} />)
+
+    // Vent på at garnlisten loader
+    await waitFor(() => expect(screen.getByText('Isager')).toBeInTheDocument())
+
+    // Klik på garnkortet for at åbne edit-modal
+    await user.click(screen.getByText('Alpaca 1'))
+
+    // Vent på at modalen er åben
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /gem ændringer/i })).toBeInTheDocument()
+    )
+
+    // Vent på at fetchYarnFullById er kaldt og søgefeltet er udfyldt
+    await waitFor(() => {
+      const searchInput = screen.getByRole('textbox', {
+        name: /skriv mærke eller garnnavn fra garn-kataloget/i,
+      })
+      expect(searchInput).toHaveValue('Isager Alpaca 1')
+    })
+
+    // Dropdown MÅ IKKE være åben — ingen søgeresultater vises
+    expect(screen.queryByText(/søger i katalog/i)).not.toBeInTheDocument()
+    // Ingen liste-container med hits (hits-elementet har ikke vores mock-navn fra searchYarnsFull)
+    // searchYarnsFull er mockat til [] så ingen resultater kan vises
+    const searchInput = screen.getByRole('textbox', {
+      name: /skriv mærke eller garnnavn fra garn-kataloget/i,
+    })
+    // Søge-inputtet er udfyldt men dropdown er ikke åben
+    expect(searchInput).toHaveValue('Isager Alpaca 1')
+    // Ingen dropdown: tjek at ingen søgeresultat-item med garnet vises via søgning
+    // (den vises via KatalogInfoblok, ikke dropdown)
+    const dropdownItem = document.querySelector('[style*="position: absolute"][style*="top: 100%"]')
+    expect(dropdownItem).toBeNull()
+  })
+})
+
+// ── B2: Søgefelt åbner dropdown ved bruger-input ─────────────────────────────
+
+describe('Garnlager — B2: dropdown åbner ved bruger-input i søgefelt', () => {
+  it('B2: typing i søgefeltet i add-modal åbner dropdown med søgeresultater', async () => {
+    const { searchYarnsFull } = await import('@/lib/catalog')
+    const SEARCH_RESULT = {
+      id: 'hit-1',
+      name: 'Merino Extra Fine',
+      full_name: 'Drops Merino Extra Fine',
+      producer: 'Drops',
+      thickness_category: 'fingering',
+    }
+    vi.mocked(searchYarnsFull).mockResolvedValue([SEARCH_RESULT])
+
+    const user = userEvent.setup()
+    render(<Garnlager user={FAKE_USER} onRequestLogin={() => {}} />)
+
+    await waitFor(() => expect(screen.getByText(BASE_YARN.brand)).toBeInTheDocument())
+
+    // Åbn add-modal
+    await user.click(screen.getByRole('button', { name: /\+ tilføj garn/i }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /tilføj til lager/i })).toBeInTheDocument()
+    )
+
+    // Skriv i søgefeltet (bruger-initieret)
+    const searchInput = screen.getByRole('textbox', {
+      name: /skriv mærke eller garnnavn fra garn-kataloget/i,
+    })
+    await user.type(searchInput, 'Drops')
+
+    // Dropdown åbner med søgeresultater
+    await waitFor(() => {
+      expect(screen.getByText('Drops Merino Extra Fine')).toBeInTheDocument()
+    }, { timeout: 2000 })
   })
 })

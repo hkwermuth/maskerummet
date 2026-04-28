@@ -78,6 +78,9 @@ function YarnCatalogSearch({ value, onChange, onSelectYarn, placeholder, autoFoc
   const wrapRef = useRef(null)
   const inputRef = useRef(null)
   const debounceRef = useRef(null)
+  // Kun bruger-initieret input (typing/focus) trigger søgning + dropdown.
+  // Programmatisk pre-udfyldning ved redigering må ikke åbne dropdown'en.
+  const userInitiatedRef = useRef(false)
 
   useEffect(() => {
     if (!autoFocus) return
@@ -94,6 +97,7 @@ function YarnCatalogSearch({ value, onChange, onSelectYarn, placeholder, autoFoc
       setOpen(false)
       return
     }
+    if (!userInitiatedRef.current) return
     clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
@@ -118,8 +122,8 @@ function YarnCatalogSearch({ value, onChange, onSelectYarn, placeholder, autoFoc
       <input
         ref={inputRef}
         value={value}
-        onChange={e => onChange(e.target.value)}
-        onFocus={() => hits.length > 0 && setOpen(true)}
+        onChange={e => { userInitiatedRef.current = true; onChange(e.target.value) }}
+        onFocus={() => { userInitiatedRef.current = true; if (hits.length > 0) setOpen(true) }}
         onKeyDown={e => {
           // Esc lukker dropdown (uden at også lukke den omsluttende modal).
           if (e.key === 'Escape' && open) {
@@ -767,9 +771,6 @@ export default function Garnlager({ user, onRequestLogin }) {
             const displayName = dedupeYarnNameFromBrand(y.name, y.brand)
             const colorBg = gradientFromHexColors(y.hexColors, y.hex)
             const isMulti = Array.isArray(y.hexColors) && y.hexColors.length >= 2
-            const headerUrl = y.imageUrl || y.catalogImageUrl
-            const isSwatch = !y.imageUrl && y.catalogImageUrl && isCatalogSwatchUrl(y.catalogImageUrl)
-            const showPhoto = headerUrl && !isSwatch
             const colorPillText = y.colorName || (isMulti ? `Multi (${y.hexColors.length})` : '')
             const weightLabel = (y.weight && YARN_WEIGHT_LABELS[String(y.weight).toLowerCase()])
               || y.weight
@@ -783,50 +784,15 @@ export default function Garnlager({ user, onRequestLogin }) {
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(44,32,24,.13)' }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
               >
-                {/* Billedfelt — fyldt med foto, swatch-på-farve, eller solid/gradient */}
+                {/* Farvefelt — viser altid garnets farve(r) som baggrund. */}
                 {/* "Brugt op"-status: greyscale + badge så kortet visuelt læses som arkiveret */}
                 <div style={{
                   position: 'relative',
                   height: '120px',
-                  background: showPhoto ? '#F4EFE6' : colorBg,
+                  background: colorBg,
                   overflow: 'hidden',
                   filter: y.status === 'Brugt op' ? 'grayscale(1)' : 'none',
                 }}>
-                  {showPhoto && (
-                    <img
-                      src={headerUrl}
-                      alt={y.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  )}
-                  {isSwatch && (
-                    <div style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      <div style={{
-                        width: 76,
-                        height: 76,
-                        borderRadius: 12,
-                        background: 'rgba(255,255,255,.72)',
-                        border: '1px solid rgba(44,32,24,.15)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 2px 10px rgba(44,32,24,.12)',
-                      }}>
-                        <img
-                          src={headerUrl}
-                          alt={y.name}
-                          style={{ width: 64, height: 64, objectFit: 'contain' }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
                   {/* "Brugt op"-badge — øverste venstre, F9 src-warning-tokens */}
                   {y.status === 'Brugt op' && (
                     <span
@@ -1230,12 +1196,12 @@ export default function Garnlager({ user, onRequestLogin }) {
                       )}
                       <div>
                         <div style={{ fontSize: '12px', color: '#2C2018', fontWeight: 500 }}>{imagePreview ? 'Skift billede' : 'Upload billede'}</div>
-                        <div style={{ fontSize: '11px', color: '#8B7D6B' }}>JPG eller PNG — vises på garnkortet</div>
+                        <div style={{ fontSize: '11px', color: '#8B7D6B' }}>JPG eller PNG — gemmes på dit garn</div>
                       </div>
                     </label>
                     {!imagePreview && form.catalogImageUrl && isCatalogSwatchUrl(form.catalogImageUrl) && (
                       <div style={{ fontSize: '11px', color: '#8B7D6B', lineHeight: '1.45' }}>
-                        Katalogbilledet er en lille farveprøve (100×100). Upload et foto for skarpere kort.
+                        Katalogbilledet er en lille farveprøve (100×100). Upload et foto, hvis du vil gemme et billede sammen med dit garn.
                       </div>
                     )}
                     {imagePreview && (
