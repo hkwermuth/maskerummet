@@ -3,10 +3,13 @@
 import { useId, useState, useMemo } from 'react'
 import AntalStepper from './AntalStepper'
 import FarvekategoriCirkler from './FarvekategoriCirkler'
+import GarnvaegtInfoModal from './GarnvaegtInfoModal'
 import { displayYarnName } from '@/lib/catalog'
 import { detectColorFamily, COLOR_FAMILY_DEFAULT_HEX } from '@/lib/data/colorFamilies'
 import { parseCombinedColorInput, combineColorDisplay } from '@/lib/colorInput'
 import { dedupeYarnNameFromBrand } from '@/lib/yarn-display'
+
+const MANUAL_WEIGHTS = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
 
 // F11: Tre-tabs vælger pr. garn-linje i projekt-formularen.
 //   • "Fra mit garn"  — vælg fra brugerens yarn_items-lager (default ved i_gang/færdig)
@@ -291,6 +294,8 @@ function FraKatalogTab({ line, patch, catalogSearch, onSelectCatalogYarn, catalo
 // ── Tab 3: Manuelt ────────────────────────────────────────────────────────────
 
 function ManueltTab({ line, patch }) {
+  const [showWeightInfo, setShowWeightInfo] = useState(false)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div className="bg-striq-src-warning-bg text-striq-src-warning-fg" style={{ borderRadius: 8, padding: '8px 10px', fontSize: 12 }}>
@@ -337,6 +342,51 @@ function ManueltTab({ line, patch }) {
       </div>
 
       <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.1em', color: '#8B7D6B' }}>Garnvægt</div>
+          <button
+            type="button"
+            onClick={() => setShowWeightInfo(true)}
+            aria-label="Vis garnvægt-tabel"
+            style={{
+              minWidth: 44, minHeight: 44,
+              padding: 0,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#2C4A3E',
+              fontSize: 14,
+              fontFamily: "'DM Sans', sans-serif",
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              marginLeft: -4,
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{
+                width: 18, height: 18,
+                borderRadius: '50%',
+                border: '1.5px solid #2C4A3E',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11, fontWeight: 700, lineHeight: 1,
+                fontStyle: 'italic',
+              }}
+            >
+              i
+            </span>
+          </button>
+        </div>
+        <select
+          value={line?.weight ?? ''}
+          onChange={e => patch({ weight: e.target.value || null })}
+          style={{ ...inputStyle, cursor: 'pointer' }}
+        >
+          <option value="">Vælg garnvægt…</option>
+          {MANUAL_WEIGHTS.map(w => <option key={w} value={w}>{w}</option>)}
+        </select>
+      </div>
+
+      <div>
         <Label>Farvekategori</Label>
         <FarvekategoriCirkler
           colorCategory={line?.colorCategory}
@@ -345,6 +395,8 @@ function ManueltTab({ line, patch }) {
           onExactHexChange={hex => patch({ hex })}
         />
       </div>
+
+      {showWeightInfo && <GarnvaegtInfoModal onClose={() => setShowWeightInfo(false)} />}
     </div>
   )
 }

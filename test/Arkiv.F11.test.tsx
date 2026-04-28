@@ -1,10 +1,10 @@
 /**
- * F11 – Arkiv: pattern-felter, Følgetråd-rename, GarnLinjeVælger-integration
+ * F11 – Arkiv: pattern-felter, GarnLinjeVælger-integration
  *
  * AC 1   NytProjektModal viser "Opskriftsnavn" og "Designer"
  * AC 2   DetailModal/edit-mode viser samme to felter
  * AC 3   Read-only visning i DetailModal viser opskriftsnavn + designer hvis udfyldt
- * AC 4   "Følgetråd" er synlig i NytProjektModal og DetailModal (edit + read-only)
+ * AC 4   "Følgetråd"-feltet er FJERNET fra UI (post-F11/2026-04-28)
  * AC 6   GarnLinjeVælger renderes i NytProjektModal ("Garn i projektet")
  * AC 13  Brugeren kan tilføje ≥2 garn-linjer (+ Tilføj garn-knap)
  */
@@ -178,7 +178,7 @@ describe('AC1 – NytProjektModal viser Opskriftsnavn og Designer', () => {
     })
   })
 
-  it('viser "Følgetråd"-felt (ikke "Strikket med") i NytProjektModal', async () => {
+  it('viser IKKE "Følgetråd"-felt i NytProjektModal (fjernet post-F11)', async () => {
     const user = userEvent.setup()
     vi.mocked(useSupabase).mockReturnValue(buildSupabaseMock([]) as never)
     render(<Arkiv user={mockUser} onRequestLogin={vi.fn()} />)
@@ -188,11 +188,13 @@ describe('AC1 – NytProjektModal viser Opskriftsnavn og Designer', () => {
     })
     await user.click(screen.getByRole('button', { name: /\+ nyt projekt/i }))
 
+    // Vent på at modal er åben (Designer-feltet er stadig der)
     await waitFor(() => {
-      expect(screen.getByText('Følgetråd')).toBeInTheDocument()
+      expect(screen.getByText('Designer')).toBeInTheDocument()
     })
 
-    // "Strikket med" må IKKE forekomme i NytProjektModal
+    // "Følgetråd" og "Strikket med" må IKKE forekomme — feltet er fjernet
+    expect(screen.queryByText(/^følgetråd$/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/strikket med/i)).not.toBeInTheDocument()
   })
 })
@@ -281,7 +283,7 @@ describe('AC2 – DetailModal/edit-mode viser Opskriftsnavn og Designer', () => 
     })
   })
 
-  it('viser Følgetråd-label i DetailModal edit-mode', async () => {
+  it('viser IKKE Følgetråd-label i DetailModal edit-mode (fjernet post-F11)', async () => {
     const user = userEvent.setup()
     vi.mocked(useSupabase).mockReturnValue(buildSupabaseMock([projectWithPattern]) as never)
     render(<Arkiv user={mockUser} onRequestLogin={vi.fn()} />)
@@ -296,9 +298,11 @@ describe('AC2 – DetailModal/edit-mode viser Opskriftsnavn og Designer', () => 
     })
     await user.click(screen.getByRole('button', { name: /^Rediger$/ }))
 
+    // Designer er stadig synlig i edit-mode (sanity-check), Følgetråd er ikke
     await waitFor(() => {
-      expect(screen.getByText('Følgetråd')).toBeInTheDocument()
+      expect(screen.getByText('Designer')).toBeInTheDocument()
     })
+    expect(screen.queryByText(/^følgetråd$/i)).not.toBeInTheDocument()
   })
 
   it('Opskriftsnavn-felt er præfyldt med gemte data', async () => {
@@ -377,7 +381,7 @@ describe('AC3 – Read-only DetailModal viser opskriftsnavn + designer', () => {
     })
   })
 
-  it('viser Følgetråd og held_with-værdien i read-only view', async () => {
+  it('viser IKKE Følgetråd-label i read-only view (fjernet post-F11)', async () => {
     const user = userEvent.setup()
     vi.mocked(useSupabase).mockReturnValue(buildSupabaseMock([projectWithPattern]) as never)
     render(<Arkiv user={mockUser} onRequestLogin={vi.fn()} />)
@@ -387,8 +391,10 @@ describe('AC3 – Read-only DetailModal viser opskriftsnavn + designer', () => {
     })
     await user.click(screen.getByText('Trøje med opskrift'))
 
+    // Designer-værdi vises (sanity-check at modal er åben), men Følgetråd-label gør ikke
     await waitFor(() => {
-      expect(screen.getByText('Mohair')).toBeInTheDocument()
+      expect(screen.getByText('Sanne Fjalland')).toBeInTheDocument()
     })
+    expect(screen.queryByText(/^følgetråd$/i)).not.toBeInTheDocument()
   })
 })

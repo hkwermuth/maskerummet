@@ -103,6 +103,46 @@ const PROJECT_STATUS_CHIP_STYLE = {
   letterSpacing: '.02em',
 }
 
+// Status-accent matcher Garnlager.STATUS_COLORS mønstret så systemet føles ét.
+const PROJECT_STATUS_ACCENT = {
+  vil_gerne:       { bg: '#D8D0E8', fg: '#3C2A5C' },
+  i_gang:          { bg: '#FFE0C4', fg: '#7A3C10' },
+  faerdigstrikket: { bg: '#D0E8D4', fg: '#2A5C35' },
+}
+
+function titleLabelForStatus(status) {
+  if (status === 'vil_gerne') return 'Hvad vil du strikke?'
+  if (status === 'i_gang')    return 'Hvad strikker du?'
+  return 'Hvad strikkede du?'
+}
+
+function StatusAccentBar({ status }) {
+  const c = PROJECT_STATUS_ACCENT[status] ?? PROJECT_STATUS_ACCENT.faerdigstrikket
+  const label = PROJECT_STATUS_LABELS[status] ?? PROJECT_STATUS_LABELS.faerdigstrikket
+  return (
+    <div
+      role="status"
+      aria-label={`Projektstatus: ${label}`}
+      style={{
+        background: c.bg,
+        color: c.fg,
+        padding: '8px 12px',
+        borderRadius: 8,
+        fontSize: 12,
+        fontWeight: 600,
+        fontFamily: "'DM Sans', sans-serif",
+        letterSpacing: '.04em',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+      }}
+    >
+      <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: '50%', background: c.fg, opacity: 0.65 }} />
+      {label}
+    </div>
+  )
+}
+
 const formatDate = formatDanish
 
 const inputStyle = {
@@ -380,7 +420,6 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     title:           entry?.title            ?? '',
     usedAt:          entry?.used_at          ?? '',
     needleSize:      entry?.needle_size      ?? '',
-    heldWith:        entry?.held_with        ?? '',
     notes:           entry?.notes            ?? '',
     status:          entry?.status           ?? 'faerdigstrikket',
     patternName:     entry?.pattern_name     ?? '',
@@ -434,13 +473,16 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // F11: hent brugerens lager én gang så "Fra mit garn"-tab kan vise det
+  // F11: hent brugerens lager én gang så "Fra mit garn"-tab kan vise det.
+  // Kun garn som faktisk findes i lageret (status: På lager / I brug) — ikke
+  // ønskeliste eller brugt op. Et projekt skal kunne kobles til reelt garn.
   useEffect(() => {
     async function loadStash() {
       try {
         const { data } = await supabase
           .from('yarn_items')
           .select('*')
+          .in('status', ['På lager', 'I brug'])
           .order('brand', { ascending: true })
         setUserYarnItems((data ?? []).map(fromDb))
       } catch {
@@ -623,11 +665,13 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     setSaving(true); setSaveError(null)
     const newlyUploadedPaths = [] // til oprydning hvis DB-update fejler
     try {
+      // F11/2026-04-28: held_with-feltet er fjernet fra projekt-formen.
+      // DB-kolonnen lever videre for bagudkompatibilitet (CSV-eksport, gamle
+      // rækker), men vi skriver ikke længere fra UI.
       const updates = {
         title:            form.title           || null,
         used_at:          form.usedAt          || null,
         needle_size:      form.needleSize      || null,
-        held_with:        form.heldWith        || null,
         notes:            form.notes           || null,
         status:           form.status          || 'faerdigstrikket',
         pattern_name:     form.patternName     || null,
@@ -758,7 +802,6 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
           quantityUsed: l.quantityUsed,
           usedFor: data.title,
           needleSize: data.needle_size,
-          heldWith: data.held_with,
           notes: data.notes,
           usedAt: data.used_at,
         }),
@@ -855,7 +898,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               {editing ? (
-                <input value={form.title} onChange={e => setF('title', e.target.value)} placeholder="Projektnavn..." style={{ ...inputStyle, fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 600 }} />
+                <input value={form.title} onChange={e => setF('title', e.target.value)} placeholder={titleLabelForStatus(form.status)} style={{ ...inputStyle, fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 600 }} />
               ) : (
                 <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '22px', fontWeight: 600, color: '#2C2018' }}>
                   {entry.title || 'Unavngivet projekt'}
@@ -906,7 +949,10 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div>
                 <Label>Status</Label>
-                <StatusChips value={form.status} onChange={v => setF('status', v)} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <StatusChips value={form.status} onChange={v => setF('status', v)} />
+                  <StatusAccentBar status={form.status} />
+                </div>
                 {form.status !== 'faerdigstrikket' && entry.is_shared && (
                   <div style={{ marginTop: '6px', fontSize: '11px', color: '#8B3A2A' }}>
                     Projektet er delt i Fællesskabet. Hvis du gemmer med denne status, fjernes delingen.
@@ -925,19 +971,14 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                 </div>
               </div>
 
-              <div>
-                <Label>Følgetråd</Label>
-                <input value={form.heldWith} onChange={e => setF('heldWith', e.target.value)} style={inputStyle} />
-              </div>
-
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
                 <div>
                   <Label>Opskriftsnavn</Label>
-                  <input value={form.patternName} onChange={e => setF('patternName', e.target.value)} placeholder="F.eks. Sierraknit Diamond Top" style={inputStyle} />
+                  <input value={form.patternName} onChange={e => setF('patternName', e.target.value)} placeholder="Fx. Sophie Scarf" style={inputStyle} />
                 </div>
                 <div>
                   <Label>Designer</Label>
-                  <input value={form.patternDesigner} onChange={e => setF('patternDesigner', e.target.value)} placeholder="F.eks. Sanne Fjalland" style={inputStyle} />
+                  <input value={form.patternDesigner} onChange={e => setF('patternDesigner', e.target.value)} placeholder="Fx. PetiteKnit" style={inputStyle} />
                 </div>
               </div>
 
@@ -1076,12 +1117,6 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                     <div style={{ fontSize: '13px', color: '#2C2018' }}>{entry.needle_size} mm</div>
                   </div>
                 )}
-                {entry.held_with && (
-                  <div>
-                    <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '3px' }}>Følgetråd</div>
-                    <div style={{ fontSize: '13px', color: '#2C2018' }}>{entry.held_with}</div>
-                  </div>
-                )}
                 {entry.pattern_name && (
                   <div>
                     <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '3px' }}>Opskrift</div>
@@ -1178,7 +1213,6 @@ const EMPTY_NEW = {
   title: '',
   usedAt: new Date().toISOString().slice(0, 10),
   needleSize: '',
-  heldWith: '',
   notes: '',
   status: 'faerdigstrikket',
   patternName: '',
@@ -1211,13 +1245,16 @@ function NytProjektModal({ user, onClose, onSaved }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // F11: hent brugerens lager én gang så "Fra mit garn"-tab kan vise det
+  // F11: hent brugerens lager én gang så "Fra mit garn"-tab kan vise det.
+  // Kun garn som faktisk findes i lageret (status: På lager / I brug) — ikke
+  // ønskeliste eller brugt op. Et projekt skal kunne kobles til reelt garn.
   useEffect(() => {
     async function loadStash() {
       try {
         const { data } = await supabase
           .from('yarn_items')
           .select('*')
+          .in('status', ['På lager', 'I brug'])
           .order('brand', { ascending: true })
         setUserYarnItems((data ?? []).map(fromDb))
       } catch {
@@ -1366,7 +1403,6 @@ function NytProjektModal({ user, onClose, onSaved }) {
           title:            form.title           || null,
           used_at:          form.usedAt          || null,
           needle_size:      form.needleSize      || null,
-          held_with:        form.heldWith        || null,
           notes:            form.notes           || null,
           status:           form.status          || 'faerdigstrikket',
           pattern_name:     form.patternName     || null,
@@ -1437,7 +1473,6 @@ function NytProjektModal({ user, onClose, onSaved }) {
           quantityUsed: l.quantityUsed,
           usedFor: project.title,
           needleSize: project.needle_size,
-          heldWith: project.held_with,
           notes: project.notes,
           usedAt: project.used_at,
         }),
@@ -1492,11 +1527,14 @@ function NytProjektModal({ user, onClose, onSaved }) {
 
           <div>
             <Label>Status</Label>
-            <StatusChips value={form.status} onChange={v => setF('status', v)} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <StatusChips value={form.status} onChange={v => setF('status', v)} />
+              <StatusAccentBar status={form.status} />
+            </div>
           </div>
 
           <div>
-            <Label>Hvad er strikket?</Label>
+            <Label>{titleLabelForStatus(form.status)}</Label>
             <input value={form.title} onChange={e => setF('title', e.target.value)} placeholder="F.eks. Sommersweater, hue til børn..." style={inputStyle} />
           </div>
 
@@ -1509,20 +1547,16 @@ function NytProjektModal({ user, onClose, onSaved }) {
               <Label>Dato</Label>
               <input type="date" value={form.usedAt} onChange={e => setF('usedAt', e.target.value)} style={inputStyle} />
             </div>
-            <div>
-              <Label>Følgetråd</Label>
-              <input value={form.heldWith} onChange={e => setF('heldWith', e.target.value)} placeholder="F.eks. mohair-tråd" style={inputStyle} />
-            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
             <div>
               <Label>Opskriftsnavn</Label>
-              <input value={form.patternName} onChange={e => setF('patternName', e.target.value)} placeholder="F.eks. Sierraknit Diamond Top" style={inputStyle} />
+              <input value={form.patternName} onChange={e => setF('patternName', e.target.value)} placeholder="Fx. Sophie Scarf" style={inputStyle} />
             </div>
             <div>
               <Label>Designer</Label>
-              <input value={form.patternDesigner} onChange={e => setF('patternDesigner', e.target.value)} placeholder="F.eks. Sanne Fjalland" style={inputStyle} />
+              <input value={form.patternDesigner} onChange={e => setF('patternDesigner', e.target.value)} placeholder="Fx. PetiteKnit" style={inputStyle} />
             </div>
           </div>
 
