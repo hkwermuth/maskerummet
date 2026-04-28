@@ -14,6 +14,8 @@ import { exportProjekter } from '@/lib/export/exportProjekter'
 import { formatDanish } from '@/lib/date/formatDanish'
 import { DelMedFaellesskabetModal } from '@/components/app/DelMedFaellesskabetModal'
 import GarnLinjeVælger from '@/components/app/GarnLinjeVælger'
+import ProjectCardPlaceholder from '@/components/app/ProjectCardPlaceholder'
+import ImageCarousel from '@/components/app/ImageCarousel'
 import {
   PROJECT_STATUSES,
   PROJECT_STATUS_LABELS,
@@ -921,7 +923,17 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                   Rediger
                 </button>
               )}
-              <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#8B7D6B', padding: '4px' }}>✕</button>
+              <button
+                onClick={onClose}
+                aria-label="Luk projekt"
+                style={{
+                  minWidth: 44, minHeight: 44, width: 44, height: 44,
+                  background: 'none', border: 'none', fontSize: '20px',
+                  cursor: 'pointer', color: '#8B7D6B',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 0,
+                }}
+              >✕</button>
             </div>
           </div>
 
@@ -1152,13 +1164,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                   <div style={{ fontSize: '10px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: '6px' }}>
                     Opskrift ({entry.pattern_image_urls.length} {entry.pattern_image_urls.length === 1 ? 'billede' : 'billeder'})
                   </div>
-                  <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
-                    {entry.pattern_image_urls.map((url, i) => (
-                      <a key={url} href={url} target="_blank" rel="noreferrer" style={{ flexShrink: 0 }}>
-                        <img src={url} alt={`Opskrift ${i + 1}`} style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 6, display: 'block' }} />
-                      </a>
-                    ))}
-                  </div>
+                  <ImageCarousel images={entry.pattern_image_urls} alt="Opskrift" />
                 </div>
               )}
 
@@ -1927,9 +1933,14 @@ export default function Arkiv({ user, onRequestLogin }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px', padding: '20px' }}>
           {filtered.map(p => {
             const yarns = (p.yarnLines ?? [])
-            const first = yarns[0]
-            const fallbackHex = first?.hex || '#A8C4C4'
             const thumbs = yarns.slice(0, 6)
+            const placeholderHexes = yarns
+              .map(l => {
+                const c = l.catalogColorId ? colorMap.get(l.catalogColorId) : null
+                if (c?.hex_code) return String(c.hex_code).startsWith('#') ? c.hex_code : `#${c.hex_code}`
+                return l.hex || ''
+              })
+              .filter(h => typeof h === 'string' && h.trim().length > 0)
             return (
             <div
               key={p.id}
@@ -1953,7 +1964,10 @@ export default function Arkiv({ user, onRequestLogin }) {
                   )}
                 </div>
               ) : (
-                <div style={{ height: '6px', background: fallbackHex }} />
+                <ProjectCardPlaceholder
+                  status={p.status ?? 'i_gang'}
+                  yarnHexes={placeholderHexes}
+                />
               )}
               <div style={{ padding: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>

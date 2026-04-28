@@ -72,7 +72,6 @@ export default function GarnLinjeVælger({
   status,
   userYarnItems = [],
   catalogSearch,            // <YarnCatalogSearch>-komponent passes ind så vi ikke laver dobbelt-import
-  onSelectCatalogYarn,      // (yarn) => void — kalder ind i parent som håndterer ensureColorsLoaded
   catalogColors = [],       // colors for det aktuelt valgte katalog-garn
   onSelectCatalogColor,     // (color) => void
 }) {
@@ -100,7 +99,6 @@ export default function GarnLinjeVælger({
               line={line}
               patch={patch}
               catalogSearch={catalogSearch}
-              onSelectCatalogYarn={onSelectCatalogYarn}
               catalogColors={catalogColors}
               onSelectCatalogColor={onSelectCatalogColor}
             />
@@ -253,34 +251,130 @@ function formatStashLabel(y) {
 
 // ── Tab 2: Fra kataloget ──────────────────────────────────────────────────────
 
-function FraKatalogTab({ line, patch, catalogSearch, onSelectCatalogYarn, catalogColors, onSelectCatalogColor }) {
+const PILL_PREVIEW_COUNT = 6
+
+function CatalogColorPill({ color, isActive, onClick }) {
+  const hex = color.hex_code
+    ? (String(color.hex_code).startsWith('#') ? color.hex_code : `#${color.hex_code}`)
+    : null
+  const label = [color.color_number, color.color_name].filter(Boolean).join(' ')
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={isActive}
+      title={label}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '6px 10px 6px 6px',
+        minHeight: 32,
+        borderRadius: 999,
+        border: isActive ? '1.5px solid #2C4A3E' : '1px solid #D0C8BA',
+        background: isActive ? '#EAF3DE' : '#FFFCF7',
+        color: '#2C2018',
+        fontSize: 12,
+        fontFamily: "'DM Sans', sans-serif",
+        cursor: 'pointer',
+        maxWidth: '100%',
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 18, height: 18, borderRadius: '50%',
+          background: hex || '#E5DDD9',
+          border: '1px solid rgba(0,0,0,.10)',
+          flexShrink: 0,
+        }}
+      />
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {label || 'Uden navn'}
+      </span>
+    </button>
+  )
+}
+
+function FraKatalogTab({ line, patch, catalogSearch, catalogColors, onSelectCatalogColor }) {
+  const [showAllColors, setShowAllColors] = useState(false)
+
+  const visibleColors = showAllColors || catalogColors.length <= PILL_PREVIEW_COUNT
+    ? catalogColors
+    : catalogColors.slice(0, PILL_PREVIEW_COUNT)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div>
         <Label>Søg i garn-katalog</Label>
         {catalogSearch}
       </div>
-      {line?.catalogYarnId && catalogColors.length > 0 && (
-        <div>
-          <Label>Farve (fra katalog)</Label>
-          <select
-            value={line.catalogColorId ?? ''}
-            onChange={e => {
-              const id = e.target.value || null
-              const c = catalogColors.find(x => x.id === id) || null
-              onSelectCatalogColor(c)
-            }}
-            style={inputStyle}
-          >
-            <option value="">Vælg farve…</option>
-            {catalogColors.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.color_number ? `${c.color_number} · ` : ''}{c.color_name}
-              </option>
-            ))}
-          </select>
-        </div>
+
+      {line?.catalogYarnId && (
+        <>
+          <div>
+            <Label>Farve</Label>
+            <input
+              value={combineColorDisplay(line?.colorCode, line?.colorName)}
+              onChange={e => {
+                const { colorName, colorCode } = parseCombinedColorInput(e.target.value)
+                const detected = detectColorFamily(colorName)
+                const nextHex = !(line?.hex && String(line.hex).trim()) && detected && COLOR_FAMILY_DEFAULT_HEX[detected]
+                  ? COLOR_FAMILY_DEFAULT_HEX[detected]
+                  : line?.hex
+                patch({
+                  colorName,
+                  colorCode,
+                  hex: nextHex || line?.hex || '#A8C4C4',
+                  catalogColorId: null,
+                })
+              }}
+              placeholder="fx 883174 eller Rosa"
+              style={inputStyle}
+            />
+            <div style={{ fontSize: 11, color: '#8B7D6B', marginTop: 4 }}>Skriv farvenummer, navn eller begge dele</div>
+          </div>
+
+          {catalogColors.length > 0 && (
+            <div>
+              <Label>Farver fra kataloget</Label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {visibleColors.map(c => (
+                  <CatalogColorPill
+                    key={c.id}
+                    color={c}
+                    isActive={line?.catalogColorId === c.id}
+                    onClick={() => onSelectCatalogColor(c)}
+                  />
+                ))}
+                {catalogColors.length > PILL_PREVIEW_COUNT && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllColors(v => !v)}
+                    style={{
+                      minHeight: 32,
+                      padding: '6px 12px',
+                      borderRadius: 999,
+                      border: '1px dashed #D0C8BA',
+                      background: 'transparent',
+                      color: '#6B5D4F',
+                      fontSize: 12,
+                      cursor: 'pointer',
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    {showAllColors ? 'Vis færre' : `Vis alle (${catalogColors.length})`}
+                  </button>
+                )}
+              </div>
+              <div style={{ fontSize: 11, color: '#8B7D6B', marginTop: 4 }}>
+                Klik for at fylde feltet — du kan altid skrive ovenpå
+              </div>
+            </div>
+          )}
+        </>
       )}
+
       {line?.catalogYarnId && (
         <div className="bg-striq-src-catalog-bg text-striq-src-catalog-fg" style={{ borderRadius: 8, padding: '8px 10px', fontSize: 12 }}>
           <strong>{line.yarnBrand}</strong> · {dedupeYarnNameFromBrand(line.yarnName, line.yarnBrand)}

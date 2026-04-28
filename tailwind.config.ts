@@ -12,6 +12,7 @@ const config: Config = {
           muted:          '#8C7E74',
           sage:           '#61846D',
           pink:           '#D4ADB6',
+          dustyrose:      '#B58A92',
           accent:         '#D9BFC3',
           border:         '#E5DDD9',
           link:           '#9B6272',

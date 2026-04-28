@@ -147,6 +147,12 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
   faerdigstrikket: 'Færdigstrikket',
 }
 
+export const PROJECT_PLACEHOLDER_LABELS: Record<ProjectStatus, string> = {
+  vil_gerne:       'Projekt jeg overvejer',
+  i_gang:          'Projekt i gang',
+  faerdigstrikket: 'Færdigt projekt',
+}
+
 // ── Projekt-medier ────────────────────────────────────────────────────────────
 
 export const MAX_PROJECT_IMAGES = 6
