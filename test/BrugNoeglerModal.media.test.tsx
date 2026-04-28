@@ -100,6 +100,98 @@ function buildSupabaseMock(opts: {
 
 beforeEach(() => vi.clearAllMocks())
 
+describe('BrugNoeglerModal — yarn_items status-opdatering ved forbrug', () => {
+  it('sætter status til "I brug" når antal stadig er > 0', async () => {
+    const user = userEvent.setup()
+    const yarnItemsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
+    const onSaved = vi.fn()
+
+    const supabaseMock = {
+      from: vi.fn((table: string) => {
+        if (table === 'projects') {
+          return {
+            select: vi.fn((cols: string) => {
+              if (cols.includes('project_image_urls')) {
+                return { eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { project_image_urls: [], pattern_image_urls: [], pattern_pdf_url: null }, error: null }) })) }
+              }
+              return { eq: vi.fn(() => ({ in: vi.fn(() => ({ order: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue({ data: [existingProject], error: null }) })) })) }
+            }),
+            update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })),
+          }
+        }
+        if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
+        if (table === 'yarn_items') return { update: yarnItemsUpdate }
+        return {}
+      }),
+    }
+    vi.mocked(useSupabase).mockReturnValue(supabaseMock as never)
+
+    render(
+      <BrugNoeglerModal
+        yarn={{ ...sampleYarn, antal: 5, status: 'På lager' }}
+        user={{ id: 'user-1' }}
+        onClose={vi.fn()}
+        onSaved={onSaved}
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument())
+    // Default form.quantityUsed = 1 → 5 - 1 = 4 → "I brug"
+    await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
+
+    await waitFor(() => expect(yarnItemsUpdate).toHaveBeenCalled())
+    const updatePayload = yarnItemsUpdate.mock.calls[0][0]
+    expect(updatePayload.status).toBe('I brug')
+    expect(updatePayload.quantity).toBe(4)
+    expect(onSaved).toHaveBeenCalledWith(expect.anything(), 4, 'I brug')
+  })
+
+  it('sætter status til "Brugt op" når antal når 0', async () => {
+    const user = userEvent.setup()
+    const yarnItemsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
+    const onSaved = vi.fn()
+
+    const supabaseMock = {
+      from: vi.fn((table: string) => {
+        if (table === 'projects') {
+          return {
+            select: vi.fn((cols: string) => {
+              if (cols.includes('project_image_urls')) {
+                return { eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { project_image_urls: [], pattern_image_urls: [], pattern_pdf_url: null }, error: null }) })) }
+              }
+              return { eq: vi.fn(() => ({ in: vi.fn(() => ({ order: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue({ data: [existingProject], error: null }) })) })) }
+            }),
+            update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })),
+          }
+        }
+        if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
+        if (table === 'yarn_items') return { update: yarnItemsUpdate }
+        return {}
+      }),
+    }
+    vi.mocked(useSupabase).mockReturnValue(supabaseMock as never)
+
+    render(
+      <BrugNoeglerModal
+        yarn={{ ...sampleYarn, antal: 1, status: 'På lager' }}
+        user={{ id: 'user-1' }}
+        onClose={vi.fn()}
+        onSaved={onSaved}
+      />
+    )
+
+    await waitFor(() => expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument())
+    // antal=1, brug 1 → 0 → "Brugt op"
+    await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
+
+    await waitFor(() => expect(yarnItemsUpdate).toHaveBeenCalled())
+    const updatePayload = yarnItemsUpdate.mock.calls[0][0]
+    expect(updatePayload.status).toBe('Brugt op')
+    expect(updatePayload.quantity).toBe(0)
+    expect(onSaved).toHaveBeenCalledWith(expect.anything(), 0, 'Brugt op')
+  })
+})
+
 describe('BrugNoeglerModal — projekt-liste-filtrering (sikkerhed + UX)', () => {
   it('liste-load filtrerer på user_id (ingen andre brugeres delte projekter)', async () => {
     const user = userEvent.setup()

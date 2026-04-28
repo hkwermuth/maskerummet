@@ -256,13 +256,15 @@ export default function BrugNoeglerModal({
         .insert([{ ...usageData, user_id: user.id }]).select().single()
       if (insertErr) throw insertErr
 
-      // ── 5) Opdatér yarn_items quantity ─────────────────────────────────────
+      // ── 5) Opdatér yarn_items quantity + status ────────────────────────────
+      // Når brugeren logger forbrug, bør garnet stå som "I brug" (ikke "På lager")
+      // så det vises i Garnlager-filteret "I brug". Når antal når 0, bliver det
+      // automatisk "Brugt op".
       const newQty = Math.max(0, (parseFloat(String(yarn.antal)) || 0) - parseFloat(String(form.quantityUsed) || '0'))
-      const updates: any = { quantity: newQty }
-      if (newQty === 0) updates.status = 'Brugt op'
-      await supabase.from('yarn_items').update(updates).eq('id', yarn.id)
+      const newStatus = newQty === 0 ? 'Brugt op' : 'I brug'
+      await supabase.from('yarn_items').update({ quantity: newQty, status: newStatus }).eq('id', yarn.id)
 
-      onSaved(usageRow, newQty, newQty === 0 ? 'Brugt op' : (yarn.status ?? ''))
+      onSaved(usageRow, newQty, newStatus)
       onClose()
     } catch (e: any) {
       setError('Kunne ikke gemme: ' + e.message)
