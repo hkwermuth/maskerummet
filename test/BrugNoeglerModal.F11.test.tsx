@@ -54,10 +54,16 @@ const sampleYarn = {
 const sampleProject = { id: 'p1', title: 'Sommersweater', used_at: '2024-01-01', created_at: '2024-01-01' }
 
 function buildSupabaseMock() {
+  const projectsLimit = vi.fn().mockResolvedValue({ data: [sampleProject], error: null })
   const projectsChain = {
-    select: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue({ data: [sampleProject], error: null }),
+    select: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        in: vi.fn(() => ({
+          order: vi.fn().mockReturnThis(),
+          limit: projectsLimit,
+        })),
+      })),
+    })),
   }
 
   const usageInsertChain = {

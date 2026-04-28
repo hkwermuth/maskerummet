@@ -108,13 +108,23 @@ export default function BrugNoeglerModal({
 
   useEffect(() => {
     async function loadProjects() {
+      // Kun brugerens EGNE projekter (ikke delte fra andre via community-RLS),
+      // og kun i statusserne hvor det giver mening at logge garn-forbrug.
       const { data } = await supabase.from('projects').select('id,title,used_at,created_at')
+        .eq('user_id', user.id)
+        .in('status', ['vil_gerne', 'i_gang'])
         .order('used_at', { ascending: false }).order('created_at', { ascending: false }).limit(200)
-      setProjects(data ?? [])
-      if ((data ?? []).length > 0) setSelectedProjectId((data as Project[])[0].id)
+      const rows = data ?? []
+      setProjects(rows)
+      if (rows.length > 0) {
+        setSelectedProjectId((rows as Project[])[0].id)
+      } else {
+        // Ingen åbne projekter at tilføje til — skift til "Opret nyt projekt"-mode.
+        setProjectMode('new')
+      }
     }
     loadProjects()
-  }, [])
+  }, [user.id])
 
   function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]

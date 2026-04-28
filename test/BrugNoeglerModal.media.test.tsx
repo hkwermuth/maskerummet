@@ -71,10 +71,15 @@ function buildSupabaseMock(opts: {
                 eq: vi.fn(() => ({ single: projectsLoadSingle })),
               }
             }
-            // List-load i useEffect: select('id,title,used_at,created_at')
-            return {
+            // List-load i useEffect: .eq('user_id', uid).in('status', [...]).order().order().limit()
+            const limitChain = {
               order: vi.fn().mockReturnThis(),
               limit: projectsListLimit,
+            }
+            return {
+              eq: vi.fn(() => ({
+                in: vi.fn(() => limitChain),
+              })),
             }
           }),
           insert: vi.fn(() => ({ select: vi.fn(() => ({ single: projectsInsertSingle })) })),
@@ -92,6 +97,116 @@ function buildSupabaseMock(opts: {
 }
 
 beforeEach(() => vi.clearAllMocks())
+
+describe('BrugNoeglerModal — projekt-liste-filtrering (sikkerhed + UX)', () => {
+  it('liste-load filtrerer på user_id (ingen andre brugeres delte projekter)', async () => {
+    const user = userEvent.setup()
+    const eqSpy = vi.fn(() => ({
+      in: vi.fn(() => ({
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [existingProject], error: null }),
+      })),
+    }))
+    const supabaseMock = {
+      from: vi.fn((table: string) => {
+        if (table === 'projects') {
+          return {
+            select: vi.fn(() => ({ eq: eqSpy })),
+            insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'p-new' }, error: null }) })) })),
+            update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })),
+          }
+        }
+        if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
+        if (table === 'yarn_items') return { update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })) }
+        return {}
+      }),
+    }
+    vi.mocked(useSupabase).mockReturnValue(supabaseMock as never)
+
+    render(
+      <BrugNoeglerModal
+        yarn={sampleYarn}
+        user={{ id: 'user-42' }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    )
+
+    await waitFor(() => expect(eqSpy).toHaveBeenCalled())
+    expect(eqSpy).toHaveBeenCalledWith('user_id', 'user-42')
+  })
+
+  it('liste-load filtrerer status til kun vil_gerne + i_gang', async () => {
+    const inSpy = vi.fn(() => ({
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({ data: [existingProject], error: null }),
+    }))
+    const supabaseMock = {
+      from: vi.fn((table: string) => {
+        if (table === 'projects') {
+          return {
+            select: vi.fn(() => ({ eq: vi.fn(() => ({ in: inSpy })) })),
+            insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'p-new' }, error: null }) })) })),
+            update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })),
+          }
+        }
+        if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
+        if (table === 'yarn_items') return { update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })) }
+        return {}
+      }),
+    }
+    vi.mocked(useSupabase).mockReturnValue(supabaseMock as never)
+
+    render(
+      <BrugNoeglerModal
+        yarn={sampleYarn}
+        user={{ id: 'user-1' }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    )
+
+    await waitFor(() => expect(inSpy).toHaveBeenCalled())
+    const [col, statuses] = inSpy.mock.calls[0]
+    expect(col).toBe('status')
+    expect(statuses).toEqual(['vil_gerne', 'i_gang'])
+    expect(statuses).not.toContain('faerdigstrikket')
+  })
+
+  it('skifter automatisk til "Opret nyt projekt"-mode hvis listen er tom', async () => {
+    const supabaseMock = {
+      from: vi.fn((table: string) => {
+        if (table === 'projects') {
+          return {
+            select: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                in: vi.fn(() => ({
+                  order: vi.fn().mockReturnThis(),
+                  limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+                })),
+              })),
+            })),
+            insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'p-new' }, error: null }) })) })),
+          }
+        }
+        return {}
+      }),
+    }
+    vi.mocked(useSupabase).mockReturnValue(supabaseMock as never)
+
+    render(
+      <BrugNoeglerModal
+        yarn={sampleYarn}
+        user={{ id: 'user-1' }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    )
+
+    // Når listen er tom skifter mode til 'new' → "Projektnavn"-felt vises
+    await waitFor(() => expect(screen.getByText(/^projektnavn$/i)).toBeInTheDocument())
+  })
+})
 
 describe('BrugNoeglerModal — media gemmes på projects-tabellen', () => {
   it('eksisterende projekt: billede appendes til projects.project_image_urls', async () => {
