@@ -12,7 +12,7 @@ export async function fetchSharedProjects(
 ): Promise<SharedProjectPublic[]> {
   const { data: projects, error: pErr } = await supabase
     .from('public_shared_projects')
-    .select('id,title,project_image_urls,project_type,community_description,pattern_name,pattern_designer,shared_at,display_name')
+    .select('id,title,project_image_urls,project_type,community_description,community_size_shown,pattern_name,pattern_designer,shared_at,display_name')
     .order('shared_at', { ascending: false })
 
   if (pErr) {
@@ -47,6 +47,7 @@ export async function fetchSharedProjects(
 export type SharePayload = {
   project_type: ProjectType
   community_description: string | null
+  community_size_shown: string | null
   pattern_name: string
   pattern_designer: string
   display_name?: string | null
@@ -75,6 +76,7 @@ export async function shareProject(
       shared_at: new Date().toISOString(),
       project_type: payload.project_type,
       community_description: payload.community_description,
+      community_size_shown: payload.community_size_shown,
       pattern_name: payload.pattern_name,
       pattern_designer: payload.pattern_designer,
     })

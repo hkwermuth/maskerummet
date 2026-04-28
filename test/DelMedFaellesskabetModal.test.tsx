@@ -29,6 +29,7 @@ const baseProject = {
   is_shared: false,
   project_type: null,
   community_description: null,
+  community_size_shown: null,
   pattern_name: '',
   pattern_designer: '',
 }

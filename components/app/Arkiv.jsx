@@ -29,7 +29,7 @@ import {
 const PROJECT_FIELDS =
   'id,user_id,title,used_at,needle_size,held_with,notes,' +
   'project_image_urls,pattern_pdf_url,pattern_pdf_thumbnail_url,pattern_image_urls,' +
-  'is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,' +
+  'is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,community_size_shown,' +
   'status,created_at,updated_at'
 
 const IMAGES_BUCKET   = 'yarn-images'
@@ -1173,9 +1173,9 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                   <button
                     onClick={() => onShare?.(entry)}
                     style={{ padding: '7px 14px', background: entry.is_shared ? '#E4EEE4' : '#F0E5D8', color: entry.is_shared ? '#2A4A2A' : '#6A5638', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                    aria-label={entry.is_shared ? 'Rediger deling med fællesskabet' : 'Del med fællesskabet'}
+                    aria-label={entry.is_shared ? 'Rediger deling med Fællesskabet' : 'Del med Fællesskabet'}
                   >
-                    {entry.is_shared ? '✓ Delt med fællesskabet' : 'Del med fællesskabet'}
+                    {entry.is_shared ? '✓ Delt med Fællesskabet' : 'Del med Fællesskabet'}
                   </button>
                 ) : (
                   <span style={{ fontSize: '12px', color: '#8B7D6B', fontStyle: 'italic' }}>

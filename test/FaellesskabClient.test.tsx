@@ -14,6 +14,7 @@ const makeProject = (overrides: Partial<SharedProjectPublic> = {}): SharedProjec
   project_image_urls: [],
   project_type: 'sweater',
   community_description: null,
+  community_size_shown: null,
   pattern_name: 'Mina',
   pattern_designer: 'Lene B.',
   shared_at: '2026-01-01T00:00:00Z',

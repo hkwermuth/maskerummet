@@ -45,6 +45,43 @@ function escapeRegex(s: string): string {
 }
 
 /**
+ * Bygger en visnings-label for et garn ud fra brand + name, uden duplikering.
+ * Bruges på Fællesskabets delte projekt-kort hvor data ofte har brand-navnet
+ * gentaget i name-feltet ("Drops Drops Air", "Filcolana Filcolana Tilia")
+ * eller har et "(X by Brand)"-suffix.
+ *
+ * Eksempler:
+ *  ("Drops",     "Drops Air")                                  → "Drops Air"
+ *  ("Filcolana", "Filcolana Tilia")                             → "Filcolana Tilia"
+ *  ("Permin",    "Permin Bella Color (Bella Color by Permin)") → "Bella Color by Permin"
+ *  ("Permin",    "Permin Bella (by Permin)")                   → "Permin Bella"
+ *  ("Permin",    "Bella")                                       → "Permin Bella"
+ *  (null,        "Air")                                         → "Air"
+ *  ("Drops",     null)                                          → "Drops"
+ */
+export function yarnDisplayLabel(brand: string | null | undefined, name: string | null | undefined): string {
+  const b = (brand ?? '').trim()
+  const n = (name ?? '').trim()
+  if (!n) return b
+  if (!b) return n
+
+  // Specialtilfælde: name ender med "(... by Brand)" og parens-indholdet har en
+  // meningsfuld forelement → brug parens-indholdet som visnings-navn.
+  const parensMatch = n.match(/\(([^()]+)\)\s*$/)
+  if (parensMatch) {
+    const inside = parensMatch[1].trim()
+    const byPattern = new RegExp(`^(.+?)\\s+by\\s+${escapeRegex(b)}\\s*$`, 'i')
+    if (byPattern.test(inside)) return inside
+  }
+
+  const deduped = dedupeYarnNameFromBrand(n, b)
+  // Hvis det dedupede navn allerede starter med brand som ord, returner det som er.
+  // Ellers præfiks brand så vi får "Brand Navn".
+  if (new RegExp(`^${escapeRegex(b)}\\b`, 'i').test(deduped)) return deduped
+  return `${b} ${deduped}`
+}
+
+/**
  * Bygger CSS-baggrund fra et array af hex-farver.
  * - 0 farver eller ugyldig: fallback (eller given fallbackHex)
  * - 1 farve: solid

@@ -24,6 +24,7 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
   const dialogRef = useRef(null)
   const [projectType, setProjectType]         = useState(project.project_type || '')
   const [desc, setDesc]                       = useState(project.community_description || '')
+  const [sizeShown, setSizeShown]             = useState(project.community_size_shown || '')
   const [patternName, setPatternName]         = useState(project.pattern_name || '')
   const [patternDesigner, setPatternDesigner] = useState(project.pattern_designer || '')
   const [displayName, setDisplayName]         = useState('')
@@ -77,9 +78,11 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
     setSaving(true); setError(null)
     try {
       const cleanDesc = desc.trim() || null
+      const cleanSize = sizeShown.trim() || null
       await shareProject(supabase, project.id, user.id, {
         project_type: projectType,
         community_description: cleanDesc,
+        community_size_shown: cleanSize,
         pattern_name: pName,
         pattern_designer: pDesigner,
         display_name: displayName.trim() || null,
@@ -90,6 +93,7 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
         shared_at: new Date().toISOString(),
         project_type: projectType,
         community_description: cleanDesc,
+        community_size_shown: cleanSize,
         pattern_name: pName,
         pattern_designer: pDesigner,
       })
@@ -132,7 +136,7 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
         <div style={{ background: '#6A5638', padding: '18px 24px', position: 'relative' }}>
           <button onClick={onClose} aria-label="Luk" style={{ position: 'absolute', top: '12px', right: '16px', background: 'none', border: 'none', color: 'rgba(255,255,255,.7)', fontSize: '18px', cursor: 'pointer' }}>✕</button>
           <div id="del-modal-title" style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '20px', fontWeight: 600, color: '#fff' }}>
-            {isAlreadyShared ? 'Rediger deling' : 'Del med fællesskabet'}
+            {isAlreadyShared ? 'Rediger deling' : 'Del med Fællesskabet'}
           </div>
           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.72)', marginTop: '2px', lineHeight: 1.5 }}>
             Dit projekt bliver synligt for alle. Dine private noter deles ikke.
@@ -167,6 +171,18 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
             <div style={{ fontSize: '10.5px', color: '#8B7D6B', marginTop: '4px', lineHeight: 1.5 }}>
               Dine private noter deles ikke — kun denne beskrivelse vises offentligt.
             </div>
+          </div>
+
+          <div>
+            <Label>Vist i str. (valgfri)</Label>
+            <input
+              value={sizeShown}
+              onChange={e => setSizeShown(e.target.value)}
+              placeholder="fx M, 38 eller 98 cm bryst"
+              maxLength={50}
+              aria-label="Vist i str."
+              style={inputStyle}
+            />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
@@ -220,7 +236,7 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
                   disabled={saving}
                   style={{ padding: '8px 14px', background: 'transparent', color: '#8B3A2A', border: '1px solid #E6C8C0', borderRadius: '6px', fontSize: '12px', cursor: saving ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif" }}
                 >
-                  Fjern fra fællesskabet
+                  Fjern fra Fællesskabet
                 </button>
               )}
             </div>

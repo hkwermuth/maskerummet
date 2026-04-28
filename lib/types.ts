@@ -182,6 +182,7 @@ export type Project = {
   pattern_name: string | null
   pattern_designer: string | null
   community_description: string | null
+  community_size_shown: string | null
   created_at: string
   updated_at: string
 }
@@ -189,24 +190,29 @@ export type Project = {
 // ── Fællesskabet (delte projekter) ───────────────────────────────────────────
 
 export const PROJECT_TYPES = [
-  'cardigan', 'sweater', 'top', 'hue', 'sjal',
-  'stroemper', 'vest', 'troeje', 'toerklaede', 'taeppe', 'andet',
+  'cardigan', 'sweater', 'top', 'bluse', 'sommerbluse',
+  'hue', 'sjal', 'stroemper', 'vest', 'troeje',
+  'toerklaede', 'taeppe', 'babytoej', 'boernetoej', 'andet',
 ] as const
 
 export type ProjectType = typeof PROJECT_TYPES[number]
 
 export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
-  cardigan:   'Cardigan',
-  sweater:    'Sweater',
-  top:        'Top',
-  hue:        'Hue',
-  sjal:       'Sjal',
-  stroemper:  'Strømper',
-  vest:       'Vest',
-  troeje:     'Trøje',
-  toerklaede: 'Tørklæde',
-  taeppe:     'Tæppe',
-  andet:      'Andet',
+  cardigan:    'Cardigan',
+  sweater:     'Sweater',
+  top:         'Top',
+  bluse:       'Bluse',
+  sommerbluse: 'Sommerbluse',
+  hue:         'Hue',
+  sjal:        'Sjal',
+  stroemper:   'Strømper',
+  vest:        'Vest',
+  troeje:      'Trøje',
+  toerklaede:  'Tørklæde',
+  taeppe:      'Tæppe',
+  babytoej:    'Babytøj',
+  boernetoej:  'Børnetøj',
+  andet:       'Andet',
 }
 
 export type Profile = {
@@ -234,6 +240,7 @@ export type SharedProjectPublic = {
   project_image_urls: string[]
   project_type: ProjectType | null
   community_description: string | null
+  community_size_shown: string | null
   pattern_name: string | null
   pattern_designer: string | null
   shared_at: string

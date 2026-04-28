@@ -21,7 +21,7 @@ const SECTIONS = [
   {
     icon: '📖',
     title: 'Opskrifter & inspiration',
-    body: 'Gem opskrifter som PDF og find inspiration i fællesskabets delte projekter.',
+    body: 'Gem opskrifter som PDF og find inspiration i Fællesskabets delte projekter.',
   },
   {
     icon: '📅',

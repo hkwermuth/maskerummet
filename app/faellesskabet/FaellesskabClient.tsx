@@ -7,6 +7,7 @@ import {
   type SharedProjectPublic,
 } from '@/lib/types'
 import { HeroIllustration } from '@/components/layout/HeroIllustration'
+import { yarnDisplayLabel } from '@/lib/yarn-display'
 
 const AUTHOR_FALLBACK = 'Anonym strikker'
 
@@ -24,7 +25,7 @@ export function FaellesskabClient({
     const s = new Set<string>()
     for (const p of initialProjects) {
       for (const y of p.yarns) {
-        const label = yarnLabel(y.yarn_brand, y.yarn_name)
+        const label = yarnDisplayLabel(y.yarn_brand, y.yarn_name)
         if (label) s.add(label)
       }
     }
@@ -42,7 +43,7 @@ export function FaellesskabClient({
     return initialProjects.filter(p => {
       if (type && p.project_type !== type) return false
       if (yarnFilter) {
-        const has = p.yarns.some(y => yarnLabel(y.yarn_brand, y.yarn_name) === yarnFilter)
+        const has = p.yarns.some(y => yarnDisplayLabel(y.yarn_brand, y.yarn_name) === yarnFilter)
         if (!has) return false
       }
       if (patternFilter && p.pattern_name !== patternFilter) return false
@@ -63,8 +64,8 @@ export function FaellesskabClient({
   }, [initialProjects, q, type, yarnFilter, patternFilter])
 
   const countLabel = filtered.length === 1
-    ? '1 projekt delt af fællesskabet'
-    : `${filtered.length} projekter delt af fællesskabet`
+    ? '1 projekt delt af Fællesskabet'
+    : `${filtered.length} projekter delt af Fællesskabet`
 
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: '#F8F3EE', minHeight: 'calc(100vh - 58px - 57px)' }}>
@@ -84,7 +85,7 @@ export function FaellesskabClient({
               fontSize: 'clamp(28px, 4.2vw, 38px)',
               fontWeight: 600, color: '#302218', margin: 0, letterSpacing: '.01em',
             }}>
-              Hent inspiration fra fællesskabet
+              Hent inspiration fra Fællesskabet
             </h1>
             <p style={{ fontSize: 14.5, color: '#6B5D4F', margin: '6px 0 0', maxWidth: 640, lineHeight: 1.55 }}>
               Se andre strikkeres færdige projekter — søg på type, opskrift eller garn, og find dit næste projekt.
@@ -109,7 +110,7 @@ export function FaellesskabClient({
             value={q}
             onChange={e => setQ(e.target.value)}
             placeholder="Søg efter projekt, garn, opskrift eller bruger…"
-            aria-label="Søg i fællesskabet"
+            aria-label="Søg i Fællesskabet"
             style={{
               padding: '11px 16px', border: '1px solid #D0C8BA', borderRadius: 999,
               background: '#FFFCF7', fontSize: 14, color: '#302218', outline: 'none',
@@ -278,10 +279,23 @@ function SharedProjectCard({ project }: { project: SharedProjectPublic }) {
           </p>
         )}
 
+        {project.community_size_shown && (
+          <div>
+            <span style={{
+              display: 'inline-block',
+              fontSize: 11, padding: '3px 10px', borderRadius: 999,
+              background: '#EDE7D8', color: '#5A4228',
+              fontFamily: "'DM Sans', sans-serif",
+            }}>
+              str. {project.community_size_shown}
+            </span>
+          </div>
+        )}
+
         {(visibleYarns.length > 0 || restCount > 0) && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 'auto', paddingTop: 4 }}>
             {visibleYarns.map(y => {
-              const label = yarnLabel(y.yarn_brand, y.yarn_name) || y.color_name || 'Garn'
+              const label = yarnDisplayLabel(y.yarn_brand, y.yarn_name) || y.color_name || 'Garn'
               return (
                 <span key={y.id} style={{
                   fontSize: 11, padding: '3px 10px', borderRadius: 999,
@@ -312,13 +326,10 @@ function EmptyState({ nothingShared }: { nothingShared: boolean }) {
       </div>
       <div style={{ fontSize: 13.5, marginTop: 6, maxWidth: 420, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>
         {nothingShared
-          ? 'Vær den første til at dele et færdigt projekt — gå til "Mine projekter" og klik "Del med fællesskabet" på et projekt.'
+          ? 'Vær den første til at dele et færdigt projekt — gå til "Mine projekter" og klik "Del med Fællesskabet" på et projekt.'
           : 'Prøv at ændre dine filtre eller ryd søgefeltet.'}
       </div>
     </div>
   )
 }
 
-function yarnLabel(brand: string | null, name: string | null): string {
-  return [brand, name].filter(Boolean).join(' ').trim()
-}
