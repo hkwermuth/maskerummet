@@ -290,6 +290,99 @@ describe('AC12 – AntalStepper renderes i GarnLinjeVælger', () => {
   })
 })
 
+// ── AC F11 – ManueltTab: garnvægt-select + info-knap ─────────────────────────
+
+describe('ManueltTab – garnvægt-select med alle typer', () => {
+  const WEIGHT_OPTIONS = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
+
+  async function goToManuelt(user: ReturnType<typeof userEvent.setup>) {
+    renderVælger({ status: 'faerdigstrikket' })
+    await user.click(screen.getByRole('tab', { name: /manuelt/i }))
+  }
+
+  it('Manuelt-tab har en garnvægt-select', async () => {
+    const user = userEvent.setup()
+    await goToManuelt(user)
+    // Select med default option "Vælg garnvægt…"
+    expect(screen.getByRole('combobox')).toBeInTheDocument()
+  })
+
+  WEIGHT_OPTIONS.forEach(weight => {
+    it(`garnvægt-select indeholder option "${weight}"`, async () => {
+      const user = userEvent.setup()
+      await goToManuelt(user)
+      const select = screen.getByRole('combobox')
+      expect(select).toBeInTheDocument()
+      // Tjek at option-elementet med den pågældende tekst eksisterer
+      const option = Array.from(select.querySelectorAll('option')).find(o => o.textContent === weight)
+      expect(option).toBeDefined()
+    })
+  })
+
+  it('ændring af garnvægt-select kalder patch med { weight: ... }', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(
+      <GarnLinjeVælger
+        line={{ yarnName: '', yarnBrand: '', colorName: '', colorCode: '', hex: '#A8C4C4', quantityUsed: '', catalogYarnId: null, catalogColorId: null }}
+        onChange={onChange}
+        onRemove={vi.fn()}
+        status="faerdigstrikket"
+        userYarnItems={[]}
+        catalogSearch={<div />}
+        onSelectCatalogYarn={vi.fn()}
+        catalogColors={[]}
+        onSelectCatalogColor={vi.fn()}
+      />
+    )
+    await user.click(screen.getByRole('tab', { name: /manuelt/i }))
+    await user.selectOptions(screen.getByRole('combobox'), 'DK')
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ weight: 'DK' })
+    )
+  })
+})
+
+describe('ManueltTab – info-knap der åbner GarnvaegtInfoModal', () => {
+  it('info-knap med aria-label "Vis garnvægt-tabel" er til stede på Manuelt-tab', async () => {
+    const user = userEvent.setup()
+    renderVælger({ status: 'faerdigstrikket' })
+    await user.click(screen.getByRole('tab', { name: /manuelt/i }))
+    expect(screen.getByRole('button', { name: 'Vis garnvægt-tabel' })).toBeInTheDocument()
+  })
+
+  it('klik på info-knap åbner GarnvaegtInfoModal (role="dialog" vises)', async () => {
+    const user = userEvent.setup()
+    renderVælger({ status: 'faerdigstrikket' })
+    await user.click(screen.getByRole('tab', { name: /manuelt/i }))
+
+    // Ingen dialog endnu
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    // Klik info-knap
+    await user.click(screen.getByRole('button', { name: 'Vis garnvægt-tabel' }))
+
+    // Dialog skal nu være synlig
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText('Internationale garnvægt-betegnelser')).toBeInTheDocument()
+  })
+
+  it('klik på "Luk"-knap i GarnvaegtInfoModal lukker dialogen igen', async () => {
+    const user = userEvent.setup()
+    renderVælger({ status: 'faerdigstrikket' })
+    await user.click(screen.getByRole('tab', { name: /manuelt/i }))
+    await user.click(screen.getByRole('button', { name: 'Vis garnvægt-tabel' }))
+
+    // Dialog åben
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    // Luk via "Luk"-knap (footer-knappen er den sidste af de to der matcher /luk/i)
+    const lukKnapper = screen.getAllByRole('button', { name: /luk/i })
+    await user.click(lukKnapper[lukKnapper.length - 1])
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+})
+
 // ── inferTabFromLine ──────────────────────────────────────────────────────────
 
 describe('inferTabFromLine', () => {

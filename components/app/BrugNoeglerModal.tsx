@@ -80,8 +80,8 @@ export default function BrugNoeglerModal({
   const [projects, setProjects] = useState<Project[]>([])
   const [projectMode, setProjectMode] = useState<'existing' | 'new'>('existing')
   const [selectedProjectId, setSelectedProjectId] = useState('')
-  const [newProject, setNewProject] = useState({ title: '', usedAt: today, needleSize: yarn.pindstr ?? '', heldWith: '', notes: '' })
-  const [form, setForm] = useState({ quantityUsed: 1, usedFor: '', needleSize: yarn.pindstr ?? '', heldWith: '', notes: '', usedAt: today })
+  const [newProject, setNewProject] = useState({ title: '', usedAt: today, needleSize: yarn.pindstr ?? '', notes: '' })
+  const [form, setForm] = useState({ quantityUsed: 1, usedFor: '', needleSize: yarn.pindstr ?? '', notes: '', usedAt: today })
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
@@ -122,7 +122,7 @@ export default function BrugNoeglerModal({
         projectId = selectedProjectId
       } else {
         const { data: project, error: pErr } = await supabase.from('projects')
-          .insert([{ user_id: user.id, title: newProject.title || null, used_at: newProject.usedAt || null, needle_size: newProject.needleSize || null, held_with: newProject.heldWith || null, notes: newProject.notes || null }])
+          .insert([{ user_id: user.id, title: newProject.title || null, used_at: newProject.usedAt || null, needle_size: newProject.needleSize || null, notes: newProject.notes || null }])
           .select().single()
         if (pErr) throw pErr
         projectId = (project as { id: string }).id
@@ -222,7 +222,6 @@ export default function BrugNoeglerModal({
                   <Field label="Dato"><input type="date" value={newProject.usedAt} onChange={e => setNP('usedAt', e.target.value)} style={inputStyle} /></Field>
                   <Field label="Pindestørrelse"><input value={newProject.needleSize} onChange={e => setNP('needleSize', e.target.value)} placeholder="mm" style={inputStyle} /></Field>
                 </div>
-                <Field label="Følgetråd"><input value={newProject.heldWith} onChange={e => setNP('heldWith', e.target.value)} style={inputStyle} /></Field>
                 <Field label="Noter"><textarea value={newProject.notes} onChange={e => setNP('notes', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} /></Field>
               </div>
             )}
@@ -239,10 +238,7 @@ export default function BrugNoeglerModal({
             <input value={form.usedFor} onChange={e => setF('usedFor', e.target.value)} placeholder="F.eks. Sommersweater, hue til børn..." style={inputStyle} />
           </Field>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-            <Field label="Pindestørrelse brugt"><input value={form.needleSize} onChange={e => setF('needleSize', e.target.value)} placeholder={yarn.pindstr || 'mm'} style={inputStyle} /></Field>
-            <Field label="Følgetråd"><input value={form.heldWith} onChange={e => setF('heldWith', e.target.value)} placeholder="F.eks. Bella 883174" style={inputStyle} /></Field>
-          </div>
+          <Field label="Pindestørrelse brugt"><input value={form.needleSize} onChange={e => setF('needleSize', e.target.value)} placeholder={yarn.pindstr || 'mm'} style={inputStyle} /></Field>
 
           <div style={{ borderTop: '1px solid #EDE7D8', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <FileUploadField label="Billede af projektet" accept="image/*" preview={imagePreview} onChange={handleImage} hint="JPG, PNG — vises i arkivet" />

@@ -1,9 +1,12 @@
 /**
- * F11 – BrugNoeglerModal: Følgetråd-rename
+ * F11 – BrugNoeglerModal: Følgetråd-felt fjernet (post-F11/2026-04-28)
  *
- * AC 4  "Strikket med" er erstattet af "Følgetråd" i BrugNoeglerModal
- *        — begge call-sites (eksisterende projekt + nyt projekt).
- * AC 5  DB-kolonnen held_with modtager fortsat værdien (via toUsageDb mock).
+ * AC 4  "Følgetråd"-feltet er fjernet fra både eksisterende-projekt-mode og
+ *       nyt-projekt-mode i BrugNoeglerModal. Brugeren skal ikke længere
+ *       indtaste følgetråd som separat felt — info kan tilføjes via Noter.
+ * AC 5  toUsageDb-mapper bevarer fortsat held_with-feltet (DB-kolonnen lever
+ *       videre for bagudkompatibilitet, selvom den ikke længere udfyldes
+ *       fra UI'et).
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -87,8 +90,8 @@ beforeEach(() => vi.clearAllMocks())
 
 // ── AC 4 – Følgetråd label i "eksisterende projekt"-mode ─────────────────────
 
-describe('AC4 – Følgetråd-label i BrugNoeglerModal (eksisterende projekt)', () => {
-  it('viser "Følgetråd" label (ikke "Strikket med")', async () => {
+describe('AC4 – Følgetråd-felt fjernet i BrugNoeglerModal (eksisterende projekt)', () => {
+  it('viser IKKE "Følgetråd" eller "Strikket med" label', async () => {
     const mock = buildSupabaseMock()
     vi.mocked(useSupabase).mockReturnValue(mock as never)
 
@@ -101,17 +104,18 @@ describe('AC4 – Følgetråd-label i BrugNoeglerModal (eksisterende projekt)', 
       />
     )
 
+    // Vent til modalen er klar (Pindestørrelse brugt-feltet bekræfter det)
     await waitFor(() => {
-      const labels = screen.getAllByText('Følgetråd')
-      expect(labels.length).toBeGreaterThanOrEqual(1)
+      expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument()
     })
 
+    expect(screen.queryByText(/^følgetråd$/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/^strikket med$/i)).not.toBeInTheDocument()
   })
 })
 
-describe('AC4 – Følgetråd-label i BrugNoeglerModal (nyt projekt-mode)', () => {
-  it('"Opret nyt projekt"-mode viser Følgetråd-label', async () => {
+describe('AC4 – Følgetråd-felt fjernet i BrugNoeglerModal (nyt projekt-mode)', () => {
+  it('"Opret nyt projekt"-mode viser ikke Følgetråd-label', async () => {
     const user = userEvent.setup()
     const mock = buildSupabaseMock()
     vi.mocked(useSupabase).mockReturnValue(mock as never)
@@ -131,11 +135,12 @@ describe('AC4 – Følgetråd-label i BrugNoeglerModal (nyt projekt-mode)', () =
     })
     await user.click(screen.getByRole('button', { name: /opret nyt projekt/i }))
 
+    // Projektnavn-feltet bekræfter at "Opret nyt projekt"-mode er aktiv
     await waitFor(() => {
-      const labels = screen.getAllByText('Følgetråd')
-      expect(labels.length).toBeGreaterThanOrEqual(1)
+      expect(screen.getByText(/^projektnavn$/i)).toBeInTheDocument()
     })
 
+    expect(screen.queryByText(/^følgetråd$/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/^strikket med$/i)).not.toBeInTheDocument()
   })
 })
