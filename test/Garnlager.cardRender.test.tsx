@@ -330,11 +330,12 @@ describe('Garnlager kort — AC9: detaljelinje', () => {
   })
 
   it('detaljelinje indeholder status', async () => {
-    await renderAndWait([{ ...BASE_YARN, colorCode: '', antal: 1, status: 'Brugt op' }])
+    // F5 2026-04-28: default-filter skjuler "Brugt op"-kort. Tester med "I brug"
+    // for at verificere at status vises i detaljelinjen — adfærden er den samme
+    // for alle synlige statusser.
+    await renderAndWait([{ ...BASE_YARN, colorCode: '', antal: 1, status: 'I brug' }])
 
-    // "Brugt op" kan optræde i filter-dropdown og i detaljelinjen på kortet
-    // Vi verificerer via detaljelinjen der indeholder "ngl · Brugt op"
-    expect(screen.getByText(/ngl · Brugt op/)).toBeInTheDocument()
+    expect(screen.getByText(/ngl · I brug/)).toBeInTheDocument()
   })
 
   it('detaljelinje bruger " · " som separator: "001 · 3 ngl · På lager"', async () => {

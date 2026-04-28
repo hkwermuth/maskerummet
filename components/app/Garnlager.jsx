@@ -16,6 +16,7 @@ import {
 import BarcodeScanner from './BarcodeScanner'
 import BrugNoeglerModal from './BrugNoeglerModal'
 import KatalogInfoblok from './KatalogInfoblok'
+import BrugtOpFoldeUd from './BrugtOpFoldeUd'
 import FarvekategoriCirkler from './FarvekategoriCirkler'
 import FlereFarverVælger from './FlereFarverVælger'
 import AntalStepper from './AntalStepper'
@@ -24,6 +25,7 @@ import { dedupeYarnNameFromBrand, gradientFromHexColors, primaryFiberLabel } fro
 import { YARN_WEIGHT_LABELS } from '@/lib/yarn-weight'
 import { exportGarnlager } from '@/lib/export/exportGarnlager'
 import { validateForm } from '@/lib/validators/yarnForm'
+import { toISODate } from '@/lib/date/formatDanish'
 
 const WEIGHTS  = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
 const STATUSES = ['På lager', 'I brug', 'Brugt op', 'Ønskeliste']
@@ -51,6 +53,8 @@ const EMPTY_FORM = {
   weight: 'DK', fiber: '', metrage: '', pindstr: '',
   antal: 1, status: 'På lager', hex: '', hexColors: [], noter: '', barcode: '',
   imageUrl: null,
+  brugtTilProjekt: '',
+  brugtOpDato: '',
   catalogYarnId: null,
   catalogColorId: null,
   catalogImageUrl: null,
@@ -356,6 +360,7 @@ export default function Garnlager({ user, onRequestLogin }) {
   const [catalogQuery, setCatalogQuery] = useState('')
   const [selectedYarn, setSelectedYarn] = useState(null)
   const [colorsForYarn, setColorsForYarn] = useState([])
+  const [projects, setProjects] = useState([])
 
   // ── Load from Supabase ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -373,6 +378,25 @@ export default function Garnlager({ user, onRequestLogin }) {
       setLoaded(true)
     }
     fetchYarns()
+  }, [])
+
+  // ── Projects til "Brugt op"-folde-ud autocomplete ───────────────────────────
+  // Defensiv: autocomplete-data er nice-to-have. Hvis kaldet fejler (offline,
+  // RLS-edge, mocked Supabase i tests) viser vi blot fri tekst-input uden forslag.
+  useEffect(() => {
+    async function loadProjects() {
+      try {
+        const { data } = await supabase
+          .from('projects')
+          .select('id,title,used_at,created_at')
+          .order('used_at', { ascending: false })
+          .limit(200)
+        setProjects(data ?? [])
+      } catch {
+        setProjects([])
+      }
+    }
+    loadProjects()
   }, [])
 
   // ── Persist helpers ─────────────────────────────────────────────────────────
@@ -554,15 +578,20 @@ export default function Garnlager({ user, onRequestLogin }) {
   }
 
   // ── Filtering ───────────────────────────────────────────────────────────────
+  // Default-visning skjuler "Brugt op"-garn så lageret viser hvad brugeren har.
+  // Brugeren kan eksplicit vælge "Brugt op" i status-dropdown for at se dem.
   const filtered = yarns.filter(y => {
     const matchesSearch = yarnMatchesStashSearch(y, q)
     const matchesWeight = !filterWeight || y.weight === filterWeight
-    const matchesStatus = !filterStatus || y.status === filterStatus
+    const matchesStatus = filterStatus
+      ? y.status === filterStatus
+      : y.status !== 'Brugt op'
     const matchesFiber  = !filterFiber  || (y.fiber ?? '').toLowerCase().includes(filterFiber.toLowerCase())
     return matchesSearch && matchesWeight && matchesStatus && matchesFiber
   })
 
-  const totalNgl = yarns.reduce((s, y) => s + Number(y.antal || 0), 0)
+  const totalNgl    = yarns.reduce((s, y) => s + Number(y.antal || 0), 0)
+  const brugtOpCount = yarns.filter(y => y.status === 'Brugt op').length
 
   if (!loaded) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', color: '#8B7D6B', fontFamily: "'DM Sans', sans-serif" }}>
@@ -659,6 +688,7 @@ export default function Garnlager({ user, onRequestLogin }) {
             [totalNgl, 'Nøgler i alt'],
             [yarns.filter(y => y.status === 'I brug').length, 'I brug'],
             [yarns.filter(y => y.status === 'På lager').length, 'På lager'],
+            [brugtOpCount, 'Brugt op'],
           ].map(([n, l]) => (
             <div key={l} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '18px', fontWeight: 600, color: '#2C4A3E', lineHeight: 1.1 }}>{n}</span>
@@ -775,11 +805,13 @@ export default function Garnlager({ user, onRequestLogin }) {
                 onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
               >
                 {/* Billedfelt — fyldt med foto, swatch-på-farve, eller solid/gradient */}
+                {/* "Brugt op"-status: greyscale + badge så kortet visuelt læses som arkiveret */}
                 <div style={{
                   position: 'relative',
                   height: '120px',
                   background: showPhoto ? '#F4EFE6' : colorBg,
                   overflow: 'hidden',
+                  filter: y.status === 'Brugt op' ? 'grayscale(1)' : 'none',
                 }}>
                   {showPhoto && (
                     <img
@@ -814,6 +846,28 @@ export default function Garnlager({ user, onRequestLogin }) {
                         />
                       </div>
                     </div>
+                  )}
+
+                  {/* "Brugt op"-badge — øverste venstre, F9 src-warning-tokens */}
+                  {y.status === 'Brugt op' && (
+                    <span
+                      data-testid="brugt-op-badge"
+                      className="bg-striq-src-warning-bg text-striq-src-warning-fg"
+                      style={{
+                        position: 'absolute',
+                        top: 8,
+                        left: 8,
+                        padding: '3px 10px',
+                        borderRadius: 999,
+                        fontSize: 11,
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontWeight: 500,
+                        letterSpacing: '.02em',
+                        boxShadow: '0 1px 3px rgba(44,32,24,.15)',
+                      }}
+                    >
+                      Brugt op
+                    </span>
                   )}
 
                   {/* Manuelt-ikon ved IKKE-katalog (omvendt logik) */}
@@ -1093,7 +1147,19 @@ export default function Garnlager({ user, onRequestLogin }) {
               )}
 
               <Field label="Status">
-                <select value={form.status} onChange={e => setF('status', e.target.value)} style={{ ...inputStyle, cursor: 'pointer' }}>
+                <select
+                  value={form.status}
+                  onChange={e => {
+                    const next = e.target.value
+                    setForm(p => ({
+                      ...p,
+                      status: next,
+                      // Default dato til i dag når status skifter til "Brugt op" og dato er tom.
+                      brugtOpDato: next === 'Brugt op' && !p.brugtOpDato ? toISODate(new Date()) : p.brugtOpDato,
+                    }))
+                  }}
+                  style={{ ...inputStyle, cursor: 'pointer' }}
+                >
                   {STATUSES.map(s => <option key={s}>{s}</option>)}
                 </select>
               </Field>
@@ -1105,6 +1171,23 @@ export default function Garnlager({ user, onRequestLogin }) {
                   onChange={v => setF('antal', v)}
                 />
               </Field>
+
+              {/* Brugt op-folde-ud — vises kun når status = "Brugt op" (F5) */}
+              {form.status === 'Brugt op' && (
+                <BrugtOpFoldeUd
+                  brugtTilProjekt={form.brugtTilProjekt}
+                  brugtOpDato={form.brugtOpDato}
+                  onChangeProjekt={v => {
+                    setF('brugtTilProjekt', v)
+                    if (fieldErrors.brugtTilProjekt) {
+                      setFieldErrors(prev => { const n = { ...prev }; delete n.brugtTilProjekt; return n })
+                    }
+                  }}
+                  onChangeDato={v => setF('brugtOpDato', v)}
+                  existingProjects={projects}
+                  error={fieldErrors.brugtTilProjekt}
+                />
+              )}
 
               {/* Billede upload — kollapset bag toggle indtil bruger åbner */}
               <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
