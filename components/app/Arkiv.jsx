@@ -29,7 +29,7 @@ import {
 const PROJECT_FIELDS =
   'id,user_id,title,used_at,needle_size,held_with,notes,' +
   'project_image_urls,pattern_pdf_url,pattern_pdf_thumbnail_url,pattern_image_urls,' +
-  'is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,community_size_shown,' +
+  'is_shared,shared_at,project_type,pattern_name,pattern_designer,community_description,community_size_shown,community_primary_image_index,' +
   'status,created_at,updated_at'
 
 const IMAGES_BUCKET   = 'yarn-images'

@@ -46,10 +46,13 @@ describe('A1 fetchSharedProjects — field whitelist', () => {
     await fetchSharedProjects(supabase as never)
 
     expect(projectSelectSpy).toHaveBeenCalledWith(
-      'id,title,project_image_urls,project_type,community_description,community_size_shown,pattern_name,pattern_designer,shared_at,display_name',
+      'id,title,project_image_urls,community_primary_image_index,project_type,community_description,community_size_shown,pattern_name,pattern_designer,pattern_pdf_thumbnail_url,pattern_cover_url,shared_at,display_name',
     )
     const selectArg: string = projectSelectSpy.mock.calls[0][0]
     expect(selectArg).toContain('community_size_shown')
+    expect(selectArg).toContain('community_primary_image_index')
+    expect(selectArg).toContain('pattern_pdf_thumbnail_url')
+    expect(selectArg).toContain('pattern_cover_url')
     expect(selectArg).not.toContain('notes')
     expect(selectArg).not.toContain('pattern_pdf_url')
     expect(selectArg).not.toContain('needle_size')
@@ -182,6 +185,7 @@ describe('A2 shareProject — correct fields sent, no private data', () => {
       project_type: 'sweater',
       community_description: 'Min fine trøje',
       community_size_shown: null,
+      community_primary_image_index: null,
       pattern_name: 'Mina',
       pattern_designer: 'Lene',
     })
@@ -193,6 +197,7 @@ describe('A2 shareProject — correct fields sent, no private data', () => {
       project_type: 'sweater',
       community_description: 'Min fine trøje',
       community_size_shown: null,
+      community_primary_image_index: null,
       pattern_name: 'Mina',
       pattern_designer: 'Lene',
     })
@@ -217,6 +222,7 @@ describe('A2 shareProject — correct fields sent, no private data', () => {
       project_type: 'hue',
       community_description: null,
       community_size_shown: null,
+      community_primary_image_index: null,
       pattern_name: 'Hat',
       pattern_designer: 'Designer',
       display_name: 'Marie L.',
@@ -241,6 +247,7 @@ describe('A2 shareProject — correct fields sent, no private data', () => {
       project_type: 'hue',
       community_description: null,
       community_size_shown: null,
+      community_primary_image_index: null,
       pattern_name: 'Hat',
       pattern_designer: 'Designer',
       // display_name intentionally absent

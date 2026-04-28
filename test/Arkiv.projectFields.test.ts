@@ -42,6 +42,12 @@ describe('Arkiv PROJECT_FIELDS regression', () => {
     expect(block).toContain('community_size_shown')
   })
 
+  it('indeholder "community_primary_image_index" i PROJECT_FIELDS (Runde 3)', () => {
+    const block = extractProjectFieldsBlock(arkivSource)
+    expect(block).not.toBe('')
+    expect(block).toContain('community_primary_image_index')
+  })
+
   it('indeholder alle forventede kerne-felter i PROJECT_FIELDS', () => {
     const block = extractProjectFieldsBlock(arkivSource)
     expect(block).not.toBe('')
@@ -54,6 +60,7 @@ describe('Arkiv PROJECT_FIELDS regression', () => {
       'is_shared',
       'community_size_shown',
       'community_description',
+      'community_primary_image_index',
       'project_type',
       'pattern_name',
       'pattern_designer',

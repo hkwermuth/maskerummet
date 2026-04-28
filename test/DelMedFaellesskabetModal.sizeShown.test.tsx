@@ -33,6 +33,8 @@ const baseProject = {
   project_type: null,
   community_description: null,
   community_size_shown: null,
+  community_primary_image_index: null,
+  project_image_urls: [],
   pattern_name: '',
   pattern_designer: '',
 }

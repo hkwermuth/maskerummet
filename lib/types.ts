@@ -183,6 +183,7 @@ export type Project = {
   pattern_designer: string | null
   community_description: string | null
   community_size_shown: string | null
+  community_primary_image_index: number | null
   created_at: string
   updated_at: string
 }
@@ -238,11 +239,14 @@ export type SharedProjectPublic = {
   id: string
   title: string | null
   project_image_urls: string[]
+  community_primary_image_index: number | null
   project_type: ProjectType | null
   community_description: string | null
   community_size_shown: string | null
   pattern_name: string | null
   pattern_designer: string | null
+  pattern_pdf_thumbnail_url: string | null
+  pattern_cover_url: string | null
   shared_at: string
   display_name: string | null
   yarns: SharedProjectYarn[]

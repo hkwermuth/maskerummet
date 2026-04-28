@@ -25,6 +25,12 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
   const [projectType, setProjectType]         = useState(project.project_type || '')
   const [desc, setDesc]                       = useState(project.community_description || '')
   const [sizeShown, setSizeShown]             = useState(project.community_size_shown || '')
+  const [primaryIdx, setPrimaryIdx]           = useState(() => {
+    const raw = project.community_primary_image_index
+    const total = project.project_image_urls?.length || 0
+    if (typeof raw !== 'number' || raw < 0 || raw >= total) return 0
+    return raw
+  })
   const [patternName, setPatternName]         = useState(project.pattern_name || '')
   const [patternDesigner, setPatternDesigner] = useState(project.pattern_designer || '')
   const [displayName, setDisplayName]         = useState('')
@@ -79,10 +85,13 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
     try {
       const cleanDesc = desc.trim() || null
       const cleanSize = sizeShown.trim() || null
+      const total = project.project_image_urls?.length || 0
+      const cleanPrimary = total >= 2 ? primaryIdx : 0
       await shareProject(supabase, project.id, user.id, {
         project_type: projectType,
         community_description: cleanDesc,
         community_size_shown: cleanSize,
+        community_primary_image_index: cleanPrimary,
         pattern_name: pName,
         pattern_designer: pDesigner,
         display_name: displayName.trim() || null,
@@ -94,6 +103,7 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
         project_type: projectType,
         community_description: cleanDesc,
         community_size_shown: cleanSize,
+        community_primary_image_index: cleanPrimary,
         pattern_name: pName,
         pattern_designer: pDesigner,
       })
@@ -184,6 +194,60 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
               style={inputStyle}
             />
           </div>
+
+          {(project.project_image_urls?.length ?? 0) >= 2 && (
+            <div>
+              <Label>Hovedbillede på Fællesskabet</Label>
+              <div role="radiogroup" aria-label="Vælg hovedbillede" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {project.project_image_urls.map((url, i) => {
+                  const selected = i === primaryIdx
+                  return (
+                    <button
+                      key={url}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      aria-label={`Vælg billede ${i + 1} som hovedbillede`}
+                      onClick={() => setPrimaryIdx(i)}
+                      style={{
+                        position: 'relative',
+                        width: 80, height: 80, padding: 0,
+                        border: selected ? '2px solid #2C4A3E' : '1.5px solid #D0C8BA',
+                        borderRadius: 8, overflow: 'hidden',
+                        background: '#FFFCF7', cursor: 'pointer',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt=""
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                      {selected && (
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            position: 'absolute', top: 4, right: 4,
+                            width: 20, height: 20, borderRadius: '50%',
+                            background: '#2C4A3E', color: '#fff',
+                            fontSize: 12, lineHeight: 1,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontWeight: 700,
+                          }}
+                        >
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+              <div style={{ fontSize: '10.5px', color: '#8B7D6B', marginTop: '4px', lineHeight: 1.5 }}>
+                Det valgte billede vises som thumbnail på Fællesskabet.
+              </div>
+            </div>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
             <div>

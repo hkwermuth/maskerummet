@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   PROJECT_TYPE_LABELS,
   type ProjectType,
@@ -8,6 +8,7 @@ import {
 } from '@/lib/types'
 import { HeroIllustration } from '@/components/layout/HeroIllustration'
 import { yarnDisplayLabel } from '@/lib/yarn-display'
+import { SharedProjectDetailModal } from '@/components/app/SharedProjectDetailModal'
 
 const AUTHOR_FALLBACK = 'Anonym strikker'
 
@@ -20,6 +21,18 @@ export function FaellesskabClient({
   const [type, setType] = useState<'' | ProjectType>('')
   const [yarnFilter, setYarnFilter] = useState('')
   const [patternFilter, setPatternFilter] = useState('')
+  const [active, setActive] = useState<SharedProjectPublic | null>(null)
+  const triggerRef = useRef<HTMLElement | null>(null)
+
+  function openDetail(project: SharedProjectPublic, trigger: HTMLElement) {
+    triggerRef.current = trigger
+    setActive(project)
+  }
+  function closeDetail() {
+    setActive(null)
+    // Returnér focus til kortet der åbnede modal'en
+    setTimeout(() => triggerRef.current?.focus(), 0)
+  }
 
   const yarnOptions = useMemo(() => {
     const s = new Set<string>()
@@ -151,10 +164,16 @@ export function FaellesskabClient({
             gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
             gap: 18,
           }}>
-            {filtered.map(p => <SharedProjectCard key={p.id} project={p} />)}
+            {filtered.map(p => (
+              <SharedProjectCard key={p.id} project={p} onOpen={openDetail} />
+            ))}
           </div>
         )}
       </div>
+
+      {active && (
+        <SharedProjectDetailModal project={active} onClose={closeDetail} />
+      )}
 
       <style>{`
         @media (max-width: 640px) {
@@ -200,28 +219,58 @@ function FilterSelect({
   )
 }
 
-function SharedProjectCard({ project }: { project: SharedProjectPublic }) {
+function SharedProjectCard({
+  project,
+  onOpen,
+}: {
+  project: SharedProjectPublic
+  onOpen: (project: SharedProjectPublic, trigger: HTMLElement) => void
+}) {
   const typeLabel = project.project_type ? PROJECT_TYPE_LABELS[project.project_type] : null
   const author = project.display_name?.trim() || AUTHOR_FALLBACK
   const visibleYarns = project.yarns.slice(0, 3)
   const restCount = project.yarns.length - visibleYarns.length
   const hasPattern = !!(project.pattern_name || project.pattern_designer)
 
+  const images = project.project_image_urls ?? []
+  const rawIdx = project.community_primary_image_index
+  const primaryIdx = (typeof rawIdx === 'number' && rawIdx >= 0 && rawIdx < images.length) ? rawIdx : 0
+  const heroUrl = images[primaryIdx] ?? images[0] ?? null
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLElement>) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onOpen(project, e.currentTarget)
+    }
+  }
+
   return (
-    <article style={{
-      background: '#FFFFFF',
-      border: '1px solid #E5DDD9',
-      borderRadius: 12,
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column',
-      boxShadow: '0 1px 4px rgba(48,34,24,.06)',
-    }}>
+    <article
+      role="button"
+      tabIndex={0}
+      aria-label={`${project.title || 'Unavngivet projekt'} af ${author}. Tryk Enter for at se detaljer.`}
+      onClick={e => onOpen(project, e.currentTarget)}
+      onKeyDown={handleKeyDown}
+      style={{
+        background: '#FFFFFF',
+        border: '1px solid #E5DDD9',
+        borderRadius: 12,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 1px 4px rgba(48,34,24,.06)',
+        cursor: 'pointer',
+        textAlign: 'left',
+        transition: 'transform .15s, box-shadow .15s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 18px rgba(44,32,24,.12)' }}
+      onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(48,34,24,.06)' }}
+    >
       <div style={{ position: 'relative', aspectRatio: '4 / 3', background: '#EDE7D8', overflow: 'hidden' }}>
-        {project.project_image_urls?.[0] ? (
+        {heroUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={project.project_image_urls[0]}
+            src={heroUrl}
             alt={project.title ?? 'Delt projekt'}
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             loading="lazy"
@@ -240,6 +289,17 @@ function SharedProjectCard({ project }: { project: SharedProjectPublic }) {
             boxShadow: '0 1px 3px rgba(44,32,24,.12)',
           }}>
             {typeLabel}
+          </span>
+        )}
+        {images.length > 1 && (
+          <span aria-hidden="true" style={{
+            position: 'absolute', bottom: 8, right: 8,
+            padding: '3px 9px', borderRadius: 999,
+            fontSize: 11, background: 'rgba(44,32,24,.78)',
+            color: '#FFFCF7', fontFamily: "'DM Sans', sans-serif",
+            boxShadow: '0 1px 3px rgba(44,32,24,.18)',
+          }}>
+            +{images.length - 1}
           </span>
         )}
       </div>
