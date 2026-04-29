@@ -1,0 +1,1813 @@
+{
+  "source": "DROPS Design / Garnstudio",
+  "category": "Damecardigans + DROPS 268 & 267 (kuratereret)",
+  "fetched_at": "2026-04-29",
+  "license_notes": [
+    "Billeder hostes hos DROPS (images.garnstudio.com) og må IKKE beskæres eller redigeres.",
+    "Kun navn, DROPS-nummer, foto, garn/materialer og pinde gengives — ikke selve mønsterinstruktionerne.",
+    "DROPS-logo skal være synligt; brugere klikkes til DROPS' originale mønsterside."
+  ],
+  "schema_notes": {
+    "searchable_fields": {
+      "yarns": "array of DROPS yarn names (uppercase) — direct match search",
+      "yarn_details[].name": "individual yarn name",
+      "yarn_details[].tags": "fiber tags (bomuld, hør, viskose, silke, uld, alpaka, mohair, …) — multi-tag search",
+      "audience": "dame | herre | barn | baby | unisex",
+      "garment_type": "top | sweater | cardigan | vest | kjole | nederdel | bukser | poncho | …",
+      "season": "sommer | vinter | jul | påske",
+      "needle_size": "string, e.g. \"4\" or \"4,5\" — primary recommended needle"
+    },
+    "example_queries": [
+      "audience=dame & garment_type=cardigan",
+      "season=sommer & yarn_details.tags includes hør",
+      "yarns includes \"KID-SILK\" (= mohair+silke base)",
+      "yarn_details.tags includes mohair"
+    ]
+  },
+  "patterns": [
+    {
+      "rank": 1,
+      "drops_number": "268-1",
+      "name": "Lemon Zest Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "4",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/1/1-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12575&cid=3&lang=dk",
+      "yarns": [
+        "BABY MERINO",
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "BABY MERINO",
+          "fibers": "100% merinould",
+          "tags": [
+            "uld"
+          ]
+        },
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "19 masker i bredden og 25 pinde i højden med glatstrik og 1 tråd i hver kvalitet på pinde nr 4 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker"
+      ]
+    },
+    {
+      "rank": 2,
+      "drops_number": "236-33",
+      "name": "Foggy Autumn Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "5,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/236/33/33-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=11104&cid=3&lang=dk",
+      "yarns": [
+        "AIR"
+      ],
+      "yarn_details": [
+        {
+          "name": "AIR",
+          "fibers": "70% alpaka, 23% polyamid, 7% uld",
+          "tags": [
+            "alpaka",
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "16 masker i bredden og 20 pinde i højden med glatstrik = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker"
+      ]
+    },
+    {
+      "rank": 3,
+      "drops_number": "231-6",
+      "name": "Cherished Moments",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "8",
+      "image_url": "https://images.garnstudio.com/drops/mag/231/6/6-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=10781&cid=3&lang=dk",
+      "yarns": [
+        "BRUSHED ALPACA SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "BRUSHED ALPACA SILK",
+          "fibers": "77% alpaka, 23% silke",
+          "tags": [
+            "alpaka",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "11 masker i bredden og 15 pinde i højden med glatstrik og 2 tråde = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker",
+        "Pasteldrømme"
+      ]
+    },
+    {
+      "rank": 4,
+      "drops_number": "266-5",
+      "name": "Ivory Leaf Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "4,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/266/5/5-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12570&cid=3&lang=dk",
+      "yarns": [
+        "AIR"
+      ],
+      "yarn_details": [
+        {
+          "name": "AIR",
+          "fibers": "70% alpaka, 23% polyamid, 7% uld",
+          "tags": [
+            "alpaka",
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "18 masker i bredden og 24 pinde i højden med glatstrik på pinde nr 4,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans"
+      ]
+    },
+    {
+      "rank": 5,
+      "drops_number": "244-8",
+      "name": "No Nonsense Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/244/8/8-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=11431&cid=3&lang=dk",
+      "yarns": [
+        "AIR"
+      ],
+      "yarn_details": [
+        {
+          "name": "AIR",
+          "fibers": "70% alpaka, 23% polyamid, 7% uld",
+          "tags": [
+            "alpaka",
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker"
+      ]
+    },
+    {
+      "rank": 6,
+      "drops_number": "267-18",
+      "name": "Sunset Sorbet Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "5,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/18/18-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12563&cid=3&lang=dk",
+      "yarns": [
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "15 masker i bredden og 19 pinde i højden med glatstrik og 3 tråde på pinde nr 5,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker"
+      ]
+    },
+    {
+      "rank": 7,
+      "drops_number": "266-6",
+      "name": "Fairy Lights Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/266/6/6-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12581&cid=3&lang=dk",
+      "yarns": [
+        "FIESTA",
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "FIESTA",
+          "fibers": "61% bomuld, 39% polyester (papir)",
+          "tags": [
+            "bomuld",
+            "papir"
+          ]
+        },
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik og 1 tråd i hver kvalitet på pinde nr 5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker"
+      ]
+    },
+    {
+      "rank": 8,
+      "drops_number": "259-14",
+      "name": "Morning Dream Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "4,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/259/14/14-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12130&cid=3&lang=dk",
+      "yarns": [
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "18 masker i bredden og 24 pinde i højden med glatstrik og 2 tråde på pinde nr 4,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker"
+      ]
+    },
+    {
+      "rank": 9,
+      "drops_number": "212-12",
+      "name": "Late Nights Jacket",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/212/12/12-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=9667&cid=3&lang=dk",
+      "yarns": [
+        "BRUSHED ALPACA SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "BRUSHED ALPACA SILK",
+          "fibers": "77% alpaka, 23% silke",
+          "tags": [
+            "alpaka",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans"
+      ]
+    },
+    {
+      "rank": 10,
+      "drops_number": "266-8",
+      "name": "Waterline Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/266/8/8-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12567&cid=3&lang=dk",
+      "yarns": [
+        "AIR"
+      ],
+      "yarn_details": [
+        {
+          "name": "AIR",
+          "fibers": "70% alpaka, 23% polyamid, 7% uld",
+          "tags": [
+            "alpaka",
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik på pinde nr 5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker"
+      ]
+    },
+    {
+      "rank": 11,
+      "drops_number": "268-15",
+      "name": "Lemon Mist Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "3,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/15/15-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12656&cid=3&lang=dk",
+      "yarns": [
+        "BABY MERINO",
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "BABY MERINO",
+          "fibers": "100% merinould",
+          "tags": [
+            "uld"
+          ]
+        },
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "20 masker i bredden og 27 pinde i højden med glatstrik og 1 tråd i hver kvalitet på pinde nr 3,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Kortærmede cardigans"
+      ]
+    },
+    {
+      "rank": 12,
+      "drops_number": "232-33",
+      "name": "Dusky Rose Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/232/33/33-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=10779&cid=3&lang=dk",
+      "yarns": [
+        "AIR"
+      ],
+      "yarn_details": [
+        {
+          "name": "AIR",
+          "fibers": "70% alpaka, 23% polyamid, 7% uld",
+          "tags": [
+            "alpaka",
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker"
+      ]
+    },
+    {
+      "rank": 13,
+      "drops_number": "191-8",
+      "name": "Le Conquet",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "7",
+      "image_url": "https://images.garnstudio.com/drops/mag/191/8/8-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=8555&cid=3&lang=dk",
+      "yarns": [
+        "ALPACA",
+        "FLORA",
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "ALPACA",
+          "fibers": "100% alpaka",
+          "tags": [
+            "alpaka"
+          ]
+        },
+        {
+          "name": "FLORA",
+          "fibers": "65% uld, 35% alpaka",
+          "tags": [
+            "uld",
+            "alpaka"
+          ]
+        },
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "13 masker og 15 pinde perlestrik med 3 tråde på 10 cm i bredden og 10 cm i højden",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Pasteldrømme"
+      ]
+    },
+    {
+      "rank": 14,
+      "drops_number": "174-14",
+      "name": "Twin River",
+      "audience": "herre",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/174/14/14-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=7785&cid=3&lang=dk",
+      "yarns": [
+        "NEPAL"
+      ],
+      "yarn_details": [
+        {
+          "name": "NEPAL",
+          "fibers": "65% uld, 35% alpaka",
+          "tags": [
+            "uld",
+            "alpaka"
+          ]
+        }
+      ],
+      "gauge": null,
+      "category_tags": [
+        "Herre",
+        "Bluser & Sweaters til herrer",
+        "Basisbluser til herre"
+      ]
+    },
+    {
+      "rank": 15,
+      "drops_number": "208-1",
+      "name": "Carly Pullover",
+      "audience": "herre",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "4,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/208/1/1-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=9433&cid=3&lang=dk",
+      "yarns": [
+        "AIR"
+      ],
+      "yarn_details": [
+        {
+          "name": "AIR",
+          "fibers": "70% alpaka, 23% polyamid, 7% uld",
+          "tags": [
+            "alpaka",
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "16 masker i bredden og 20 pinde i højden med glatstrik = 10 x 10 cm",
+      "category_tags": [
+        "Herre",
+        "Bluser & Sweaters til herrer",
+        "Basisbluser til herre"
+      ]
+    },
+    {
+      "rank": 16,
+      "drops_number": "260-18",
+      "name": "Midnight Tide Sweater",
+      "audience": "herre",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/260/18/18-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12549&cid=3&lang=dk",
+      "yarns": [
+        "ALASKA",
+        "BIG MERINO"
+      ],
+      "yarn_details": [
+        {
+          "name": "ALASKA",
+          "fibers": "100% uld",
+          "tags": [
+            "uld"
+          ]
+        },
+        {
+          "name": "BIG MERINO",
+          "fibers": "100% merinould",
+          "tags": [
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik på pinde nr 5 = 10 x 10 cm",
+      "category_tags": [
+        "Herre",
+        "Bluser & Sweaters til herrer",
+        "Basisbluser til herre"
+      ]
+    },
+    {
+      "rank": 17,
+      "drops_number": "219-16",
+      "name": "Urban Forest",
+      "audience": "herre",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/219/16/16-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=9985&cid=3&lang=dk",
+      "yarns": [
+        "ALASKA"
+      ],
+      "yarn_details": [
+        {
+          "name": "ALASKA",
+          "fibers": "100% uld",
+          "tags": [
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik = 10 x 10 cm",
+      "category_tags": [
+        "Herre",
+        "Bluser & Sweaters til herrer",
+        "Basisbluser til herre"
+      ]
+    },
+    {
+      "rank": 18,
+      "drops_number": "260-16",
+      "name": "Cold Creek Sweater",
+      "audience": "herre",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "8",
+      "image_url": "https://images.garnstudio.com/drops/mag/260/16/16-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12551&cid=3&lang=dk",
+      "yarns": [
+        "SNOW",
+        "ANDES"
+      ],
+      "yarn_details": [
+        {
+          "name": "SNOW",
+          "fibers": "100% uld",
+          "tags": [
+            "uld"
+          ]
+        },
+        {
+          "name": "ANDES",
+          "fibers": "65% uld, 35% alpaka",
+          "tags": [
+            "uld",
+            "alpaka"
+          ]
+        }
+      ],
+      "gauge": "11 masker i bredden og 14 pinde i højden med glatstrik på pinde nr 8 = 10 x 10 cm",
+      "category_tags": [
+        "Herre",
+        "Bluser & Sweaters til herrer",
+        "Basisbluser til herre"
+      ]
+    },
+    {
+      "rank": 19,
+      "drops_number": "246-33",
+      "name": "Grenivik Hat",
+      "audience": "herre",
+      "garment_type": "hue",
+      "garment_label": "Hue",
+      "season": "vinter",
+      "needle_size": "3",
+      "image_url": "https://images.garnstudio.com/drops/mag/246/33/33-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=11680&cid=3&lang=dk",
+      "yarns": [
+        "ALPACA"
+      ],
+      "yarn_details": [
+        {
+          "name": "ALPACA",
+          "fibers": "100% alpaka",
+          "tags": [
+            "alpaka"
+          ]
+        }
+      ],
+      "gauge": "26 masker i bredden og 34 pinde i højden med glatstrik = 10 x 10 cm",
+      "category_tags": [
+        "Herre",
+        "Tilbehør til herrer",
+        "Huer til herrer"
+      ]
+    },
+    {
+      "rank": 20,
+      "drops_number": "268-3",
+      "name": "Perfectly Bee Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/3/3-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12663&cid=3&lang=dk",
+      "yarns": [
+        "SKY",
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "SKY",
+          "fibers": "58% uld, 28% polyamid, 14% alpaka",
+          "tags": [
+            "uld",
+            "alpaka"
+          ]
+        },
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik og 1 tråd i hver kvalitet på pinde nr 5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser"
+      ]
+    },
+    {
+      "rank": 21,
+      "drops_number": "268-5",
+      "name": "Meringue Bliss Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "4,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/5/5-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12576&cid=3&lang=dk",
+      "yarns": [
+        "NORD",
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "NORD",
+          "fibers": "45% alpaka, 30% uld, 25% nylon",
+          "tags": [
+            "uld",
+            "alpaka"
+          ]
+        },
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "18 masker i bredden og 24 pinde i højden med glatstrik og 1 tråd i hver kvalitet på pinde nr 4,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser"
+      ]
+    },
+    {
+      "rank": 22,
+      "drops_number": "268-7",
+      "name": "Sand Whisper Top",
+      "audience": "dame",
+      "garment_type": "top",
+      "garment_label": "Top",
+      "season": "sommer",
+      "needle_size": "4,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/7/7-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12716&cid=3&lang=dk",
+      "yarns": [
+        "BOMULL-LIN"
+      ],
+      "yarn_details": [
+        {
+          "name": "BOMULL-LIN",
+          "fibers": "53% bomuld, 47% hør",
+          "tags": [
+            "bomuld",
+            "hør"
+          ]
+        }
+      ],
+      "gauge": "18 masker i bredden og 24 pinde i højden med glatstrik på pinde nr 4,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Toppe",
+        "Singlets"
+      ]
+    },
+    {
+      "rank": 23,
+      "drops_number": "268-8",
+      "name": "Almond Petal Top",
+      "audience": "dame",
+      "garment_type": "top",
+      "garment_label": "Top",
+      "season": "sommer",
+      "needle_size": "4",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/8/8-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12686&cid=3&lang=dk",
+      "yarns": [
+        "COTTON LIGHT"
+      ],
+      "yarn_details": [
+        {
+          "name": "COTTON LIGHT",
+          "fibers": "50% bomuld, 50% polyester",
+          "tags": [
+            "bomuld",
+            "polyester"
+          ]
+        }
+      ],
+      "gauge": "21 masker i bredden og 28 pinde i højden med glatstrik på pinde nr 4 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Toppe",
+        "T-shirts"
+      ]
+    },
+    {
+      "rank": 24,
+      "drops_number": "268-9",
+      "name": "Tea Time Lace Cardi",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "sommer",
+      "needle_size": "4",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/9/9-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12669&cid=3&lang=dk",
+      "yarns": [
+        "MUSKAT"
+      ],
+      "yarn_details": [
+        {
+          "name": "MUSKAT",
+          "fibers": "100% bomuld",
+          "tags": [
+            "bomuld"
+          ]
+        }
+      ],
+      "gauge": "21 masker i bredden og 28 pinde i højden med glatstrik på pinde nr 4 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Kortærmede cardigans"
+      ]
+    },
+    {
+      "rank": 25,
+      "drops_number": "268-10",
+      "name": "Tea Time Lace Sweater",
+      "audience": "dame",
+      "garment_type": "top",
+      "garment_label": "Top",
+      "season": "sommer",
+      "needle_size": "4",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/10/10-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12670&cid=3&lang=dk",
+      "yarns": [
+        "MUSKAT"
+      ],
+      "yarn_details": [
+        {
+          "name": "MUSKAT",
+          "fibers": "100% bomuld",
+          "tags": [
+            "bomuld"
+          ]
+        }
+      ],
+      "gauge": "21 masker i bredden og 28 pinde i højden med glatstrik på pinde nr 4 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Toppe",
+        "T-shirts"
+      ]
+    },
+    {
+      "rank": 26,
+      "drops_number": "268-11",
+      "name": "Morning Glow Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "4",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/11/11-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12621&cid=3&lang=dk",
+      "yarns": [
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "19 masker i bredden og 25 pinde i højden med glatstrik og 2 tråde på pinde 4 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Kortærmede cardigans"
+      ]
+    },
+    {
+      "rank": 27,
+      "drops_number": "268-12",
+      "name": "Morning Glow Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "4",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/12/12-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12622&cid=3&lang=dk",
+      "yarns": [
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "19 masker i bredden og 25 pinde i højden med glatstrik og 2 tråde på pinde 4 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser"
+      ]
+    },
+    {
+      "rank": 28,
+      "drops_number": "268-16",
+      "name": "Spring Dawn Top",
+      "audience": "dame",
+      "garment_type": "top",
+      "garment_label": "Top",
+      "season": "vinter",
+      "needle_size": "3",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/16/16-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12657&cid=3&lang=dk",
+      "yarns": [
+        "BABY MERINO",
+        "SAFRAN"
+      ],
+      "yarn_details": [
+        {
+          "name": "BABY MERINO",
+          "fibers": "100% merinould",
+          "tags": [
+            "uld"
+          ]
+        },
+        {
+          "name": "SAFRAN",
+          "fibers": "100% bomuld",
+          "tags": [
+            "bomuld"
+          ]
+        }
+      ],
+      "gauge": "26 masker i bredden og 34 pinde i højden med glatstrik på pinde nr 3 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Toppe",
+        "T-shirts"
+      ]
+    },
+    {
+      "rank": 29,
+      "drops_number": "268-24",
+      "name": "Sunlit Grid Top",
+      "audience": "dame",
+      "garment_type": "top",
+      "garment_label": "Top",
+      "season": "sommer",
+      "needle_size": "4",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/24/24-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12648&cid=3&lang=dk",
+      "yarns": [
+        "MUSKAT"
+      ],
+      "yarn_details": [
+        {
+          "name": "MUSKAT",
+          "fibers": "100% bomuld",
+          "tags": [
+            "bomuld"
+          ]
+        }
+      ],
+      "gauge": "21 masker i bredden og 28 pinde i højden med glatstrik på pinde nr 4 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Toppe",
+        "T-shirts"
+      ]
+    },
+    {
+      "rank": 30,
+      "drops_number": "268-28",
+      "name": "Caramel Stripes Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "4,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/28/28-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12578&cid=3&lang=dk",
+      "yarns": [
+        "DAISY",
+        "MERINO EXTRA FINE"
+      ],
+      "yarn_details": [
+        {
+          "name": "DAISY",
+          "fibers": "50% bomuld, 50% akryl",
+          "tags": [
+            "bomuld",
+            "akryl"
+          ]
+        },
+        {
+          "name": "MERINO EXTRA FINE",
+          "fibers": "100% merinould",
+          "tags": [
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "20 masker i bredden og 26 pinde i højden med glatstrik på pinde nr 4,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Basic bluser",
+        "Stribede bluser"
+      ]
+    },
+    {
+      "rank": 31,
+      "drops_number": "268-29",
+      "name": "Shy Daffodil Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/29/29-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12620&cid=3&lang=dk",
+      "yarns": [
+        "BIG MERINO"
+      ],
+      "yarn_details": [
+        {
+          "name": "BIG MERINO",
+          "fibers": "100% merinould",
+          "tags": [
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik på pinde nr 5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Basic bluser"
+      ]
+    },
+    {
+      "rank": 32,
+      "drops_number": "268-32",
+      "name": "Spring Rings Top",
+      "audience": "dame",
+      "garment_type": "top",
+      "garment_label": "Top",
+      "season": "vinter",
+      "needle_size": "3",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/32/32-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12675&cid=3&lang=dk",
+      "yarns": [
+        "NORD"
+      ],
+      "yarn_details": [
+        {
+          "name": "NORD",
+          "fibers": "45% alpaka, 30% uld, 25% nylon",
+          "tags": [
+            "uld",
+            "alpaka"
+          ]
+        }
+      ],
+      "gauge": "26 masker i bredden og 34 pinde i højden med glatstrik på pinde nr 3 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Toppe",
+        "T-shirts"
+      ]
+    },
+    {
+      "rank": 33,
+      "drops_number": "268-33",
+      "name": "Golden Mist Skirt",
+      "audience": "dame",
+      "garment_type": "nederdel",
+      "garment_label": "Nederdel",
+      "season": "vinter",
+      "needle_size": "3",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/33/33-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12639&cid=3&lang=dk",
+      "yarns": [
+        "FLORA"
+      ],
+      "yarn_details": [
+        {
+          "name": "FLORA",
+          "fibers": "65% uld, 35% alpaka",
+          "tags": [
+            "uld",
+            "alpaka"
+          ]
+        }
+      ],
+      "gauge": "26 masker i bredden og 34 pinde i højden med glatstrik på pinde nr 3 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Nederdele"
+      ]
+    },
+    {
+      "rank": 34,
+      "drops_number": "268-34",
+      "name": "Iced Coffee Dress",
+      "audience": "dame",
+      "garment_type": "kjole",
+      "garment_label": "Kjole",
+      "season": "sommer",
+      "needle_size": "4",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/34/34-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12641&cid=3&lang=dk",
+      "yarns": [
+        "BELLE"
+      ],
+      "yarn_details": [
+        {
+          "name": "BELLE",
+          "fibers": "53% bomuld, 33% viskose, 14% hør",
+          "tags": [
+            "bomuld",
+            "viskose",
+            "hør"
+          ]
+        }
+      ],
+      "gauge": "21 masker i bredden og 28 pinde i højden med glatstrik på pinde nr 4 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Kjoler & Tunikaer"
+      ]
+    },
+    {
+      "rank": 35,
+      "drops_number": "268-35",
+      "name": "Golden Mist Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "3",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/35/35-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12637&cid=3&lang=dk",
+      "yarns": [
+        "FLORA"
+      ],
+      "yarn_details": [
+        {
+          "name": "FLORA",
+          "fibers": "65% uld, 35% alpaka",
+          "tags": [
+            "uld",
+            "alpaka"
+          ]
+        }
+      ],
+      "gauge": "26 masker i bredden og 34 pinde i højden med glatstrik på pinde nr 3 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Kortærmede cardigans"
+      ]
+    },
+    {
+      "rank": 36,
+      "drops_number": "268-36",
+      "name": "Golden Mist Tee",
+      "audience": "dame",
+      "garment_type": "top",
+      "garment_label": "Top",
+      "season": "vinter",
+      "needle_size": "3",
+      "image_url": "https://images.garnstudio.com/drops/mag/268/36/36-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12638&cid=3&lang=dk",
+      "yarns": [
+        "FLORA"
+      ],
+      "yarn_details": [
+        {
+          "name": "FLORA",
+          "fibers": "65% uld, 35% alpaka",
+          "tags": [
+            "uld",
+            "alpaka"
+          ]
+        }
+      ],
+      "gauge": "26 masker i bredden og 34 pinde i højden med glatstrik på pinde nr 3 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Toppe",
+        "T-shirts"
+      ]
+    },
+    {
+      "rank": 37,
+      "drops_number": "267-5",
+      "name": "Persephone Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "4,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/5/5-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12583&cid=3&lang=dk",
+      "yarns": [
+        "KID-SILK",
+        "BRUSHED ALPACA SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        },
+        {
+          "name": "BRUSHED ALPACA SILK",
+          "fibers": "77% alpaka, 23% silke",
+          "tags": [
+            "alpaka",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "18 masker i bredden og 24 pinde i højden med glatstrik og 2 tråde DROPS Kid-Silk eller 1 tråd DROPS Brushed Alpaca Silk på pinde nr 4,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Basic bluser"
+      ]
+    },
+    {
+      "rank": 38,
+      "drops_number": "267-6",
+      "name": "Persephone Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "4,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/6/6-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12582&cid=3&lang=dk",
+      "yarns": [
+        "KID-SILK",
+        "BRUSHED ALPACA SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        },
+        {
+          "name": "BRUSHED ALPACA SILK",
+          "fibers": "77% alpaka, 23% silke",
+          "tags": [
+            "alpaka",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "18 masker i bredden og 24 pinde i højden med glatstrik og 2 tråde DROPS Kid-Silk eller 1 tråd DROPS Brushed Alpaca Silk på pinde nr 4,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker"
+      ]
+    },
+    {
+      "rank": 39,
+      "drops_number": "267-7",
+      "name": "Sweet Sprinkles Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "6",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/7/7-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12584&cid=3&lang=dk",
+      "yarns": [
+        "FIESTA",
+        "BRUSHED ALPACA SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "FIESTA",
+          "fibers": "61% bomuld, 39% polyester (papir)",
+          "tags": [
+            "bomuld",
+            "papir"
+          ]
+        },
+        {
+          "name": "BRUSHED ALPACA SILK",
+          "fibers": "77% alpaka, 23% silke",
+          "tags": [
+            "alpaka",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "14 masker i bredden og 17 pinde i højden med glatstrik og 1 tråd i hver kvalitet på pinde nr 6 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Basic bluser",
+        "Stribede bluser"
+      ]
+    },
+    {
+      "rank": 40,
+      "drops_number": "267-8",
+      "name": "Sweet Sprinkles Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "vinter",
+      "needle_size": "6",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/8/8-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12585&cid=3&lang=dk",
+      "yarns": [
+        "FIESTA",
+        "BRUSHED ALPACA SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "FIESTA",
+          "fibers": "61% bomuld, 39% polyester (papir)",
+          "tags": [
+            "bomuld",
+            "papir"
+          ]
+        },
+        {
+          "name": "BRUSHED ALPACA SILK",
+          "fibers": "77% alpaka, 23% silke",
+          "tags": [
+            "alpaka",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "14 masker i bredden og 17 pinde i højden med glatstrik og 1 tråd i hver kvalitet på pinde nr 6 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker"
+      ]
+    },
+    {
+      "rank": 41,
+      "drops_number": "267-10",
+      "name": "Rose Pearl Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/10/10-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12598&cid=3&lang=dk",
+      "yarns": [
+        "AIR"
+      ],
+      "yarn_details": [
+        {
+          "name": "AIR",
+          "fibers": "70% alpaka, 23% polyamid, 7% uld",
+          "tags": [
+            "alpaka",
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik på pinde nr 5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser"
+      ]
+    },
+    {
+      "rank": 42,
+      "drops_number": "267-14",
+      "name": "Crimson Treasure Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "5,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/14/14-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12616&cid=3&lang=dk",
+      "yarns": [
+        "MELODY"
+      ],
+      "yarn_details": [
+        {
+          "name": "MELODY",
+          "fibers": "70% alpaka, 30% uld",
+          "tags": [
+            "alpaka",
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "15 masker i bredden og 19 pinde i højden med glatstrik på pinde nr 5,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Basic bluser"
+      ]
+    },
+    {
+      "rank": 43,
+      "drops_number": "267-17",
+      "name": "Sunset Sorbet Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "5,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/17/17-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12565&cid=3&lang=dk",
+      "yarns": [
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "15 masker i bredden og 19 pinde i højden med glatstrik og 3 tråde på pinde nr 5,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Basic bluser"
+      ]
+    },
+    {
+      "rank": 44,
+      "drops_number": "267-24",
+      "name": "Grey Orchid Top",
+      "audience": "dame",
+      "garment_type": "top",
+      "garment_label": "Top",
+      "season": "sommer",
+      "needle_size": "3,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/24/24-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12685&cid=3&lang=dk",
+      "yarns": [
+        "SAFRAN"
+      ],
+      "yarn_details": [
+        {
+          "name": "SAFRAN",
+          "fibers": "100% bomuld",
+          "tags": [
+            "bomuld"
+          ]
+        }
+      ],
+      "gauge": "24 masker i bredden og 32 pinde i højden med glatstrik på pinde nr 3,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Toppe",
+        "T-shirts"
+      ]
+    },
+    {
+      "rank": 45,
+      "drops_number": "267-25",
+      "name": "Summer Living Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "sommer",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/25/25-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12667&cid=3&lang=dk",
+      "yarns": [
+        "PARIS"
+      ],
+      "yarn_details": [
+        {
+          "name": "PARIS",
+          "fibers": "100% bomuld",
+          "tags": [
+            "bomuld"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik på pinde 5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Basic bluser"
+      ]
+    },
+    {
+      "rank": 46,
+      "drops_number": "267-26",
+      "name": "Summer Living Cardigan",
+      "audience": "dame",
+      "garment_type": "cardigan",
+      "garment_label": "Cardigan",
+      "season": "sommer",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/26/26-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12668&cid=3&lang=dk",
+      "yarns": [
+        "PARIS"
+      ],
+      "yarn_details": [
+        {
+          "name": "PARIS",
+          "fibers": "100% bomuld",
+          "tags": [
+            "bomuld"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik på pinde 5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Jakker & Cardigans",
+        "Basic cardigans & jakker"
+      ]
+    },
+    {
+      "rank": 47,
+      "drops_number": "267-27",
+      "name": "Sand Walk Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "sommer",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/27/27-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12650&cid=3&lang=dk",
+      "yarns": [
+        "BOMULL-LIN"
+      ],
+      "yarn_details": [
+        {
+          "name": "BOMULL-LIN",
+          "fibers": "53% bomuld, 47% hør",
+          "tags": [
+            "bomuld",
+            "hør"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik på pinde nr 5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Basic bluser"
+      ]
+    },
+    {
+      "rank": 48,
+      "drops_number": "267-28",
+      "name": "Queen of Cables Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "5,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/28/28-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12615&cid=3&lang=dk",
+      "yarns": [
+        "AIR",
+        "KID-SILK"
+      ],
+      "yarn_details": [
+        {
+          "name": "AIR",
+          "fibers": "70% alpaka, 23% polyamid, 7% uld",
+          "tags": [
+            "alpaka",
+            "uld"
+          ]
+        },
+        {
+          "name": "KID-SILK",
+          "fibers": "75% mohair, 25% silke",
+          "tags": [
+            "mohair",
+            "silke"
+          ]
+        }
+      ],
+      "gauge": "15 masker i bredden og 20 pinde i højden med glatstrik og 1 tråd i hver kvalitet på pinde nr 5,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser"
+      ]
+    },
+    {
+      "rank": 49,
+      "drops_number": "267-29",
+      "name": "Memories of Provence Tee",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "3,5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/29/29-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12619&cid=3&lang=dk",
+      "yarns": [
+        "FABEL"
+      ],
+      "yarn_details": [
+        {
+          "name": "FABEL",
+          "fibers": "75% uld, 25% nylon",
+          "tags": [
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "24 masker i bredden og 32 pinde i højden med glatstrik på pinde nr 3,5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Toppe",
+        "Basic bluser",
+        "T-shirts"
+      ]
+    },
+    {
+      "rank": 50,
+      "drops_number": "267-30",
+      "name": "Daisy Kiss Top",
+      "audience": "dame",
+      "garment_type": "top",
+      "garment_label": "Top",
+      "season": "sommer",
+      "needle_size": "4",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/30/30-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12718&cid=3&lang=dk",
+      "yarns": [
+        "BELLE"
+      ],
+      "yarn_details": [
+        {
+          "name": "BELLE",
+          "fibers": "53% bomuld, 33% viskose, 14% hør",
+          "tags": [
+            "bomuld",
+            "viskose",
+            "hør"
+          ]
+        }
+      ],
+      "gauge": "21 masker i bredden og 28 pinde i højden med glatstrik på pinde nr 4 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Toppe",
+        "Singlets"
+      ]
+    },
+    {
+      "rank": 51,
+      "drops_number": "267-31",
+      "name": "Rose Cloud Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "3",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/31/31-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12604&cid=3&lang=dk",
+      "yarns": [
+        "ALPACA",
+        "FLORA"
+      ],
+      "yarn_details": [
+        {
+          "name": "ALPACA",
+          "fibers": "100% alpaka",
+          "tags": [
+            "alpaka"
+          ]
+        },
+        {
+          "name": "FLORA",
+          "fibers": "65% uld, 35% alpaka",
+          "tags": [
+            "uld",
+            "alpaka"
+          ]
+        }
+      ],
+      "gauge": "26 masker i bredden og 34 pinde i højden med glatstrik på pinde nr 3 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser"
+      ]
+    },
+    {
+      "rank": 52,
+      "drops_number": "267-33",
+      "name": "Seashell Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "5",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/33/33-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12580&cid=3&lang=dk",
+      "yarns": [
+        "BIG MERINO"
+      ],
+      "yarn_details": [
+        {
+          "name": "BIG MERINO",
+          "fibers": "100% merinould",
+          "tags": [
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "17 masker i bredden og 22 pinde i højden med glatstrik på pinde nr 5 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser"
+      ]
+    },
+    {
+      "rank": 53,
+      "drops_number": "267-34",
+      "name": "Spring Hug Sweater",
+      "audience": "dame",
+      "garment_type": "sweater",
+      "garment_label": "Sweater",
+      "season": "vinter",
+      "needle_size": "8",
+      "image_url": "https://images.garnstudio.com/drops/mag/267/34/34-2.jpg",
+      "pattern_url": "https://www.garnstudio.com/pattern.php?id=12607&cid=3&lang=dk",
+      "yarns": [
+        "AIR",
+        "MELODY"
+      ],
+      "yarn_details": [
+        {
+          "name": "AIR",
+          "fibers": "70% alpaka, 23% polyamid, 7% uld",
+          "tags": [
+            "alpaka",
+            "uld"
+          ]
+        },
+        {
+          "name": "MELODY",
+          "fibers": "70% alpaka, 30% uld",
+          "tags": [
+            "alpaka",
+            "uld"
+          ]
+        }
+      ],
+      "gauge": "11 masker i bredden og 14 pinde i højden med glatstrik og 1 tråd i hver kvalitet på pinde nr 8 = 10 x 10 cm",
+      "category_tags": [
+        "Dame",
+        "Bluser",
+        "Basic bluser"
+      ]
+    }
+  ]
+}
