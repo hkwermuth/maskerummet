@@ -372,6 +372,16 @@ function FraKatalogTab({ line, patch, catalogSearch, catalogColors, onSelectCata
               </div>
             </div>
           )}
+
+          <div>
+            <Label>Farvekategori</Label>
+            <FarvekategoriCirkler
+              colorCategory={line?.colorCategory}
+              hex={line?.hex || ''}
+              onChange={({ colorCategory, hex }) => patch({ colorCategory, hex, catalogColorId: null })}
+              onExactHexChange={hex => patch({ hex, catalogColorId: null })}
+            />
+          </div>
         </>
       )}
 
