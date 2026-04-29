@@ -3,7 +3,10 @@
 -- hvilket gav støjede labels på Garnlager-kort, katalog-dropdown og /garn/[slug].
 --
 -- Datafix:
--- 1) yarns: series=NULL, full_name='Permin Bella' / 'Permin Bella Color'
+-- 1) yarns: series=NULL. NB: `full_name` er en GENERATED column
+--    (producer || ' ' || name || ' (' || series || ')' når series ikke er NULL),
+--    så den opdateres automatisk til 'Permin Bella' / 'Permin Bella Color'
+--    når series sættes til NULL — vi må IKKE sætte den manuelt.
 -- 2) yarn_items: rens brugernes lager-rækker hvor name er den fulde støjede streng
 --    (matchet eksakt — manuelt redigerede navne røres ikke; dedupe-logikken på
 --    render-tid renser visuelt op for ældre data der måtte slippe igennem).
@@ -11,25 +14,17 @@
 -- Idempotent: 2. kørsel rammer 0 rækker.
 --
 -- TODO (manuel): opdater `content/yarns.xlsx` så `npm run import:yarns` ikke
--- gen-introducerer "(by Permin)" / "(Bella Color by Permin)" i series/full_name.
+-- gen-introducerer "(by Permin)" / "(Bella Color by Permin)" i series.
 -- Indtil da: kør IKKE import-scriptet — eller risiker rollback af denne migration.
 
 begin;
 
--- 1) Katalog-rækker
+-- 1) Katalog-rækker — full_name regenereres automatisk som GENERATED column.
 update public.yarns
-   set series = null,
-       full_name = 'Permin Bella'
+   set series = null
  where producer = 'Permin'
-   and name = 'Bella'
-   and (series is not null or full_name is distinct from 'Permin Bella');
-
-update public.yarns
-   set series = null,
-       full_name = 'Permin Bella Color'
- where producer = 'Permin'
-   and name = 'Bella Color'
-   and (series is not null or full_name is distinct from 'Permin Bella Color');
+   and name in ('Bella', 'Bella Color')
+   and series is not null;
 
 -- 2) Brugernes yarn_items — kun Permin-mærkede med præcist suffiks-match.
 update public.yarn_items
