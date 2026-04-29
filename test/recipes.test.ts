@@ -1,6 +1,9 @@
 /**
  * Unit-tests for DROPS opskriftskatalog — pure data-funktioner.
- * Dækker AC5-AC11 (filter/søgning) og AC18-AC21 (lager-match).
+ * Dækker AC5-AC11 (filter/søgning).
+ *
+ * AC18-AC21 (lager-match) fjernet 2026-04-29 — funktionen trækkes tilbage
+ * indtil substitut-/lignende-garn-design er gennemtænkt.
  */
 import { describe, it, expect } from 'vitest'
 import {
@@ -12,11 +15,7 @@ import {
   isAnyFilterActive,
   EMPTY_RECIPE_FILTERS,
 } from '@/lib/data/recipes'
-import {
-  matchRecipeAgainstStock,
-  stockYarnMatchesRecipeYarn,
-} from '@/lib/data/recipe-stock'
-import type { Recipe, RecipeFilters, StockYarn } from '@/lib/types-recipes'
+import type { Recipe, RecipeFilters } from '@/lib/types-recipes'
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -380,156 +379,6 @@ describe('filterRecipes — kant-tilfælde', () => {
   it('EMPTY_RECIPE_FILTERS returnerer alle 53 mønstre', () => {
     const result = filterRecipes(ALL_RECIPES, EMPTY_RECIPE_FILTERS)
     expect(result).toHaveLength(53)
-  })
-})
-
-// ─── AC18-AC21: matchRecipeAgainstStock ──────────────────────────────────────
-
-describe('matchRecipeAgainstStock — AC18-AC21', () => {
-  // AC18: has_all — alle garn på lager
-  it('AC18: has_all — recipe med BABY MERINO + KID-SILK, begge på lager', () => {
-    const recipe = makeRecipe({
-      yarns: ['BABY MERINO', 'KID-SILK'],
-    })
-    const stock: StockYarn[] = [
-      { brand: 'Drops', name: 'Baby Merino' },
-      { brand: 'Drops', name: 'Kid-Silk' },
-    ]
-    const result = matchRecipeAgainstStock(recipe, stock)
-    expect(result.status).toBe('has_all')
-    expect(result.missing).toEqual([])
-  })
-
-  // AC19: missing_one — præcis ét garn mangler
-  it('AC19: missing_one — BABY MERINO på lager, KID-SILK mangler', () => {
-    const recipe = makeRecipe({
-      yarns: ['BABY MERINO', 'KID-SILK'],
-    })
-    const stock: StockYarn[] = [
-      { brand: 'Drops', name: 'Baby Merino' },
-    ]
-    const result = matchRecipeAgainstStock(recipe, stock)
-    expect(result.status).toBe('missing_one')
-    expect(result.missing).toEqual(['KID-SILK'])
-  })
-
-  // AC20: missing_many — flere garn mangler
-  it('AC20: missing_many — ingen garn på lager', () => {
-    const recipe = makeRecipe({
-      yarns: ['BABY MERINO', 'KID-SILK', 'AIR'],
-    })
-    const stock: StockYarn[] = [
-      { brand: 'Drops', name: 'Baby Merino' },
-    ]
-    const result = matchRecipeAgainstStock(recipe, stock)
-    expect(result.status).toBe('missing_many')
-    expect(result.missing).toHaveLength(2)
-    expect(result.missing).toContain('KID-SILK')
-    expect(result.missing).toContain('AIR')
-  })
-
-  // AC21a: unknown for tomt lager
-  it('AC21a: unknown — tomt lager (tom array)', () => {
-    const recipe = makeRecipe({ yarns: ['BABY MERINO'] })
-    const result = matchRecipeAgainstStock(recipe, [])
-    expect(result.status).toBe('unknown')
-    expect(result.missing).toEqual([])
-  })
-
-  // AC21b: unknown for null lager
-  it('AC21b: unknown — null lager (ikke logget ind)', () => {
-    const recipe = makeRecipe({ yarns: ['BABY MERINO'] })
-    const result = matchRecipeAgainstStock(recipe, null)
-    expect(result.status).toBe('unknown')
-  })
-
-  // AC21c: unknown for undefined lager
-  it('AC21c: unknown — undefined lager', () => {
-    const recipe = makeRecipe({ yarns: ['BABY MERINO'] })
-    const result = matchRecipeAgainstStock(recipe, undefined)
-    expect(result.status).toBe('unknown')
-  })
-
-  // AC21d: unknown for opskrift uden garn
-  it('AC21d: unknown — opskrift med tomt yarns-array', () => {
-    const recipe = makeRecipe({ yarns: [] })
-    const stock: StockYarn[] = [{ brand: 'Drops', name: 'Air' }]
-    const result = matchRecipeAgainstStock(recipe, stock)
-    expect(result.status).toBe('unknown')
-  })
-
-  // Regression: "BABY MERINO" må IKKE matche "Drops Baby Alpaca Silk"
-  it('Regression: BABY MERINO matcher IKKE "Drops Baby Alpaca Silk"', () => {
-    const recipe = makeRecipe({ yarns: ['BABY MERINO'] })
-    const stock: StockYarn[] = [
-      { brand: 'Drops', name: 'Baby Alpaca Silk' },
-    ]
-    const result = matchRecipeAgainstStock(recipe, stock)
-    expect(result.status).not.toBe('has_all')
-    expect(result.missing).toContain('BABY MERINO')
-  })
-
-  // Regression: "AIR" må IKKE matche "Lampedusa Air Conditioned" (mangler 'drops')
-  it('Regression: AIR matcher IKKE "Lampedusa Air Conditioned" (mangler drops)', () => {
-    const recipe = makeRecipe({ yarns: ['AIR'] })
-    const stock: StockYarn[] = [
-      { brand: 'Lampedusa', name: 'Air Conditioned' },
-    ]
-    const result = matchRecipeAgainstStock(recipe, stock)
-    expect(result.status).not.toBe('has_all')
-    expect(result.missing).toContain('AIR')
-  })
-})
-
-// ─── stockYarnMatchesRecipeYarn — detaljerede match-regler ────────────────────
-
-describe('stockYarnMatchesRecipeYarn — whole-word + drops-krav', () => {
-  it('brand="Drops", name="Air" matcher yarn-key "AIR"', () => {
-    expect(stockYarnMatchesRecipeYarn({ brand: 'Drops', name: 'Air' }, 'AIR')).toBe(true)
-  })
-
-  it('brand="DROPS", name="Baby Merino" matcher yarn-key "BABY MERINO"', () => {
-    expect(stockYarnMatchesRecipeYarn({ brand: 'DROPS', name: 'Baby Merino' }, 'BABY MERINO')).toBe(true)
-  })
-
-  it('brand="DROPS", name="Kid-Silk" matcher yarn-key "KID-SILK"', () => {
-    expect(stockYarnMatchesRecipeYarn({ brand: 'DROPS', name: 'Kid-Silk' }, 'KID-SILK')).toBe(true)
-  })
-
-  it('brand="Drops", name="Baby Alpaca Silk" matcher IKKE "BABY MERINO" (whole-word)', () => {
-    expect(
-      stockYarnMatchesRecipeYarn({ brand: 'Drops', name: 'Baby Alpaca Silk' }, 'BABY MERINO'),
-    ).toBe(false)
-  })
-
-  it('brand="Lampedusa", name="Air Conditioned" matcher IKKE "AIR" (ingen drops)', () => {
-    expect(
-      stockYarnMatchesRecipeYarn({ brand: 'Lampedusa', name: 'Air Conditioned' }, 'AIR'),
-    ).toBe(false)
-  })
-
-  it('brand=null, name=null → false', () => {
-    expect(stockYarnMatchesRecipeYarn({ brand: null, name: null }, 'AIR')).toBe(false)
-  })
-
-  it('dash↔space normalisering: brand="drops", name="kid silk" matcher "KID-SILK"', () => {
-    expect(stockYarnMatchesRecipeYarn({ brand: 'drops', name: 'kid silk' }, 'KID-SILK')).toBe(true)
-  })
-
-  // Regression: substring-fragmenter må ikke false-positive matche en længere yarn.
-  // Reviewer fandt at en tidligere whole-word-implementation ville matche her.
-  it('Regression: brand="Drops", name="Brushed Alpaca Silk" matcher IKKE "ALPACA"', () => {
-    expect(
-      stockYarnMatchesRecipeYarn({ brand: 'Drops', name: 'Brushed Alpaca Silk' }, 'ALPACA'),
-    ).toBe(false)
-  })
-
-  it('Regression: brand="Drops", name="Baby Merino" matcher IKKE "MERINO"', () => {
-    expect(stockYarnMatchesRecipeYarn({ brand: 'Drops', name: 'Baby Merino' }, 'MERINO')).toBe(false)
-  })
-
-  it('Stock med "drops" i name (brand=null) matcher korrekt: name="Drops Air" + key="AIR"', () => {
-    expect(stockYarnMatchesRecipeYarn({ brand: null, name: 'Drops Air' }, 'AIR')).toBe(true)
   })
 })
 

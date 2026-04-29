@@ -5,7 +5,6 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { fetchSavedRecipes } from '@/lib/data/saved-recipes'
 import { loadRecipes } from '@/lib/data/recipes'
 import { OPSKRIFTER_TOKENS as T } from '@/lib/opskrifter-tokens'
-import type { StockYarn } from '@/lib/types-recipes'
 
 export const metadata: Metadata = {
   title: 'Opskrifter — Striq',
@@ -44,7 +43,6 @@ export default async function OpskrifterPage() {
   } = await supabase.auth.getUser()
 
   let initialSavedKeys: string[] = []
-  let stockYarns: StockYarn[] = []
 
   if (user) {
     try {
@@ -52,15 +50,6 @@ export default async function OpskrifterPage() {
       initialSavedKeys = [...savedSet]
     } catch {
       // Stille fejl — vi viser bare ingen favoritter, brugeren kan stadig browse.
-    }
-    try {
-      const { data } = await supabase
-        .from('yarn_items')
-        .select('name, brand')
-        .eq('user_id', user.id)
-      if (data) stockYarns = data as StockYarn[]
-    } catch {
-      // Stille fejl — bare ingen lager-badges.
     }
   }
 
@@ -107,14 +96,7 @@ export default async function OpskrifterPage() {
                 lineHeight: 1.55,
               }}
             >
-              Find inspiration til dit næste strikkeprojekt. Søg, filtrér efter garn, fiber og pind, og se hvilke opskrifter du kan strikke med dit eget lager. Har du selv opskrifter du gerne vil dele, kan du skrive til{' '}
-              <a
-                href="mailto:kontakt@striq.dk"
-                style={{ color: '#6B5D4F', textDecoration: 'underline' }}
-              >
-                kontakt@striq.dk
-              </a>
-              .
+              Find inspiration, se hvilket garn du skal bruge fra dit lager — og start dit næste projekt med et klik.
             </p>
           </div>
           <div className="opskrifter-hero-art" style={{ flexShrink: 0, width: 220, maxWidth: '100%' }}>
@@ -133,7 +115,6 @@ export default async function OpskrifterPage() {
         <DropsKatalog
           recipes={recipes}
           initialSavedKeys={initialSavedKeys}
-          stockYarns={stockYarns}
           userId={user?.id ?? null}
         />
       </div>

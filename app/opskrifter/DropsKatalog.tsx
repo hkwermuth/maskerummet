@@ -10,7 +10,6 @@ import {
   savedRecipeKey,
   type Recipe,
   type RecipeFilters,
-  type StockYarn,
 } from '@/lib/types-recipes'
 import {
   deriveFilterOptions,
@@ -18,7 +17,6 @@ import {
   parseFiltersFromSearchParams,
   serializeFilters,
 } from '@/lib/data/recipes'
-import { matchRecipeAgainstStock } from '@/lib/data/recipe-stock'
 import { saveRecipe, unsaveRecipe } from '@/lib/data/saved-recipes'
 import { Filterbar } from './Filterbar'
 import { DropsKort } from './DropsKort'
@@ -26,11 +24,10 @@ import { DropsKort } from './DropsKort'
 type Props = {
   recipes: Recipe[]
   initialSavedKeys: string[]
-  stockYarns: StockYarn[]
   userId: string | null
 }
 
-export default function DropsKatalog({ recipes, initialSavedKeys, stockYarns, userId }: Props) {
+export default function DropsKatalog({ recipes, initialSavedKeys, userId }: Props) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -204,14 +201,12 @@ export default function DropsKatalog({ recipes, initialSavedKeys, stockYarns, us
         >
           {visibleRecipes.map((r) => {
             const key = savedRecipeKey(r.source, r.external_id)
-            const stockMatch = matchRecipeAgainstStock(r, stockYarns)
             return (
               <DropsKort
                 key={key}
                 recipe={r}
                 isFavorite={savedKeys.has(key)}
                 onToggleFavorite={() => handleToggleFavorite(r)}
-                stockMatch={stockMatch}
               />
             )
           })}

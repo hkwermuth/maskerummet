@@ -1,13 +1,12 @@
 'use client'
 
 import { OPSKRIFTER_TOKENS as T } from '@/lib/opskrifter-tokens'
-import type { Recipe, RecipeStockMatch } from '@/lib/types-recipes'
+import type { Recipe } from '@/lib/types-recipes'
 
 type Props = {
   recipe: Recipe
   isFavorite: boolean
   onToggleFavorite: () => void
-  stockMatch: RecipeStockMatch
 }
 
 function HjerteIkon({ fyldt }: { fyldt: boolean }) {
@@ -38,45 +37,7 @@ function dropsYarnLabel(key: string): string {
   return `DROPS ${titled}`
 }
 
-function StockBadge({ match }: { match: RecipeStockMatch }) {
-  if (match.status === 'has_all') {
-    return (
-      <span
-        style={{
-          display: 'inline-block',
-          fontSize: 11.5,
-          fontWeight: 600,
-          padding: '3px 9px',
-          borderRadius: 999,
-          background: `${T.sage}20`,
-          color: T.sage,
-        }}
-      >
-        Garn på lager ✓
-      </span>
-    )
-  }
-  if (match.status === 'missing_one') {
-    return (
-      <span
-        style={{
-          display: 'inline-block',
-          fontSize: 11.5,
-          fontWeight: 600,
-          padding: '3px 9px',
-          borderRadius: 999,
-          background: `${T.gold}22`,
-          color: T.gold,
-        }}
-      >
-        Mangler 1 garn
-      </span>
-    )
-  }
-  return null
-}
-
-export function DropsKort({ recipe, isFavorite, onToggleFavorite, stockMatch }: Props) {
+export function DropsKort({ recipe, isFavorite, onToggleFavorite }: Props) {
   // Aggreger fiber-tags fra alle yarn-details (uden dubletter, sorteret)
   const fiberTags = Array.from(
     new Set(recipe.yarn_details.flatMap((y) => y.tags || [])),
@@ -227,7 +188,7 @@ export function DropsKort({ recipe, isFavorite, onToggleFavorite, stockMatch }: 
           ))}
         </div>
 
-        {/* Pind-pille (sort) + lager-badge */}
+        {/* Pind-pille */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           <span
             style={{
@@ -243,7 +204,6 @@ export function DropsKort({ recipe, isFavorite, onToggleFavorite, stockMatch }: 
           >
             Pind: {recipe.needle_size}
           </span>
-          <StockBadge match={stockMatch} />
         </div>
 
         {/* Klik-til-DROPS-knap */}

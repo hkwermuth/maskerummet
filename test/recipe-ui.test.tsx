@@ -2,6 +2,9 @@
  * UI smoke-tests for DROPS opskriftskatalog.
  * Dækker AC22 (resultat-tæller ARIA), AC23 (hjerte aria-pressed + aria-label), AC26 (tomt resultat).
  *
+ * AC24/AC25 (lager-badge) fjernet 2026-04-29 — funktionen trækkes tilbage
+ * indtil substitut-/lignende-garn-design er gennemtænkt.
+ *
  * DropsKort og Filterbar testes direkte — ingen Next.js router/searchParams nødvendig.
  */
 import { describe, it, expect, vi } from 'vitest'
@@ -10,7 +13,7 @@ import userEvent from '@testing-library/user-event'
 import React from 'react'
 import { DropsKort } from '@/app/opskrifter/DropsKort'
 import { Filterbar } from '@/app/opskrifter/Filterbar'
-import type { Recipe, RecipeStockMatch, RecipeFilterOptions, RecipeFilters } from '@/lib/types-recipes'
+import type { Recipe, RecipeFilterOptions, RecipeFilters } from '@/lib/types-recipes'
 import { EMPTY_RECIPE_FILTERS } from '@/lib/types-recipes'
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -35,17 +38,12 @@ const SAMPLE_RECIPE: Recipe = {
   ],
 }
 
-const NO_MATCH: RecipeStockMatch = { status: 'unknown', missing: [] }
-const HAS_ALL: RecipeStockMatch = { status: 'has_all', missing: [] }
-const MISSING_ONE: RecipeStockMatch = { status: 'missing_one', missing: ['KID-SILK'] }
-
 const SAMPLE_OPTIONS: RecipeFilterOptions = {
   audience: ['dame', 'herre'],
   garment_type: ['cardigan', 'sweater'],
   garment_label_for: { cardigan: 'Cardigan', sweater: 'Sweater' },
   season: ['sommer', 'vinter'],
   needle: ['4', '4,5', '5'],
-  yarn: ['AIR', 'BABY MERINO', 'KID-SILK'],
   fiber: ['mohair', 'silke', 'uld'],
 }
 
@@ -58,7 +56,6 @@ describe('DropsKort — AC23: hjerte-knap ARIA', () => {
         recipe={SAMPLE_RECIPE}
         isFavorite={false}
         onToggleFavorite={vi.fn()}
-        stockMatch={NO_MATCH}
       />,
     )
     const btn = screen.getByRole('button', { name: /gem.*favorit/i })
@@ -74,7 +71,6 @@ describe('DropsKort — AC23: hjerte-knap ARIA', () => {
         recipe={SAMPLE_RECIPE}
         isFavorite={true}
         onToggleFavorite={vi.fn()}
-        stockMatch={NO_MATCH}
       />,
     )
     const btn = screen.getByRole('button', { name: /fjern.*favoritter/i })
@@ -89,7 +85,6 @@ describe('DropsKort — AC23: hjerte-knap ARIA', () => {
         recipe={SAMPLE_RECIPE}
         isFavorite={false}
         onToggleFavorite={vi.fn()}
-        stockMatch={NO_MATCH}
       />,
     )
     expect(screen.getByRole('button', { name: /gem/i })).toHaveAttribute('aria-pressed', 'false')
@@ -99,7 +94,6 @@ describe('DropsKort — AC23: hjerte-knap ARIA', () => {
         recipe={SAMPLE_RECIPE}
         isFavorite={true}
         onToggleFavorite={vi.fn()}
-        stockMatch={NO_MATCH}
       />,
     )
     expect(screen.getByRole('button', { name: /fjern/i })).toHaveAttribute('aria-pressed', 'true')
@@ -113,7 +107,6 @@ describe('DropsKort — AC23: hjerte-knap ARIA', () => {
         recipe={SAMPLE_RECIPE}
         isFavorite={false}
         onToggleFavorite={onToggle}
-        stockMatch={NO_MATCH}
       />,
     )
     await user.click(screen.getByRole('button', { name: /gem/i }))
@@ -130,7 +123,6 @@ describe('DropsKort — render smoke-test', () => {
         recipe={SAMPLE_RECIPE}
         isFavorite={false}
         onToggleFavorite={vi.fn()}
-        stockMatch={NO_MATCH}
       />,
     )
     expect(screen.getByText(SAMPLE_RECIPE.name)).toBeInTheDocument()
@@ -142,7 +134,6 @@ describe('DropsKort — render smoke-test', () => {
         recipe={SAMPLE_RECIPE}
         isFavorite={false}
         onToggleFavorite={vi.fn()}
-        stockMatch={NO_MATCH}
       />,
     )
     // Badge vises som designer-navn — 'DROPS Design'
@@ -156,7 +147,6 @@ describe('DropsKort — render smoke-test', () => {
         recipe={SAMPLE_RECIPE}
         isFavorite={false}
         onToggleFavorite={vi.fn()}
-        stockMatch={NO_MATCH}
       />,
     )
     const links = screen.getAllByRole('link')
@@ -172,7 +162,6 @@ describe('DropsKort — render smoke-test', () => {
         recipe={SAMPLE_RECIPE}
         isFavorite={false}
         onToggleFavorite={vi.fn()}
-        stockMatch={NO_MATCH}
       />,
     )
     const img = document.querySelector('img')
@@ -187,63 +176,21 @@ describe('DropsKort — render smoke-test', () => {
         recipe={SAMPLE_RECIPE}
         isFavorite={false}
         onToggleFavorite={vi.fn()}
-        stockMatch={NO_MATCH}
       />,
     )
     expect(screen.getByText(/pind.*4/i)).toBeInTheDocument()
   })
-})
 
-// ─── DropsKort — lager-badge ──────────────────────────────────────────────────
-
-describe('DropsKort — lager-badge', () => {
-  it('has_all → "Garn på lager ✓" badge vises', () => {
+  it('viser INGEN lager-badge (feature trukket tilbage)', () => {
     render(
       <DropsKort
         recipe={SAMPLE_RECIPE}
         isFavorite={false}
         onToggleFavorite={vi.fn()}
-        stockMatch={HAS_ALL}
-      />,
-    )
-    expect(screen.getByText(/garn på lager/i)).toBeInTheDocument()
-  })
-
-  it('missing_one → "Mangler 1 garn" badge vises', () => {
-    render(
-      <DropsKort
-        recipe={SAMPLE_RECIPE}
-        isFavorite={false}
-        onToggleFavorite={vi.fn()}
-        stockMatch={MISSING_ONE}
-      />,
-    )
-    expect(screen.getByText(/mangler 1 garn/i)).toBeInTheDocument()
-  })
-
-  it('unknown → ingen lager-badge', () => {
-    render(
-      <DropsKort
-        recipe={SAMPLE_RECIPE}
-        isFavorite={false}
-        onToggleFavorite={vi.fn()}
-        stockMatch={NO_MATCH}
       />,
     )
     expect(screen.queryByText(/garn på lager/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/mangler/i)).not.toBeInTheDocument()
-  })
-
-  it('missing_many → ingen badge (undgå støj)', () => {
-    render(
-      <DropsKort
-        recipe={SAMPLE_RECIPE}
-        isFavorite={false}
-        onToggleFavorite={vi.fn()}
-        stockMatch={{ status: 'missing_many', missing: ['BABY MERINO', 'KID-SILK'] }}
-      />,
-    )
-    expect(screen.queryByText(/mangler/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/mangler.*garn/i)).not.toBeInTheDocument()
   })
 })
 

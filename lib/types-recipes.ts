@@ -71,20 +71,6 @@ export type RecipeFilterOptions = {
   fiber: string[]
 }
 
-export type RecipeStockStatus = 'has_all' | 'missing_one' | 'missing_many' | 'unknown'
-
-export type RecipeStockMatch = {
-  status: RecipeStockStatus
-  /** Uppercase yarn-keys der mangler. Tom for 'has_all' og 'unknown'. */
-  missing: string[]
-}
-
-/** Form på user's yarn_items i kontekst af opskrift-matching — kun de felter vi behøver. */
-export type StockYarn = {
-  name: string | null
-  brand: string | null
-}
-
 /** Composite key på saved_recipes — `${source}:${external_id}` */
 export type SavedRecipeKey = string
 
