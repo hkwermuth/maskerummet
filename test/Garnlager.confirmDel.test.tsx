@@ -100,16 +100,28 @@ beforeEach(async () => {
   // Reset default delete mock til succes
   mockDelete.mockResolvedValue({ error: null })
 
-  // Reset from mock: første kald (initial fetch) returnerer vores fake garn
-  mockFrom.mockImplementation(() => ({
-    select: vi.fn().mockReturnThis(),
-    order: vi.fn().mockResolvedValue({ data: [FAKE_YARN], error: null }),
-    delete: vi.fn(() => ({ eq: mockDelete })),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: FAKE_YARN, error: null }),
-  }))
+  // Reset from mock: yarn_items returnerer vores fake garn (afsluttes med .order()).
+  // projects-chain (loadProjects: .eq().in().order().limit()) afsluttes med .limit().
+  mockFrom.mockImplementation((table: string) => {
+    if (table === 'projects') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+    }
+    return {
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [FAKE_YARN], error: null }),
+      delete: vi.fn(() => ({ eq: mockDelete })),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: FAKE_YARN, error: null }),
+    }
+  })
 
   // Dynamisk import så mocks er aktive inden modulet evalueres
   const mod = await import('@/components/app/Garnlager.jsx')

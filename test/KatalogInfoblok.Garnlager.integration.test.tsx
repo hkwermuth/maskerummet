@@ -145,15 +145,26 @@ beforeEach(async () => {
     catalogImageUrl: null,
   }))
 
-  mockFrom.mockImplementation(() => ({
-    select: vi.fn().mockReturnThis(),
-    order: vi.fn().mockResolvedValue({ data: [FAKE_YARN_NO_CATALOG], error: null }),
-    delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: FAKE_YARN_NO_CATALOG, error: null }),
-  }))
+  mockFrom.mockImplementation((table: string) => {
+    if (table === 'projects') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+    }
+    return {
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [FAKE_YARN_NO_CATALOG], error: null }),
+      delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: FAKE_YARN_NO_CATALOG, error: null }),
+    }
+  })
 
   const mod = await import('@/components/app/Garnlager.jsx')
   Garnlager = mod.default

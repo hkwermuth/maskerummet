@@ -107,15 +107,26 @@ let Garnlager: React.ComponentType<{ user: unknown; onRequestLogin: () => void }
 beforeEach(async () => {
   vi.clearAllMocks()
 
-  mockFrom.mockImplementation(() => ({
-    select: vi.fn().mockReturnThis(),
-    order: vi.fn().mockResolvedValue({ data: [FAKE_YARN_NO_CATALOG], error: null }),
-    delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: FAKE_YARN_NO_CATALOG, error: null }),
-  }))
+  mockFrom.mockImplementation((table: string) => {
+    if (table === 'projects') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+    }
+    return {
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [FAKE_YARN_NO_CATALOG], error: null }),
+      delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: FAKE_YARN_NO_CATALOG, error: null }),
+    }
+  })
 
   const mod = await import('@/components/app/Garnlager.jsx')
   Garnlager = mod.default
@@ -124,15 +135,26 @@ beforeEach(async () => {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function renderAndOpenAdd(yarns = [FAKE_YARN_NO_CATALOG]) {
-  mockFrom.mockImplementation(() => ({
-    select: vi.fn().mockReturnThis(),
-    order: vi.fn().mockResolvedValue({ data: yarns, error: null }),
-    delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: yarns[0], error: null }),
-  }))
+  mockFrom.mockImplementation((table: string) => {
+    if (table === 'projects') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+    }
+    return {
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: yarns, error: null }),
+      delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: yarns[0], error: null }),
+    }
+  })
 
   const user = userEvent.setup()
   render(<Garnlager user={FAKE_USER} onRequestLogin={() => {}} />)
@@ -149,15 +171,26 @@ async function renderAndOpenAdd(yarns = [FAKE_YARN_NO_CATALOG]) {
 }
 
 async function renderAndOpenEdit(yarn = FAKE_YARN_NO_CATALOG) {
-  mockFrom.mockImplementation(() => ({
-    select: vi.fn().mockReturnThis(),
-    order: vi.fn().mockResolvedValue({ data: [yarn], error: null }),
-    delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: yarn, error: null }),
-  }))
+  mockFrom.mockImplementation((table: string) => {
+    if (table === 'projects') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+    }
+    return {
+      select: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [yarn], error: null }),
+      delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: yarn, error: null }),
+    }
+  })
 
   const user = userEvent.setup()
   render(<Garnlager user={FAKE_USER} onRequestLogin={() => {}} />)
@@ -251,15 +284,26 @@ describe('Garnlager F3 — AC10: billede-blok toggle', () => {
   })
 
   it('billede-blok er automatisk åben i edit-modal når garn har imageUrl', async () => {
-    mockFrom.mockImplementation(() => ({
-      select: vi.fn().mockReturnThis(),
-      order: vi.fn().mockResolvedValue({ data: [FAKE_YARN_WITH_IMAGE], error: null }),
-      delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
-      insert: vi.fn().mockReturnThis(),
-      update: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: FAKE_YARN_WITH_IMAGE, error: null }),
-    }))
+    mockFrom.mockImplementation((table: string) => {
+      if (table === 'projects') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          in: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: [FAKE_YARN_WITH_IMAGE], error: null }),
+        delete: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) })),
+        insert: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: FAKE_YARN_WITH_IMAGE, error: null }),
+      }
+    })
 
     const user = userEvent.setup()
     render(<Garnlager user={FAKE_USER} onRequestLogin={() => {}} />)
