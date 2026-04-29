@@ -188,48 +188,50 @@ export function DropsKort({ recipe, isFavorite, onToggleFavorite }: Props) {
           ))}
         </div>
 
-        {/* Pind-pille */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          <span
+        {/* Pind-pille + "Se opskrift" — pakkes sammen så de begge skubbes til
+            bund, uanset hvor lidt chip-/fiber-indhold der er over. */}
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <span
+              style={{
+                fontSize: 11,
+                padding: '3px 8px',
+                borderRadius: 6,
+                background: T.pillPindBg,
+                color: T.pillPindInk,
+                fontWeight: 600,
+                letterSpacing: '.02em',
+                fontFeatureSettings: '"tnum"',
+              }}
+            >
+              Pind: {recipe.needle_size}
+            </span>
+          </div>
+
+          {/* Klik-til-DROPS-knap — diskret lysegul, matcher pind-pillen */}
+          <a
+            href={recipe.pattern_url}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{
-              fontSize: 11,
-              padding: '3px 8px',
-              borderRadius: 6,
+              display: 'inline-block',
               background: T.pillPindBg,
               color: T.pillPindInk,
+              border: '1px solid transparent',
+              borderRadius: 8,
+              padding: '6px 14px',
+              fontSize: 13.5,
               fontWeight: 600,
-              letterSpacing: '.02em',
-              fontFeatureSettings: '"tnum"',
+              textDecoration: 'none',
+              textAlign: 'center',
+              minHeight: 30,
+              lineHeight: '18px',
+              fontFamily: 'inherit',
             }}
           >
-            Pind: {recipe.needle_size}
-          </span>
+            Se opskrift hos {recipe.designer} ↗
+          </a>
         </div>
-
-        {/* Klik-til-DROPS-knap — diskret lysegul, matcher pind-pillen */}
-        <a
-          href={recipe.pattern_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            marginTop: 'auto',
-            display: 'inline-block',
-            background: T.pillPindBg,
-            color: T.pillPindInk,
-            border: '1px solid transparent',
-            borderRadius: 8,
-            padding: '10px 14px',
-            fontSize: 13.5,
-            fontWeight: 600,
-            textDecoration: 'none',
-            textAlign: 'center',
-            minHeight: 44,
-            lineHeight: '24px',
-            fontFamily: 'inherit',
-          }}
-        >
-          Se opskrift hos {recipe.designer} ↗
-        </a>
       </div>
     </article>
   )
