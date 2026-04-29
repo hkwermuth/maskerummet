@@ -813,7 +813,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
 
       const { data: savedUsages, error: uErr } = await supabase
         .from('yarn_usage')
-        .upsert(usageRows)
+        .upsert(usageRows, { defaultToNull: false })
         .select()
       if (uErr) throw uErr
 
