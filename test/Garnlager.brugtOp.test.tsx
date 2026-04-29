@@ -1,7 +1,8 @@
 /**
  * F5-acceptkriterier for Garnlager-komponenten — "Brugt op" kort-adfærd.
  *
- * AC: Garnkort med status='Brugt op' → filter: grayscale(1) på billed-div.
+ * AC: Garnkort med status='Brugt op' → INGEN grayscale (F15-feedback: brugeren
+ *      skal kunne genkende garnet på farven; status signaleres via badge alene).
  * AC: Garnkort med status='Brugt op' → data-testid="brugt-op-badge" renderes.
  * AC: Default-filter (filterStatus='') skjuler "Brugt op"-kort.
  * AC: Eksplicit filterStatus='Brugt op' viser "Brugt op"-kort.
@@ -23,6 +24,7 @@ vi.mock('@/lib/supabase/client', () => ({
 vi.mock('@/lib/supabase/mappers', () => ({
   toDb: (x: unknown) => x,
   fromDb: (x: unknown) => x,
+  toUsageDb: (x: unknown) => x,
 }))
 
 vi.mock('@/lib/supabase/storage', () => ({
@@ -103,8 +105,10 @@ function mockYarns(yarns: unknown[]) {
     if (table === 'projects') {
       return {
         select: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
         eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+        order: vi.fn().mockReturnThis(),
       }
     }
     return {
@@ -158,7 +162,7 @@ describe('Garnlager F5 — Brugt op-badge og greyscale', () => {
     })
   })
 
-  it('status="Brugt op" → billed-div har filter: grayscale(1)', async () => {
+  it('status="Brugt op" → billed-div har INGEN grayscale-filter (F15)', async () => {
     mockYarns([BRUGT_OP_YARN])
     render(<Garnlager user={FAKE_USER} onRequestLogin={() => {}} />)
 
@@ -168,7 +172,9 @@ describe('Garnlager F5 — Brugt op-badge og greyscale', () => {
     await waitFor(() => {
       const badge = screen.getByTestId('brugt-op-badge')
       const imageDiv = badge.parentElement
-      expect(imageDiv?.style.filter).toBe('grayscale(1)')
+      // F15: greyscale fjernet — brugeren skal kunne genkende garnet på farven.
+      // Status signaleres alene via badge.
+      expect(imageDiv?.style.filter).toBe('')
     })
   })
 

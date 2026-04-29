@@ -1,7 +1,8 @@
 export type YarnFormErrors = {
   name?: string
   brand?: string
-  brugtTilProjekt?: string
+  brugtOpProjectId?: string
+  brugtOpNewTitle?: string
 }
 
 export type YarnFormInput = {
@@ -9,7 +10,10 @@ export type YarnFormInput = {
   brand?: string | null
   catalogYarnId?: string | null
   status?: string | null
-  brugtTilProjekt?: string | null
+  // F15: 3-mode projekt-kobling. 'none' = ingen yarn_usage, 'existing' = vælg, 'new' = opret.
+  brugtOpMode?: 'none' | 'existing' | 'new' | null
+  brugtOpProjectId?: string | null
+  brugtOpNewTitle?: string | null
   [key: string]: unknown
 }
 
@@ -21,8 +25,10 @@ export type YarnFormInput = {
  * validering over: felterne styres af kataloget og applyCatalogYarnOnlyToForm
  * fylder dem automatisk.
  *
- * Når status === "Brugt op" kræves brugtTilProjekt — kobling til projekt
- * (F5-subflow). Dato-feltet er valgfrit.
+ * Status="Brugt op" + brugtOpMode:
+ *   - 'none'     → ingen krav (valgfri kobling).
+ *   - 'existing' → kræver brugtOpProjectId.
+ *   - 'new'      → kræver brugtOpNewTitle (trim-non-empty).
  */
 export function validateForm(f: YarnFormInput): YarnFormErrors {
   const errs: YarnFormErrors = {}
@@ -30,8 +36,14 @@ export function validateForm(f: YarnFormInput): YarnFormErrors {
     if (!(f.name || '').trim())  errs.name  = 'Garnnavn er påkrævet'
     if (!(f.brand || '').trim()) errs.brand = 'Mærke er påkrævet'
   }
-  if (f.status === 'Brugt op' && !((f.brugtTilProjekt || '').trim())) {
-    errs.brugtTilProjekt = 'Vælg eller skriv hvilket projekt garnet blev brugt til'
+  if (f.status === 'Brugt op') {
+    const mode = f.brugtOpMode || 'none'
+    if (mode === 'existing' && !((f.brugtOpProjectId || '').trim())) {
+      errs.brugtOpProjectId = 'Vælg et projekt'
+    }
+    if (mode === 'new' && !((f.brugtOpNewTitle || '').trim())) {
+      errs.brugtOpNewTitle = 'Skriv en projekttitel'
+    }
   }
   return errs
 }

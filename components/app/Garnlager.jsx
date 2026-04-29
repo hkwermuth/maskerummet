@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSupabase } from '@/lib/supabase/client'
 import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
-import { toDb, fromDb } from '@/lib/supabase/mappers'
+import { toDb, fromDb, toUsageDb } from '@/lib/supabase/mappers'
 import { uploadFile as uploadFileRaw } from '@/lib/supabase/storage'
 import {
   searchYarnsFull,
@@ -58,6 +58,10 @@ const EMPTY_FORM = {
   imageUrl: null,
   brugtTilProjekt: '',
   brugtOpDato: '',
+  // F15: 3-mode projekt-kobling for "Brugt op"-flow.
+  brugtOpMode: 'none',
+  brugtOpProjectId: '',
+  brugtOpNewTitle: '',
   catalogYarnId: null,
   catalogColorId: null,
   catalogImageUrl: null,
@@ -371,9 +375,15 @@ export default function Garnlager({ user, onRequestLogin }) {
   useEffect(() => {
     async function loadProjects() {
       try {
+        // Kun brugerens egne projekter, og kun status='vil_gerne' eller 'i_gang'.
+        // Færdigstrikkede projekter er ikke et naturligt mål for "garnet blev brugt
+        // her" — listen blev for lang. Brugeren kan stadig genåbne et færdigt
+        // projekt i Arkiv hvis nødvendigt (F15).
         const { data } = await supabase
           .from('projects')
-          .select('id,title,used_at,created_at')
+          .select('id,title,used_at,created_at,status')
+          .eq('user_id', user.id)
+          .in('status', ['vil_gerne', 'i_gang'])
           .order('used_at', { ascending: false })
           .limit(200)
         setProjects(data ?? [])
@@ -382,7 +392,7 @@ export default function Garnlager({ user, onRequestLogin }) {
       }
     }
     loadProjects()
-  }, [])
+  }, [user.id])
 
   // ── Persist helpers ─────────────────────────────────────────────────────────
   function flashSave() {
@@ -408,6 +418,10 @@ export default function Garnlager({ user, onRequestLogin }) {
       // Auto-detect color category from color name if not manually set
       const colorCategory = form.colorCategory || detectColorFamily(form.colorName) || null
       const formWithCategory = { ...form, colorCategory }
+
+      // F15: fang det oprindelige antal (før toDb nuller det ud) — bruges som
+      // quantity_used hvis vi opretter en yarn_usage-række til projektet.
+      const previousQty = parseFloat(String(form.antal)) || 0
 
       let savedId = modal === 'add' ? null : modal
       let dbRow
@@ -438,6 +452,48 @@ export default function Garnlager({ user, onRequestLogin }) {
         const url = await uploadFile('yarn-images', `${user.id}/${savedId}.${ext}`, imageFile)
         await supabase.from('yarn_items').update({ image_url: url }).eq('id', savedId)
         dbRow.image_url = url
+      }
+
+      // F15: hvis status='Brugt op' OG projekt-mode≠'none', opret yarn_usage-række
+      // så projektet faktisk ved at garnet er brugt der. 'new' opretter også projektet.
+      const mode = form.brugtOpMode || 'none'
+      if (form.status === 'Brugt op' && mode !== 'none' && savedId) {
+        let projectId = null
+        if (mode === 'existing') {
+          projectId = form.brugtOpProjectId || null
+        } else if (mode === 'new') {
+          const title = (form.brugtOpNewTitle || '').trim()
+          if (title) {
+            const { data: proj, error: pErr } = await supabase
+              .from('projects')
+              .insert([{ user_id: user.id, title, status: 'i_gang', used_at: form.brugtOpDato || null }])
+              .select('id,title,used_at,created_at,status')
+              .single()
+            if (pErr) { setSaveError(`Kunne ikke oprette projekt: ${pErr.message}`); return }
+            projectId = proj.id
+            // Tilføj det nye projekt til lokal state så datalist/select er up-to-date.
+            setProjects(prev => [proj, ...prev])
+          }
+        }
+        if (projectId) {
+          const usagePayload = toUsageDb({
+            projectId,
+            yarnItemId: savedId,
+            yarnName:   form.name,
+            yarnBrand:  form.brand,
+            colorName:  form.colorName,
+            colorCode:  form.colorCode,
+            hex:        form.hex,
+            catalogYarnId:  form.catalogYarnId  ?? null,
+            catalogColorId: form.catalogColorId ?? null,
+            quantityUsed: previousQty > 0 ? previousQty : null,
+            usedAt:       form.brugtOpDato || undefined,
+          })
+          const { error: uErr } = await supabase
+            .from('yarn_usage')
+            .insert([{ ...usagePayload, user_id: user.id }])
+          if (uErr) { setSaveError(`Kunne ikke koble garn til projekt: ${uErr.message}`); return }
+        }
       }
 
       const mapped = fromDb(dbRow)
@@ -798,14 +854,14 @@ export default function Garnlager({ user, onRequestLogin }) {
                 onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(44,32,24,.13)' }}
                 onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(44,32,24,.08)' }}
               >
-                {/* Header — bruger-foto hvis uploadet, ellers farve/farve-gradient. */}
-                {/* "Brugt op"-status: greyscale + badge så kortet visuelt læses som arkiveret */}
+                {/* Header — bruger-foto hvis uploadet, ellers farve/farve-gradient.
+                    "Brugt op"-status signaleres via badge alene; greyscale fjernet
+                    så brugeren stadig kan genkende garnet på farven (F15-feedback). */}
                 <div style={{
                   position: 'relative',
                   height: '120px',
                   background: showUserPhoto ? '#F4EFE6' : colorBg,
                   overflow: 'hidden',
-                  filter: y.status === 'Brugt op' ? 'grayscale(1)' : 'none',
                 }}>
                   {showUserPhoto && (
                     <img
@@ -1140,20 +1196,37 @@ export default function Garnlager({ user, onRequestLogin }) {
                 />
               </Field>
 
-              {/* Brugt op-folde-ud — vises kun når status = "Brugt op" (F5) */}
+              {/* Brugt op-folde-ud — vises kun når status = "Brugt op" (F15: 3-mode kobling) */}
               {form.status === 'Brugt op' && (
                 <BrugtOpFoldeUd
-                  brugtTilProjekt={form.brugtTilProjekt}
-                  brugtOpDato={form.brugtOpDato}
-                  onChangeProjekt={v => {
-                    setF('brugtTilProjekt', v)
-                    if (fieldErrors.brugtTilProjekt) {
-                      setFieldErrors(prev => { const n = { ...prev }; delete n.brugtTilProjekt; return n })
+                  mode={form.brugtOpMode || 'none'}
+                  onChangeMode={v => {
+                    setF('brugtOpMode', v)
+                    setFieldErrors(prev => {
+                      const n = { ...prev }
+                      delete n.brugtOpProjectId
+                      delete n.brugtOpNewTitle
+                      return n
+                    })
+                  }}
+                  selectedProjectId={form.brugtOpProjectId}
+                  onChangeProjectId={v => {
+                    setF('brugtOpProjectId', v)
+                    if (fieldErrors.brugtOpProjectId) {
+                      setFieldErrors(prev => { const n = { ...prev }; delete n.brugtOpProjectId; return n })
                     }
                   }}
+                  newProjectTitle={form.brugtOpNewTitle}
+                  onChangeNewProjectTitle={v => {
+                    setF('brugtOpNewTitle', v)
+                    if (fieldErrors.brugtOpNewTitle) {
+                      setFieldErrors(prev => { const n = { ...prev }; delete n.brugtOpNewTitle; return n })
+                    }
+                  }}
+                  brugtOpDato={form.brugtOpDato}
                   onChangeDato={v => setF('brugtOpDato', v)}
                   existingProjects={projects}
-                  error={fieldErrors.brugtTilProjekt}
+                  errors={fieldErrors}
                 />
               )}
 

@@ -33,6 +33,7 @@ vi.mock('@/lib/supabase/client', () => ({
 vi.mock('@/lib/supabase/mappers', () => ({
   toDb: (x: unknown) => x,
   fromDb: (x: unknown) => x,
+  toUsageDb: (x: unknown) => x,
 }))
 
 vi.mock('@/lib/supabase/storage', () => ({

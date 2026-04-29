@@ -19,6 +19,7 @@ vi.mock('@/lib/supabase/client', () => ({
 vi.mock('@/lib/supabase/mappers', () => ({
   toDb: (x: unknown) => x,
   fromDb: (x: unknown) => x,
+  toUsageDb: (x: unknown) => x,
 }))
 vi.mock('@/lib/supabase/storage', () => ({ uploadFile: vi.fn() }))
 vi.mock('@/lib/catalog', () => ({
@@ -58,8 +59,10 @@ function mockYarns(yarns: unknown[]) {
     if (table === 'projects') {
       return {
         select: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
         eq: vi.fn().mockReturnThis(),
+        in: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+        order: vi.fn().mockReturnThis(),
       }
     }
     return {
