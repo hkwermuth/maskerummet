@@ -1,6 +1,8 @@
 // camelCase ↔ snake_case mappers for yarn_items, yarn_usage og projects.
 // Bruges udelukkende af SPA-komponenter (Garnlager, Arkiv, BrugNoeglerModal).
 
+import { dedupeYarnNameFromBrand } from '@/lib/yarn-display'
+
 // ── yarn_items ────────────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -102,10 +104,16 @@ export async function markYarnAsBrugtOp(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function toUsageDb(u: Record<string, any>) {
+  // Invariant: yarn_name må ikke indeholde brand-præfix (giver "Permin Permin Hannah"
+  // i projekt-views når brand+name renderes sammen). Defensiv strip her dækker
+  // alle skrive-call-sites ét sted i stedet for at jagte hver onSelectYarn.
+  const yarnName = u.yarnName != null && u.yarnBrand
+    ? dedupeYarnNameFromBrand(String(u.yarnName), String(u.yarnBrand))
+    : (u.yarnName ?? null)
   return {
     project_id:        u.projectId      ?? null,
     yarn_item_id:      u.yarnItemId     ?? null,
-    yarn_name:         u.yarnName       ?? null,
+    yarn_name:         yarnName         ?? null,
     yarn_brand:        u.yarnBrand      ?? null,
     color_name:        u.colorName      ?? null,
     color_code:        u.colorCode      ?? null,

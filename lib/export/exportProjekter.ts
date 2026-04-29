@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { generateCsv, downloadBlob, todayString } from './csv'
+import { dedupeYarnNameFromBrand } from '@/lib/yarn-display'
 
 interface ProjectRow {
   projektnavn: string
@@ -51,7 +52,7 @@ export async function exportProjekter(supabase: SupabaseClient): Promise<{ succe
           pindestørrelse: p.needle_size ?? '',
           strikketMed: p.held_with ?? '',
           noter: p.notes ?? '',
-          garnnavn: u.yarn_name ?? '',
+          garnnavn: dedupeYarnNameFromBrand(u.yarn_name, u.yarn_brand),
           garnmærke: u.yarn_brand ?? '',
           farvenavn: u.color_name ?? '',
           farvekode: u.color_code ?? '',

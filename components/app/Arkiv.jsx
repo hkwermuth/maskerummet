@@ -10,6 +10,7 @@ import {
 } from '@/lib/supabase/storage'
 import { renderPdfFirstPage } from '@/lib/pdf-thumbnail'
 import { displayYarnName, fetchColorsByIds, fetchColorsForYarn, searchYarnsFull } from '@/lib/catalog'
+import { dedupeYarnNameFromBrand, yarnDisplayLabel } from '@/lib/yarn-display'
 import { exportProjekter } from '@/lib/export/exportProjekter'
 import { formatDanish } from '@/lib/date/formatDanish'
 import { DelMedFaellesskabetModal } from '@/components/app/DelMedFaellesskabetModal'
@@ -945,7 +946,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: '11px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.1em' }}>{y.yarnBrand}</div>
                     <div style={{ fontSize: '15px', fontWeight: 500, color: '#2C2018' }}>
-                      {y.yarnName} {y.colorName ? `· ${y.colorName}` : ''}
+                      {dedupeYarnNameFromBrand(y.yarnName, y.yarnBrand)} {y.colorName ? `· ${y.colorName}` : ''}
                     </div>
                     <div style={{ fontSize: '11px', color: '#8B7D6B' }}>
                       {y.quantityUsed} ngl · {y.colorCode}
@@ -1026,7 +1027,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                               catalogYarnId:  y.id,
                               catalogColorId: null,
                               yarnBrand:      y.producer ?? '',
-                              yarnName:       displayYarnName(y),
+                              yarnName:       y.name ?? '',
                               colorName:      '',
                               colorCode:      '',
                             })
@@ -1598,7 +1599,7 @@ function NytProjektModal({ user, onClose, onSaved }) {
                           catalogYarnId:  y.id,
                           catalogColorId: null,
                           yarnBrand:      y.producer ?? '',
-                          yarnName:       displayYarnName(y),
+                          yarnName:       y.name ?? '',
                           colorName:      '',
                           colorCode:      '',
                         })
@@ -1994,7 +1995,7 @@ export default function Arkiv({ user, onRequestLogin }) {
                   {yarns.slice(0, 2).map((l, idx) => (
                     <span key={l.id}>
                       {idx > 0 && <span> · </span>}
-                      {(l.yarnBrand || '').trim()} {(l.yarnName || '').trim()} {l.colorName ? `· ${l.colorName}` : ''}
+                      {yarnDisplayLabel(l.yarnBrand, l.yarnName)} {l.colorName ? `· ${l.colorName}` : ''}
                     </span>
                   ))}
                   {yarns.length > 2 && <span> · …</span>}
