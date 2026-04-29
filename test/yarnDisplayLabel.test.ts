@@ -18,9 +18,10 @@ describe('yarnDisplayLabel — AC1-10', () => {
     expect(yarnDisplayLabel('Filcolana', 'Filcolana Tilia')).toBe('Filcolana Tilia')
   })
 
-  // AC3: name ender med "(Bella Color by Permin)" — brug parens-indholdet
-  it('AC3: ("Permin", "Permin Bella Color (Bella Color by Permin)") → "Bella Color by Permin"', () => {
-    expect(yarnDisplayLabel('Permin', 'Permin Bella Color (Bella Color by Permin)')).toBe('Bella Color by Permin')
+  // AC3: ny DB-state efter cleanup 2026-04-29 — "Permin Bella Color" uden parens-suffiks
+  // returneres as-is (brand er præfiks i name).
+  it('AC3: ("Permin", "Permin Bella Color") → "Permin Bella Color"', () => {
+    expect(yarnDisplayLabel('Permin', 'Permin Bella Color')).toBe('Permin Bella Color')
   })
 
   // AC4: name ender med "(by Permin)" — strip "(by Permin)", præfiks brand → "Permin Bella"

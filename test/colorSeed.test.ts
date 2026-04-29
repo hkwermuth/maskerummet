@@ -219,7 +219,7 @@ describe('Permin-seeds matcher faktisk DB-format', () => {
 describe('summarizeDiff', () => {
   it('producerer label + tællinger', () => {
     const seed = {
-      producer: 'Permin', yarnName: 'Bella', series: 'by Permin',
+      producer: 'Permin', yarnName: 'Bella', series: null,
       matchKey: 'color_number',
       entries: [{ key: '01', hex: '#FFFFFF' }],
     }
@@ -227,7 +227,7 @@ describe('summarizeDiff', () => {
       { id: 'a', color_number: '01', hex_code: null, yarn_id: 'y' },
     ])
     const s = summarizeDiff(seed, diff)
-    expect(s.label).toBe('Permin Bella (by Permin)')
+    expect(s.label).toBe('Permin Bella')
     expect(s.toUpdate).toBe(1)
     expect(s.unchanged).toBe(0)
   })
