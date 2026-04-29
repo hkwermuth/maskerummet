@@ -194,12 +194,12 @@ export function DropsKort({ recipe, isFavorite, onToggleFavorite }: Props) {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             <span
               style={{
-                fontSize: 11,
+                fontSize: 11.5,
                 padding: '3px 8px',
                 borderRadius: 6,
                 background: T.pillPindBg,
                 color: T.pillPindInk,
-                fontWeight: 600,
+                fontWeight: 500,
                 letterSpacing: '.02em',
                 fontFeatureSettings: '"tnum"',
               }}
@@ -221,7 +221,7 @@ export function DropsKort({ recipe, isFavorite, onToggleFavorite }: Props) {
               borderRadius: 8,
               padding: '6px 14px',
               fontSize: 13.5,
-              fontWeight: 600,
+              fontWeight: 400,
               textDecoration: 'none',
               textAlign: 'center',
               minHeight: 30,
