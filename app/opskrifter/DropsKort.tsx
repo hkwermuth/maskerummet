@@ -206,7 +206,7 @@ export function DropsKort({ recipe, isFavorite, onToggleFavorite }: Props) {
           </span>
         </div>
 
-        {/* Klik-til-DROPS-knap */}
+        {/* Klik-til-DROPS-knap — diskret lysegul, matcher pind-pillen */}
         <a
           href={recipe.pattern_url}
           target="_blank"
@@ -214,8 +214,8 @@ export function DropsKort({ recipe, isFavorite, onToggleFavorite }: Props) {
           style={{
             marginTop: 'auto',
             display: 'inline-block',
-            background: T.text,
-            color: T.white,
+            background: T.pillPindBg,
+            color: T.pillPindInk,
             border: '1px solid transparent',
             borderRadius: 8,
             padding: '10px 14px',

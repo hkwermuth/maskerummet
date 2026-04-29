@@ -21,8 +21,10 @@ export const OPSKRIFTER_TOKENS = {
   chipFiberInk: '#355C3E',
   pillBg:       '#F1ECE2',
   pillInk:      '#3D362A',
-  pillPindBg:   '#1F1D1A',
-  pillPindInk:  '#FFFFFF',
+  // Pind-pille + "Se opskrift"-knap: blødt lysegult med næsten-sort tekst —
+  // mindre dominerende end mørk-på-hvid CTA, holder fokus på opskrift-billede.
+  pillPindBg:   '#F4E5B5',
+  pillPindInk:  '#302218',
 } as const
 
 export type OpskrifterToken = keyof typeof OPSKRIFTER_TOKENS
