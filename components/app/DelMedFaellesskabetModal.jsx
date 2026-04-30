@@ -163,9 +163,11 @@ export function DelMedFaellesskabetModal({ project, user, onClose, onShared, onU
               style={inputStyle}
             >
               <option value="">Vælg type…</option>
-              {PROJECT_TYPES.map(t => (
-                <option key={t} value={t}>{PROJECT_TYPE_LABELS[t]}</option>
-              ))}
+              {[...PROJECT_TYPES]
+                .sort((a, b) => PROJECT_TYPE_LABELS[a].localeCompare(PROJECT_TYPE_LABELS[b], 'da'))
+                .map(t => (
+                  <option key={t} value={t}>{PROJECT_TYPE_LABELS[t]}</option>
+                ))}
             </select>
           </div>
 

@@ -193,7 +193,8 @@ export type Project = {
 export const PROJECT_TYPES = [
   'cardigan', 'sweater', 'top', 'bluse', 'sommerbluse',
   'hue', 'sjal', 'stroemper', 'vest', 'troeje',
-  'toerklaede', 'taeppe', 'babytoej', 'boernetoej', 'andet',
+  'toerklaede', 'taeppe', 'babytoej', 'boernetoej',
+  'nederdel', 'kjole', 'andet',
 ] as const
 
 export type ProjectType = typeof PROJECT_TYPES[number]
@@ -213,6 +214,8 @@ export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
   taeppe:      'Tæppe',
   babytoej:    'Babytøj',
   boernetoej:  'Børnetøj',
+  nederdel:    'Nederdel',
+  kjole:       'Kjole',
   andet:       'Andet',
 }
 

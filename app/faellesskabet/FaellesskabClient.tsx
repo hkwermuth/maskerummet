@@ -135,7 +135,9 @@ export function FaellesskabClient({
             value={type}
             onChange={v => setType(v as '' | ProjectType)}
             placeholder="Alle typer"
-            options={Object.entries(PROJECT_TYPE_LABELS).map(([k, label]) => ({ value: k, label }))}
+            options={Object.entries(PROJECT_TYPE_LABELS)
+              .map(([k, label]) => ({ value: k, label }))
+              .sort((a, b) => a.label.localeCompare(b.label, 'da'))}
           />
           <FilterSelect
             label="Filtrer efter garn"
@@ -330,25 +332,6 @@ function SharedProjectCard({
                 {[project.pattern_name, project.pattern_designer].filter(Boolean).join(' · ')}
               </div>
             </div>
-          </div>
-        )}
-
-        {project.community_description && (
-          <p style={{ fontSize: 12.5, color: '#6B5D4F', lineHeight: 1.55, margin: 0 }}>
-            {project.community_description}
-          </p>
-        )}
-
-        {project.community_size_shown && (
-          <div>
-            <span style={{
-              display: 'inline-block',
-              fontSize: 11, padding: '3px 10px', borderRadius: 999,
-              background: '#EDE7D8', color: '#5A4228',
-              fontFamily: "'DM Sans', sans-serif",
-            }}>
-              str. {project.community_size_shown}
-            </span>
           </div>
         )}
 

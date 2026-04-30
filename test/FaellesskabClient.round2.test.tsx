@@ -84,17 +84,14 @@ describe('AC27 EmptyState tekst med stort F', () => {
   })
 })
 
-// ── AC28: Str.-pille vises kun når community_size_shown er udfyldt ────────────
+// ── AC28: Kort-overblik viser hverken str.-pille eller beskrivelse ───────────
+// Disse felter flyttes til detaljer-modalen — kortet skal kun rumme titel,
+// forfatter, opskrift og garn.
 
-describe('AC28 community_size_shown pille', () => {
-  it('viser "str. M" pille når community_size_shown er "M"', () => {
+describe('AC28 kort-overblik skjuler str. og beskrivelse', () => {
+  it('viser ingen str.-pille selv når community_size_shown er udfyldt', () => {
     render(<FaellesskabClient initialProjects={[makeProject({ community_size_shown: 'M' })]} />)
-    expect(screen.getByText('str. M')).toBeInTheDocument()
-  })
-
-  it('viser "str. 38" pille når community_size_shown er "38"', () => {
-    render(<FaellesskabClient initialProjects={[makeProject({ community_size_shown: '38' })]} />)
-    expect(screen.getByText('str. 38')).toBeInTheDocument()
+    expect(screen.queryByText(/^str\./)).not.toBeInTheDocument()
   })
 
   it('viser ingen str.-pille når community_size_shown er null', () => {
@@ -102,10 +99,10 @@ describe('AC28 community_size_shown pille', () => {
     expect(screen.queryByText(/^str\./)).not.toBeInTheDocument()
   })
 
-  it('viser ingen str.-pille når community_size_shown er tom streng', () => {
-    // Tom streng er falsy — ingen pille
-    render(<FaellesskabClient initialProjects={[makeProject({ community_size_shown: '' as never })]} />)
-    expect(screen.queryByText(/^str\./)).not.toBeInTheDocument()
+  it('viser ikke community_description i kort-overblikket', () => {
+    const description = 'Lang beskrivelse om pasform og ændringer'
+    render(<FaellesskabClient initialProjects={[makeProject({ community_description: description })]} />)
+    expect(screen.queryByText(description)).not.toBeInTheDocument()
   })
 })
 

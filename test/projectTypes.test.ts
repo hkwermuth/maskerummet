@@ -31,13 +31,21 @@ describe('AC11 PROJECT_TYPES — fire nye keys', () => {
   it('indeholder "boernetoej"', () => {
     expect(PROJECT_TYPES).toContain('boernetoej')
   })
+
+  it('indeholder "nederdel"', () => {
+    expect(PROJECT_TYPES).toContain('nederdel')
+  })
+
+  it('indeholder "kjole"', () => {
+    expect(PROJECT_TYPES).toContain('kjole')
+  })
 })
 
-// ── AC12: PROJECT_TYPE_LABELS har alle 15 typer ───────────────────────────────
+// ── AC12: PROJECT_TYPE_LABELS har alle 17 typer ───────────────────────────────
 
-describe('AC12 PROJECT_TYPE_LABELS — 15 labels', () => {
-  it('har præcis 15 entries', () => {
-    expect(Object.keys(PROJECT_TYPE_LABELS)).toHaveLength(15)
+describe('AC12 PROJECT_TYPE_LABELS — 17 labels', () => {
+  it('har præcis 17 entries', () => {
+    expect(Object.keys(PROJECT_TYPE_LABELS)).toHaveLength(17)
   })
 
   it('har dansk label for "bluse"', () => {
@@ -58,6 +66,14 @@ describe('AC12 PROJECT_TYPE_LABELS — 15 labels', () => {
   it('har dansk label for "boernetoej"', () => {
     expect(PROJECT_TYPE_LABELS['boernetoej']).toBeTruthy()
     expect(typeof PROJECT_TYPE_LABELS['boernetoej']).toBe('string')
+  })
+
+  it('har dansk label "Nederdel" for "nederdel"', () => {
+    expect(PROJECT_TYPE_LABELS['nederdel']).toBe('Nederdel')
+  })
+
+  it('har dansk label "Kjole" for "kjole"', () => {
+    expect(PROJECT_TYPE_LABELS['kjole']).toBe('Kjole')
   })
 })
 
