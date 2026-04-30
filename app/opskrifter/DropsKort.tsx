@@ -130,23 +130,18 @@ export function DropsKort({ recipe, isFavorite, onToggleFavorite }: Props) {
       </a>
 
       <div style={{ padding: '14px 18px 18px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, justifyContent: 'space-between' }}>
-          <h3
-            style={{
-              margin: 0,
-              fontSize: 17,
-              fontWeight: 600,
-              lineHeight: 1.3,
-              color: T.text,
-              fontFamily: "'Cormorant Garamond', serif",
-            }}
-          >
-            {recipe.name}
-          </h3>
-          <span style={{ flexShrink: 0, fontSize: 12, color: T.textMuted, letterSpacing: '.04em' }}>
-            DROPS {recipe.external_id}
-          </span>
-        </div>
+        <h3
+          style={{
+            margin: 0,
+            fontSize: 17,
+            fontWeight: 600,
+            lineHeight: 1.3,
+            color: T.text,
+            fontFamily: "'Cormorant Garamond', serif",
+          }}
+        >
+          {recipe.name}
+        </h3>
 
         {/* Garn-chips (sand) + fiber-chips (grøn) */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
