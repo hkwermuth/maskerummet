@@ -327,6 +327,82 @@ Opsamling fra Jespers råd (IT-arkitekt) + løbende diskussion. Markeret efter k
 
 Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
 
+### Planlagt: Auto-cascade brugt-op ved projekt-færdiggørelse (2026-05-01)
+
+Plan godkendt, ikke startet. Hannah går videre søndag/mandag (2026-05-03/04).
+
+**Mål:** Når et projekt skifter til `status='faerdigstrikket'` (i DetailModal **eller** NytProjektModal), skal alle linkede garn med yarn_item_id automatisk få `status='Brugt op'` — med modal-bekræftelse for at håndtere edge cases pr. linje.
+
+**3 designvalg afklaret med Hannah:**
+1. **Default for rest-nøgler**: "Behold på lager" (ikke-destruktivt default — modalen vil ikke nulstille `quantity` medmindre brugeren eksplicit vælger 'Brugt op').
+2. **De-cascade implementeres**: status `faerdigstrikket → i_gang/vil_gerne` reverter cascadede garn fra 'Brugt op' → 'I brug', rydder `brugt_til_projekt` + `brugt_op_dato`. **Quantity=0 bevares** (originalen er væk).
+3. **Fulde modal-version** (ikke minimal auto-cascade) — håndterer alle edge cases.
+
+**Edge cases der SKAL dækkes:**
+- Garn med restantal: pr-linje radio 'Brugt op' (sætter quantity=0) eller 'Behold på lager' (default).
+- Garn delt på flere aktive projekter: hvis `yarn_item_id` har andre `yarn_usage`-rows hvor projektet er 'i_gang'/'vil_gerne', vises som "Kan ikke markeres brugt op" + viser projekt-titler. Skip cascade.
+- Garn-linjer uden `yarn_item_id`: info-banner "X garn er ikke knyttet til dit lager — kan ikke automatisk markeres brugt op".
+- Idempotens: garn allerede status='Brugt op' skippes silently.
+
+**Filer der oprettes:**
+- `lib/yarn-finalize.ts` (~100 linjer): pure helpers `classifyFinalizableLines`, `finalizeYarnLines`, `revertCascadedYarns`. Match-pattern fra `lib/yarn-return.ts`.
+- `components/app/MarkYarnsBrugtOpModal.tsx` (~250 linjer): radio-pr-linje, info-sektioner, "Anvend første valg på alle"-shortcut, useEscapeKey, busy-state. Visuel reference: `ConfirmDeleteProjectModal` + `ReturnYarnConfirmModal`.
+- `test/yarn-finalize.test.ts`, `test/MarkYarnsBrugtOpModal.test.tsx`, `test/Arkiv.cascadeBrugtOp.test.tsx`.
+
+**Filer der ændres (`Arkiv.jsx`):**
+- DetailModal `handleSave`: ny **Fase 1.5** mellem merge-prompt (Fase 1) og uploads (Fase 2): detektér `entry.status !== 'faerdigstrikket' && form.status === 'faerdigstrikket'` → klassificér linjer → åbn modal (promise-wrapper-mønster fra `openReturnConfirmModal`). Cancel = early return, finally rydder saving-state.
+- DetailModal `handleSave`: detektér også **de-cascade** (`entry.status === 'faerdigstrikket' && form.status !== 'faerdigstrikket'`) → silent `revertCascadedYarns` (ingen ekstra modal — gem-knappen er bekræftelsen).
+- DetailModal `handleSave` Fase 3: efter `projects.update`, kør `finalizeYarnLines` med decisions.
+- NytProjektModal `save()`: efter `yarn_usage.insert`, hvis `form.status === 'faerdigstrikket'` og linjer findes → klassificér + åbn modal + finalize.
+- Tilføj `finalizeModalState` (samme pattern som `returnConfirmState`) + udvid unmount-cleanup useEffect (linje ~511) til at resolve dangling finalize-promise.
+
+**Interfaces (signaturer):**
+```ts
+type FinalizableSource = { yarnUsageId: string; yarnItemId: string|null; yarnName: string|null; ...quantityUsed: number|null }
+type FinalizableClassification = {
+  finalizable: Array<{ source: FinalizableSource; currentStockQuantity: number; currentStatus: string }>
+  multiProject: Array<{ source: FinalizableSource; otherProjectTitles: string[] }>
+  noYarnItem: FinalizableSource[]
+  alreadyBrugtOp: FinalizableSource[]
+}
+type FinalizeDecision = 'brugt-op' | 'behold'
+classifyFinalizableLines(supabase, userId, currentProjectId, lines) → FinalizableClassification
+finalizeYarnLines(supabase, finalizable, decisions: Map<yarnUsageId, FinalizeDecision>, projektTitel, brugtOpDato) → { markedBrugtOp: yarnItemIds[] }
+revertCascadedYarns(supabase, userId, projectId, projectTitle) → { reverted: yarnItemIds[] }
+```
+
+**De-cascade-detection:** match på `(user_id, status='Brugt op', brugt_til_projekt = entry.title)` (bruger pre-skift title — robust mod samtidig title-ændring). Sæt `status='I brug'`, `brugt_til_projekt=NULL`, `brugt_op_dato=NULL`.
+
+**Acceptkriterier (10 stk, alle testbare):**
+1. DetailModal status-skift non-faerdig → faerdig åbner modalen hvis ≥1 linje med yarn_item_id
+2. Modal viser pr. linje: garnnavn, brugt antal, restantal, default 'Behold på lager'
+3. Multi-projekt-linjer vises som "Kan ikke" + projekttitler
+4. Linjer uden yarn_item_id vises som info-banner
+5. Bekræft → `markYarnAsBrugtOp` pr. valgt 'Brugt op'
+6. Cancel = ingen DB-mutationer (Fase 1-mønster)
+7. De-cascade: faerdig → i_gang/vil_gerne reverter status + rydder brugt_til/dato
+8. NytProjektModal-cascade dækket
+9. Tests dækker alle ACs + race-håndtering
+10. a11y: aria-modal, useEscapeKey, ≥44px touch-targets
+
+**Risici (top 3):**
+1. **Multi-projekt-detection-falsk-positiv**: brugeren ser "Kan ikke" hvis hun lige har oprettet et i_gang-projekt med samme garn. Mitigation: vis projekt-titlerne så hun kan reagere.
+2. **De-cascade-match på title**: skrøbelig hvis title ændret samtidig. Mitigation: brug `entry.title` (DB pre-skift). Senere refactor til `brugt_til_projekt_id UUID` (F5-fremtidssikring) eliminerer problemet.
+3. **NytProjektModal-cancel**: hvis bruger cancler modalen efter projekt-insert, lever projektet uden cascade. Acceptabelt — kan finaliseres senere fra Arkiv.
+
+**Estimat:** Stor (~600 linjer kode + tests). Følger eksisterende mønster fra retur-flow tæt — lav arkitektur-risiko.
+
+**Implementerings-faser:**
+A. Pure helpers + tests (`lib/yarn-finalize.ts`)
+B. Modal-komponent + tests
+C. DetailModal-integration (Fase 1.5 + Fase 3 + de-cascade)
+D. NytProjektModal-integration
+E. Reviewer-sweep
+
+**Når featuren er shippet** flyttes denne post til "Implementeret → Garn-katalog" eller en ny "Sporbarhed"-undersektion (måske F16 i nummereringen efter F15).
+
+---
+
 ### Planlagt: Indtastning + garn-katalog (brief 2026-04-27)
 
 Stort brief om hele indtastnings-flowet og bidragsflow til STRIQs garn-katalog. Nedbrudt til 8 sekventerbare features. Tre datakilder skal være visuelt adskilte gennem hele appen: **grøn = katalog (read-only)**, **lilla = AI-forslag**, **neutral = bruger-input**.
