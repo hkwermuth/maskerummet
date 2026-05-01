@@ -24,7 +24,7 @@ import AntalStepper from './AntalStepper'
 import { detectColorFamily, COLOR_FAMILY_DEFAULT_HEX, yarnMatchesStashSearch } from '@/lib/data/colorFamilies'
 import { parseCombinedColorInput, combineColorDisplay } from '@/lib/colorInput'
 import { dedupeYarnNameFromBrand, gradientFromHexColors, primaryFiberLabel } from '@/lib/yarn-display'
-import { YARN_WEIGHT_LABELS } from '@/lib/yarn-weight'
+import { YARN_WEIGHT_LABELS, looseWeightKey } from '@/lib/yarn-weight'
 import { validateForm } from '@/lib/validators/yarnForm'
 import { toISODate } from '@/lib/date/formatDanish'
 import { PROJECT_STATUS_LABELS } from '@/lib/types'
@@ -732,7 +732,10 @@ export default function Garnlager({ user, onRequestLogin }) {
   const filtered = yarns
     .filter(y => {
       const matchesSearch = yarnMatchesStashSearch(y, q)
-      const matchesWeight = !filterWeight || y.weight === filterWeight
+      // Vægt-felt har historisk været gemt med blandet casing ('Lace' vs 'lace')
+      // afhængigt af om garnet kom fra katalog eller manuel form. Sammenlign på
+      // den kanoniske lowercase enum-værdi så 'Lace' matcher 'lace' matcher 'sock'.
+      const matchesWeight = !filterWeight || looseWeightKey(y.weight) === looseWeightKey(filterWeight)
       const matchesStatus = filterStatus
         ? y.status === filterStatus
         : y.status !== 'Brugt op'

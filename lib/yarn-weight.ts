@@ -85,3 +85,15 @@ export function mapToYarnWeight(input: string | null | undefined): YarnWeight | 
   if (key === '') return null
   return ALIAS_MAP[key] ?? null
 }
+
+// Slap normalisering brugt i klient-side filter/sammenligning. Dækker alle
+// historiske skrivekonventioner (capitalized 'Lace', lowercase enum 'lace',
+// alias som 'sock'/'8-ply' osv.) og returnerer altid den kanoniske lowercase
+// enum-værdi — eller en lowercase-trimmet streng hvis intet alias matcher.
+// Så `looseWeightKey('Lace') === looseWeightKey('lace')` er altid sandt.
+export function looseWeightKey(input: string | null | undefined): string {
+  if (input == null) return ''
+  const key = String(input).trim().toLowerCase()
+  if (key === '') return ''
+  return ALIAS_MAP[key] ?? key
+}

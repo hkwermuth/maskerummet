@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { YARN_WEIGHT_LABELS } from '@/lib/yarn-weight'
 
 // Alle catalog-søgefunktioner tager en Supabase-klient som parameter
 // så de kan bruges både klient-side (browser client) og server-side (public client).
@@ -47,7 +48,12 @@ export function applyCatalogYarnOnlyToForm(yarn: YarnRow, prev: YarnRow = {}): Y
     colorCode:      '',
     colorCategory:  '',
     fiber:          yarn.fiber_main      ?? '',
-    weight:         yarn.thickness_category || prev.weight || 'DK',
+    // F1 introducerede yarn_weight-enum (lowercase 'lace'/'fingering'/...).
+    // Foretræk det kanoniske felt og oversæt til formens label-format.
+    // Falder tilbage til det historiske thickness_category for ældre katalog-rækker
+    // der endnu ikke er blevet enum-mapped.
+    weight:         (yarn.yarn_weight && YARN_WEIGHT_LABELS[yarn.yarn_weight as keyof typeof YARN_WEIGHT_LABELS])
+                      || yarn.thickness_category || prev.weight || 'DK',
     metrage:        metrageFromYarn(yarn) || prev.metrage,
     pindstr:        pindstrFromYarn(yarn) || prev.pindstr,
     hex:            '',
@@ -67,7 +73,12 @@ export function applyCatalogYarnColorToForm(yarn: YarnRow, color: ColorRow | nul
     colorName:      color?.color_name    ?? '',
     colorCode:      color?.color_number  ?? '',
     fiber:          yarn.fiber_main      ?? '',
-    weight:         yarn.thickness_category || prev.weight || 'DK',
+    // F1 introducerede yarn_weight-enum (lowercase 'lace'/'fingering'/...).
+    // Foretræk det kanoniske felt og oversæt til formens label-format.
+    // Falder tilbage til det historiske thickness_category for ældre katalog-rækker
+    // der endnu ikke er blevet enum-mapped.
+    weight:         (yarn.yarn_weight && YARN_WEIGHT_LABELS[yarn.yarn_weight as keyof typeof YARN_WEIGHT_LABELS])
+                      || yarn.thickness_category || prev.weight || 'DK',
     metrage:        metrageFromYarn(yarn) || prev.metrage,
     pindstr:        pindstrFromYarn(yarn) || prev.pindstr,
     hex,
