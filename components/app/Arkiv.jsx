@@ -1,6 +1,8 @@
 'use client'
 import { useMemo, useRef, useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSupabase } from '@/lib/supabase/client'
+import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 import { fromDb, fromUsageDb, toUsageDb } from '@/lib/supabase/mappers'
 import {
   uploadFile as uploadFileRaw,
@@ -13,10 +15,13 @@ import { displayYarnName, fetchColorsByIds, fetchColorsForYarn, searchYarnsFull 
 import { dedupeYarnNameFromBrand, yarnDisplayLabel } from '@/lib/yarn-display'
 import { exportProjekter } from '@/lib/export/exportProjekter'
 import { formatDanish } from '@/lib/date/formatDanish'
+import { findYarnItemMatch, returnYarnLinesToStash } from '@/lib/yarn-return'
 import { DelMedFaellesskabetModal } from '@/components/app/DelMedFaellesskabetModal'
 import GarnLinjeVælger from '@/components/app/GarnLinjeVælger'
 import ProjectCardPlaceholder from '@/components/app/ProjectCardPlaceholder'
 import ImageCarousel from '@/components/app/ImageCarousel'
+import ConfirmDeleteProjectModal from '@/components/app/ConfirmDeleteProjectModal'
+import ReturnYarnConfirmModal from '@/components/app/ReturnYarnConfirmModal'
 import {
   PROJECT_STATUSES,
   PROJECT_STATUS_LABELS,
@@ -408,13 +413,109 @@ function PatternModeToggle({ value, onChange, disabled }) {
   )
 }
 
+// Inline-bekræftelse når brugeren fjerner en garn-linje fra et eksisterende
+// projekt: skal nøglerne tilbage til lager, eller skal de slettes?
+function PendingRemoveLineConfirm({ line, onCancel, onChoose }) {
+  const qty = Number(line.quantityUsed ?? 0) || 0
+  const label = [line.yarnBrand, line.yarnName].filter(Boolean).join(' · ') || 'Garn'
+  useEscapeKey(true, onCancel)
+  return (
+    <div
+      onClick={e => e.target === e.currentTarget && onCancel()}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="pending-remove-line-title"
+      style={{
+        position: 'fixed', inset: 0,
+        background: 'rgba(48,34,24,.5)',
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        zIndex: 1350, overflowY: 'auto', padding: '20px 16px',
+      }}
+    >
+      <div
+        style={{
+          background: '#FFFCF7', borderRadius: 14,
+          width: 420, maxWidth: '100%',
+          boxShadow: '0 24px 60px rgba(48,34,24,.25)',
+          margin: 'auto', overflow: 'hidden',
+        }}
+      >
+        <div style={{ background: '#61846D', padding: '18px 22px' }}>
+          <div
+            id="pending-remove-line-title"
+            style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 600, color: '#fff' }}
+          >
+            Fjern garn fra projekt
+          </div>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)', marginTop: 2 }}>
+            {label}
+            {line.colorName ? ` · ${line.colorName}` : ''}
+          </div>
+        </div>
+        <div style={{ padding: 22, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontSize: 13, color: '#302218' }}>
+            Hvad skal der ske med {qty} {qty === 1 ? 'nøgle' : 'nøgler'}?
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => onChoose(true)}
+              style={{ padding: '10px 14px', background: '#61846D', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", minHeight: 44 }}
+            >
+              Returnér til lager
+            </button>
+            <button
+              type="button"
+              onClick={() => onChoose(false)}
+              style={{ padding: '10px 14px', background: '#FFFCF7', color: '#8B3A2A', border: '1px solid #8B3A2A', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", minHeight: 44 }}
+            >
+              Slet uden retur
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              style={{ padding: '8px 14px', background: 'transparent', color: '#8C7E74', border: '1px solid #D0C8BA', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", minHeight: 44 }}
+            >
+              Annuller
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: '#8C7E74', lineHeight: 1.5 }}>
+            Ændringen gemmes først når du klikker <strong>Gem ændringer</strong> på projektet.
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
   const supabase = useSupabase()
+  const router = useRouter()
   const [editing, setEditing]         = useState(false)
   const [saving, setSaving]           = useState(false)
   const [deleting, setDeleting]       = useState(false)
   const [confirmDel, setConfirmDel]   = useState(false)
   const [saveError, setSaveError]     = useState(null)
+
+  // Sletning af projekt med garn → ConfirmDeleteProjectModal med 3 valg
+  const [showDeleteProjectModal, setShowDeleteProjectModal] = useState(false)
+  // Fjernelse af enkelt garn-linje → inline bekræftelse "retur eller slet?"
+  const [pendingRemoveLine, setPendingRemoveLine] = useState(null)
+  // Promise-wrapped state for ReturnYarnConfirmModal (merge-spørgsmål)
+  const [returnConfirmState, setReturnConfirmState] = useState(null)
+
+  // Hvis DetailModal unmounter mens merge-modalen er åben, skal pending
+  // openReturnConfirmModal-promise resolves med null så handleSave/performDelete
+  // ikke hænger og lækker. Bruger functional setState så vi får fat i seneste
+  // resolve-callback uden at gøre returnConfirmState til en effekt-dependency.
+  useEffect(() => {
+    return () => {
+      setReturnConfirmState(prev => {
+        if (prev) prev.resolve(null)
+        return null
+      })
+    }
+  }, [])
 
   const yarns = entry?.yarnLines ?? []
   const fallbackHex = yarns[0]?.hex || '#A8C4C4'
@@ -506,8 +607,59 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     setForm(p => ({ ...p, yarnLines: [...(p.yarnLines ?? []), EMPTY_YARN_LINE] }))
   }
   function removeLine(i) {
-    setForm(p => ({ ...p, yarnLines: (p.yarnLines ?? []).filter((_, idx) => idx !== i) }))
+    const line = (form.yarnLines ?? [])[i]
+    // Linje uden mængde eller uden nogen identitet → fjern direkte uden at spørge
+    const hasIdentity = line && (line.yarnItemId || line.catalogColorId || line.colorCode || line.colorName)
+    const hasQty = line && Number(line.quantityUsed ?? 0) > 0
+    if (!line || !hasIdentity || !hasQty) {
+      setForm(p => ({ ...p, yarnLines: (p.yarnLines ?? []).filter((_, idx) => idx !== i) }))
+      return
+    }
+    setPendingRemoveLine({ index: i, line })
   }
+
+  function confirmRemoveLine(shouldReturn) {
+    if (!pendingRemoveLine) return
+    const { index, line } = pendingRemoveLine
+    if (!line.id) {
+      // Linjen er aldrig blevet gemt — fjern den fra form-state.
+      setForm(p => ({ ...p, yarnLines: (p.yarnLines ?? []).filter((_, idx) => idx !== index) }))
+    } else {
+      // Linjen findes i DB — markér til retur/slet ved næste gem.
+      setForm(p => ({
+        ...p,
+        yarnLines: (p.yarnLines ?? []).map((l, idx) =>
+          idx === index ? { ...l, __pendingRemove: true, __shouldReturn: shouldReturn } : l
+        ),
+      }))
+    }
+    setPendingRemoveLine(null)
+  }
+
+  // Konvertér en form-yarnLine til ReturnableLine for lib/yarn-return
+  function lineToReturnable(line) {
+    return {
+      yarnUsageId:    line.id,
+      yarnItemId:     line.yarnItemId    ?? null,
+      yarnName:       line.yarnName      ?? null,
+      yarnBrand:      line.yarnBrand     ?? null,
+      colorName:      line.colorName     ?? null,
+      colorCode:      line.colorCode     ?? null,
+      hex:            line.hex           ?? null,
+      quantityUsed:   Number(line.quantityUsed ?? 0) || null,
+      catalogYarnId:  line.catalogYarnId ?? null,
+      catalogColorId: line.catalogColorId ?? null,
+    }
+  }
+
+  // Promise-wrapper: åbner ReturnYarnConfirmModal og resolver med decisions-Map
+  // (eller null hvis brugeren annullerer).
+  function openReturnConfirmModal(candidates) {
+    return new Promise(resolve => {
+      setReturnConfirmState({ candidates, resolve })
+    })
+  }
+
   async function ensureColorsLoaded(yarnId) {
     if (!yarnId) return []
     if (colorsByYarnId.has(yarnId)) return colorsByYarnId.get(yarnId)
@@ -668,6 +820,34 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     setSaving(true); setSaveError(null)
     const newlyUploadedPaths = [] // til oprydning hvis DB-update fejler
     try {
+      // ── Fase 1: Spørg om merge-decisions FØR vi mutater Storage eller DB ──
+      // Hvis brugeren har markeret garn-linjer til retur (__pendingRemove +
+      // __shouldReturn), match dem mod lageret nu. Match-kandidater der ikke er
+      // by-yarn-item-id kræver bruger-bekræftelse via ReturnYarnConfirmModal.
+      // Cancel her efterlader projektet 100% uændret — finally rydder saving-state.
+      const removedLines = (form.yarnLines ?? []).filter(l => l.__pendingRemove && l.id)
+      const keptForms = (form.yarnLines ?? []).filter(l => !l.__pendingRemove)
+      const linesToReturn = removedLines.filter(l => l.__shouldReturn)
+      let returnable = []
+      let returnDecisions = new Map()
+      if (linesToReturn.length > 0) {
+        returnable = linesToReturn.map(lineToReturnable)
+        const matches = await Promise.all(
+          returnable.map(r => findYarnItemMatch(supabase, user.id, r))
+        )
+        const needDecision = returnable
+          .map((r, idx) => ({ source: r, match: matches[idx] }))
+          .filter(c => c.match && c.match.matchKind !== 'by-yarn-item-id')
+        if (needDecision.length > 0) {
+          const result = await openReturnConfirmModal(needDecision)
+          if (result === null) {
+            // Brugeren annullerede merge-spørgsmålet → afbryd uden DB-/Storage-ændringer.
+            return
+          }
+          returnDecisions = result
+        }
+      }
+
       // F11/2026-04-28: held_with-feltet er fjernet fra projekt-formen.
       // DB-kolonnen lever videre for bagudkompatibilitet (CSV-eksport, gamle
       // rækker), men vi skriver ikke længere fra UI.
@@ -776,16 +956,25 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         await deleteFiles(supabase, PATTERNS_BUCKET, [...cleanupPatterns, ...cleanupPdfPaths]).catch(() => { /* best-effort */ })
       }
 
-      // Synkroniser yarn_usage-rækker: slet fjernede, upsert resten
-      const keptIds = new Set((form.yarnLines ?? []).map(l => l.id).filter(Boolean))
+      // ── Fase 3: Retur-til-lager + synkroniser yarn_usage-rækker ──
+      // Beslutninger blev allerede indhentet i fase 1; nu hvor projects-rækken
+      // er gemt, kan vi mutate yarn_items (returnYarnLinesToStash) og slette
+      // de fjernede yarn_usage-rækker. Returnable-arrayet er en kopi af linje-
+      // dataen fra før sletningen, så det er sikkert at slette yarn_usage bagefter.
+      if (returnable.length > 0) {
+        await returnYarnLinesToStash(supabase, user.id, returnable, returnDecisions)
+      }
+
+      const keptIds = new Set(keptForms.map(l => l.id).filter(Boolean))
       const originalIds = (entry.yarnLines ?? []).map(l => l.id).filter(Boolean)
       const toDelete = originalIds.filter(id => !keptIds.has(id))
+
       if (toDelete.length > 0) {
         const { error: dErr } = await supabase.from('yarn_usage').delete().in('id', toDelete)
         if (dErr) throw dErr
       }
 
-      const lines = (form.yarnLines ?? []).filter(l =>
+      const lines = keptForms.filter(l =>
         (l.yarnName || l.yarnBrand || l.colorName || l.colorCode || l.quantityUsed)
       )
       if (lines.length === 0) throw new Error('Tilføj mindst ét garn til projektet.')
@@ -839,31 +1028,77 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         await deleteFiles(supabase, bucket, paths).catch(() => { /* best-effort */ })
       }
       setSaveError('Kunne ikke gemme: ' + e.message)
+    } finally {
+      // Sikrer at "Gem ændringer"-knappen frigives — også på den tidlige
+      // return ved merge-modal-cancel (Fase 1).
+      setSaving(false)
     }
-    setSaving(false)
   }
 
   async function handleDelete() {
+    // Tomt projekt → bevar simpel ja/nej (allerede vist via confirmDel-state).
+    // Projekt med garn → åbn ConfirmDeleteProjectModal med 3 valg.
+    if ((entry.yarnLines ?? []).length === 0) {
+      return performDelete('delete-all')
+    }
+    setConfirmDel(false)
+    setShowDeleteProjectModal(true)
+  }
+
+  async function performDelete(choice) {
     setDeleting(true)
-    // Slet projektet i DB først; cascade fjerner yarn_usage. Storage-filer
-    // ryddes herefter best-effort så vi ikke efterlader orphans.
-    await supabase.from('projects').delete().eq('id', entry.id)
+    setSaveError(null)
+    try {
+      // Returnér garn FØR vi sletter projektet — ellers cascader yarn_usage
+      // før vi har nået at læse linje-data.
+      if (choice === 'return' && (entry.yarnLines ?? []).length > 0) {
+        const returnable = (entry.yarnLines ?? []).map(lineToReturnable)
+        const matches = await Promise.all(
+          returnable.map(r => findYarnItemMatch(supabase, user.id, r))
+        )
+        const needDecision = returnable
+          .map((r, idx) => ({ source: r, match: matches[idx] }))
+          .filter(c => c.match && c.match.matchKind !== 'by-yarn-item-id')
+        let decisions = new Map()
+        if (needDecision.length > 0) {
+          const result = await openReturnConfirmModal(needDecision)
+          if (result === null) {
+            // Brugeren annullerede merge-spørgsmålet → afbryd hele sletningen.
+            setDeleting(false)
+            return
+          }
+          decisions = result
+        }
+        await returnYarnLinesToStash(supabase, user.id, returnable, decisions)
+      }
 
-    const imagePaths = (entry.project_image_urls ?? []).map(pathFromUrl).filter(Boolean)
-    if (imagePaths.length > 0) {
-      await deleteFiles(supabase, IMAGES_BUCKET, imagePaths).catch(() => { /* best-effort */ })
-    }
-    const patternPaths = [
-      ...(entry.pattern_image_urls ?? []).map(pathFromUrl).filter(Boolean),
-      ...(entry.pattern_pdf_url ? [pathFromUrl(entry.pattern_pdf_url)].filter(Boolean) : []),
-      ...(entry.pattern_pdf_thumbnail_url ? [pathFromUrl(entry.pattern_pdf_thumbnail_url)].filter(Boolean) : []),
-    ]
-    if (patternPaths.length > 0) {
-      await deleteFiles(supabase, PATTERNS_BUCKET, patternPaths).catch(() => { /* best-effort */ })
-    }
+      // Slet projektet i DB; cascade fjerner yarn_usage.
+      const { error: delErr } = await supabase.from('projects').delete().eq('id', entry.id)
+      if (delErr) throw delErr
 
-    onDelete(entry.id)
-    onClose()
+      // Storage-cleanup best-effort (orphans skadeløse).
+      const imagePaths = (entry.project_image_urls ?? []).map(pathFromUrl).filter(Boolean)
+      if (imagePaths.length > 0) {
+        await deleteFiles(supabase, IMAGES_BUCKET, imagePaths).catch(() => { /* best-effort */ })
+      }
+      const patternPaths = [
+        ...(entry.pattern_image_urls ?? []).map(pathFromUrl).filter(Boolean),
+        ...(entry.pattern_pdf_url ? [pathFromUrl(entry.pattern_pdf_url)].filter(Boolean) : []),
+        ...(entry.pattern_pdf_thumbnail_url ? [pathFromUrl(entry.pattern_pdf_thumbnail_url)].filter(Boolean) : []),
+      ]
+      if (patternPaths.length > 0) {
+        await deleteFiles(supabase, PATTERNS_BUCKET, patternPaths).catch(() => { /* best-effort */ })
+      }
+
+      setShowDeleteProjectModal(false)
+      onDelete(entry.id)
+      onClose()
+    } catch (e) {
+      setSaveError('Kunne ikke slette: ' + (e?.message ?? String(e)))
+      setShowDeleteProjectModal(false)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const coverImage = projectImages[0]?.url ?? null
@@ -876,6 +1111,49 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
       onClick={e => e.target === e.currentTarget && !editing && onClose()}
       style={{ position: 'fixed', inset: 0, background: 'rgba(44,32,24,.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1200, overflowY: 'auto', padding: '20px 16px' }}
     >
+      {showDeleteProjectModal && (
+        <ConfirmDeleteProjectModal
+          project={{
+            id: entry.id,
+            title: entry.title,
+            status: entry.status ?? 'faerdigstrikket',
+          }}
+          yarnLines={(entry.yarnLines ?? []).map(l => ({
+            id:           l.id,
+            yarnItemId:   l.yarnItemId   ?? null,
+            yarnName:     l.yarnName     ?? null,
+            yarnBrand:    l.yarnBrand    ?? null,
+            colorName:    l.colorName    ?? null,
+            colorCode:    l.colorCode    ?? null,
+            hex:          l.hex          ?? null,
+            quantityUsed: Number(l.quantityUsed ?? 0) || 0,
+          }))}
+          onCancel={() => { if (!deleting) setShowDeleteProjectModal(false) }}
+          onConfirm={performDelete}
+        />
+      )}
+      {returnConfirmState && (
+        <ReturnYarnConfirmModal
+          candidates={returnConfirmState.candidates}
+          onCancel={() => {
+            const { resolve } = returnConfirmState
+            setReturnConfirmState(null)
+            resolve(null)
+          }}
+          onConfirm={async (decisions) => {
+            const { resolve } = returnConfirmState
+            setReturnConfirmState(null)
+            resolve(decisions)
+          }}
+        />
+      )}
+      {pendingRemoveLine && (
+        <PendingRemoveLineConfirm
+          line={pendingRemoveLine.line}
+          onCancel={() => setPendingRemoveLine(null)}
+          onChoose={confirmRemoveLine}
+        />
+      )}
       <div style={{ background: '#FFFCF7', borderRadius: '14px', width: '520px', maxWidth: '100%', boxShadow: '0 24px 60px rgba(44,32,24,.25)', margin: 'auto', overflow: 'hidden' }}>
         {coverImage ? (
           <div style={{ aspectRatio: '16/9', overflow: 'hidden', background: '#EDE7D8', position: 'relative' }}>
@@ -940,21 +1218,39 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
 
           {!editing && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-              {yarns.map((y) => (
-                <div key={y.id} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '12px 14px', background: '#F4EFE6', borderRadius: '10px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: y.hex || '#A8C4C4', border: '1px solid rgba(0,0,0,.08)', flexShrink: 0 }} />
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '11px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.1em' }}>{y.yarnBrand}</div>
-                    <div style={{ fontSize: '15px', fontWeight: 500, color: '#2C2018' }}>
-                      {dedupeYarnNameFromBrand(y.yarnName, y.yarnBrand)} {y.colorName ? `· ${y.colorName}` : ''}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#8B7D6B' }}>
-                      {y.quantityUsed} ngl · {y.colorCode}
-                      {y.catalogYarnId && <span style={{ marginLeft: '6px', color: '#1E4D3A' }}>· katalog</span>}
+              {yarns.map((y) => {
+                const clickable = Boolean(y.yarnItemId)
+                const open = () => router.push(`/garnlager?yarn=${y.yarnItemId}`)
+                return (
+                  <div
+                    key={y.id}
+                    onClick={clickable ? open : undefined}
+                    onKeyDown={clickable ? (e) => {
+                      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() }
+                    } : undefined}
+                    role={clickable ? 'button' : undefined}
+                    tabIndex={clickable ? 0 : undefined}
+                    aria-label={clickable ? `Vis ${y.yarnBrand ?? ''} ${dedupeYarnNameFromBrand(y.yarnName, y.yarnBrand) ?? ''} i Mit garn` : undefined}
+                    style={{
+                      display: 'flex', gap: '12px', alignItems: 'center',
+                      padding: '12px 14px', background: '#F4EFE6', borderRadius: '10px',
+                      cursor: clickable ? 'pointer' : 'default',
+                    }}
+                  >
+                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: y.hex || '#A8C4C4', border: '1px solid rgba(0,0,0,.08)', flexShrink: 0 }} />
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '11px', color: '#8B7D6B', textTransform: 'uppercase', letterSpacing: '.1em' }}>{y.yarnBrand}</div>
+                      <div style={{ fontSize: '15px', fontWeight: 500, color: '#2C2018' }}>
+                        {dedupeYarnNameFromBrand(y.yarnName, y.yarnBrand)} {y.colorName ? `· ${y.colorName}` : ''}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#8B7D6B' }}>
+                        {y.quantityUsed} ngl · {y.colorCode}
+                        {y.catalogYarnId && <span style={{ marginLeft: '6px', color: '#1E4D3A' }}>· katalog</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
@@ -1192,7 +1488,19 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                     </button>
                   </div>
                 ) : (
-                  <button onClick={() => setConfirmDel(true)} style={{ padding: '7px 14px', background: '#F0E8E0', color: '#8B3A2A', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                  <button
+                    onClick={() => {
+                      // Tomt projekt → vis enkel ja/nej (eksisterende UX).
+                      // Med garn → åbn ConfirmDeleteProjectModal direkte (det
+                      //            er allerede selve bekræftelsen).
+                      if ((entry.yarnLines ?? []).length === 0) {
+                        setConfirmDel(true)
+                      } else {
+                        handleDelete()
+                      }
+                    }}
+                    style={{ padding: '7px 14px', background: '#F0E8E0', color: '#8B3A2A', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                  >
                     Slet projekt
                   </button>
                 )}
@@ -1696,6 +2004,7 @@ function NytProjektModal({ user, onClose, onSaved }) {
 
 export default function Arkiv({ user, onRequestLogin }) {
   const supabase = useSupabase()
+  const searchParams = useSearchParams()
   const uploadFile = (bucket, path, file) => uploadFileRaw(supabase, bucket, path, file)
   const [projects, setProjects] = useState([])
   const [loaded, setLoaded]   = useState(false)
@@ -1705,6 +2014,7 @@ export default function Arkiv({ user, onRequestLogin }) {
   const [sharing, setSharing]   = useState(null)
   const [showNew, setShowNew] = useState(false)
   const [colorMap, setColorMap] = useState(new Map())
+  const autoOpenedProjectId = useRef(null)
 
   function applyShareUpdate(updated) {
     setProjects(prev => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p))
@@ -1755,6 +2065,20 @@ export default function Arkiv({ user, onRequestLogin }) {
     }
     load()
   }, [])
+
+  // Auto-åbn projekt fra ?projekt=<id> query-param (cross-link fra Garnlager).
+  // Skifter også statusTab så det åbnede projekt er synligt under den rette
+  // tab når brugeren lukker modalen igen.
+  useEffect(() => {
+    const projectId = searchParams?.get('projekt')
+    if (!projectId || !loaded) return
+    if (autoOpenedProjectId.current === projectId) return
+    const project = projects.find(p => p.id === projectId)
+    if (!project) return
+    autoOpenedProjectId.current = projectId
+    if (project.status) setStatusTab(project.status)
+    setSelected(project)
+  }, [searchParams, projects, loaded])
 
   useEffect(() => {
     async function loadColors() {

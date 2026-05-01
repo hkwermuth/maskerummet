@@ -278,11 +278,18 @@ export default function BrugNoeglerModal({
       if (insertErr) throw insertErr
 
       // ── 5) Opdatér yarn_items quantity + status ────────────────────────────
-      // Når brugeren logger forbrug, bør garnet stå som "I brug" (ikke "På lager")
-      // så det vises i Garnlager-filteret "I brug". Når antal når 0, bliver det
-      // automatisk "Brugt op".
+      // Status-regel:
+      //   newQty > 0  ⇒ 'På lager'  (nøgler tilbage at gribe efter; sporbarhed
+      //                              til aktivt projekt vises via "Bruges i
+      //                              projekter"-sektionen i Garnlager edit-modal,
+      //                              IKKE via status-skift — ellers forsvinder
+      //                              garnet fra "På lager"-filteret selv om
+      //                              brugeren stadig har nøgler tilbage).
+      //   newQty == 0 ⇒ 'I brug'    (alt aktivt brugt; 'Brugt op' sættes først
+      //                              når brugeren markerer projektet færdigt —
+      //                              håndteres af markYarnAsBrugtOp i mappers.ts).
       const newQty = Math.max(0, (parseFloat(String(yarn.antal)) || 0) - parseFloat(String(form.quantityUsed) || '0'))
-      const newStatus = newQty === 0 ? 'Brugt op' : 'I brug'
+      const newStatus = newQty === 0 ? 'I brug' : 'På lager'
       await supabase.from('yarn_items').update({ quantity: newQty, status: newStatus }).eq('id', yarn.id)
 
       onSaved(usageRow, newQty, newStatus)

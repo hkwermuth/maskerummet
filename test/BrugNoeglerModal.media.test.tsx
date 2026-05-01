@@ -235,7 +235,7 @@ describe('BrugNoeglerModal — note appendes til projects.notes med dato-stamp',
 })
 
 describe('BrugNoeglerModal — yarn_items status-opdatering ved forbrug', () => {
-  it('sætter status til "I brug" når antal stadig er > 0', async () => {
+  it('sætter status til "På lager" når antal stadig er > 0 (sporbarhed: garn med restantal forbliver synligt på lager-filteret)', async () => {
     const user = userEvent.setup()
     const yarnItemsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
     const onSaved = vi.fn()
@@ -270,17 +270,17 @@ describe('BrugNoeglerModal — yarn_items status-opdatering ved forbrug', () => 
     )
 
     await waitFor(() => expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument())
-    // Default form.quantityUsed = 1 → 5 - 1 = 4 → "I brug"
+    // Default form.quantityUsed = 1 → 5 - 1 = 4 → "På lager" (4 nøgler tilbage)
     await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
 
     await waitFor(() => expect(yarnItemsUpdate).toHaveBeenCalled())
     const updatePayload = yarnItemsUpdate.mock.calls[0][0]
-    expect(updatePayload.status).toBe('I brug')
+    expect(updatePayload.status).toBe('På lager')
     expect(updatePayload.quantity).toBe(4)
-    expect(onSaved).toHaveBeenCalledWith(expect.anything(), 4, 'I brug')
+    expect(onSaved).toHaveBeenCalledWith(expect.anything(), 4, 'På lager')
   })
 
-  it('sætter status til "Brugt op" når antal når 0', async () => {
+  it('sætter status til "I brug" når antal når 0 (alt aktivt brugt — Brugt op sættes først når projekt markeres færdigt)', async () => {
     const user = userEvent.setup()
     const yarnItemsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
     const onSaved = vi.fn()
@@ -315,14 +315,15 @@ describe('BrugNoeglerModal — yarn_items status-opdatering ved forbrug', () => 
     )
 
     await waitFor(() => expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument())
-    // antal=1, brug 1 → 0 → "Brugt op"
+    // antal=1, brug 1 → 0 → "I brug" (alt aktivt brugt; bliver først 'Brugt op'
+    // når brugeren markerer projektet færdigt — håndteres af markYarnAsBrugtOp).
     await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
 
     await waitFor(() => expect(yarnItemsUpdate).toHaveBeenCalled())
     const updatePayload = yarnItemsUpdate.mock.calls[0][0]
-    expect(updatePayload.status).toBe('Brugt op')
+    expect(updatePayload.status).toBe('I brug')
     expect(updatePayload.quantity).toBe(0)
-    expect(onSaved).toHaveBeenCalledWith(expect.anything(), 0, 'Brugt op')
+    expect(onSaved).toHaveBeenCalledWith(expect.anything(), 0, 'I brug')
   })
 })
 

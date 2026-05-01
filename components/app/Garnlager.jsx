@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSupabase } from '@/lib/supabase/client'
 import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 import { toDb, fromDb, toUsageDb } from '@/lib/supabase/mappers'
@@ -27,6 +28,20 @@ import { YARN_WEIGHT_LABELS } from '@/lib/yarn-weight'
 import { exportGarnlager } from '@/lib/export/exportGarnlager'
 import { validateForm } from '@/lib/validators/yarnForm'
 import { toISODate } from '@/lib/date/formatDanish'
+import { PROJECT_STATUS_LABELS } from '@/lib/types'
+
+// Badge-farver matcher tonen for projekt-status-chips i Arkiv. Lokale
+// konstanter da der ikke er en delt design-token-tabel endnu.
+const PROJECT_STATUS_BADGE_BG = {
+  vil_gerne:       '#E8E0F0',
+  i_gang:          '#FFE0C4',
+  faerdigstrikket: '#D0E8D4',
+}
+const PROJECT_STATUS_BADGE_FG = {
+  vil_gerne:       '#3C2A5C',
+  i_gang:          '#7A3C10',
+  faerdigstrikket: '#2A5C35',
+}
 
 const WEIGHTS  = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
 const STATUSES = ['På lager', 'I brug', 'Brugt op', 'Ønskeliste']
@@ -71,6 +86,8 @@ function isCatalogSwatchUrl(url) {
   const s = String(url || '')
   // Permin uses 100x100 swatches at /img/spec/<hash>.png
   if (s.includes('/img/spec/')) return true
+  // DROPS (garnstudio) uses ~50x50 swatches at /img/shademap/<yarn>/<code>.jpg
+  if (s.includes('images.garnstudio.com/img/shademap/')) return true
   return false
 }
 
@@ -312,6 +329,8 @@ function LoginPrompt({ onRequestLogin, title, desc, icon }) {
 
 export default function Garnlager({ user, onRequestLogin }) {
   const supabase = useSupabase()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const uploadFile = (bucket, path, file) => uploadFileRaw(supabase, bucket, path, file)
   const [yarns, setYarns] = useState([])
   const [loaded, setLoaded] = useState(false)
@@ -337,6 +356,10 @@ export default function Garnlager({ user, onRequestLogin }) {
   const [fieldErrors, setFieldErrors] = useState({})
   const [confirmDel, setConfirmDel] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // Sporbarhed: aktive projekter for det åbne garn (vises i edit-modal)
+  const [activeProjects, setActiveProjects] = useState([])
+  // Forhindrer auto-åbn-effekten i at trigge igen efter brugeren har lukket modalen
+  const autoOpenedYarnId = useRef(null)
 
   useEffect(() => {
     setConfirmDel(false)
@@ -393,6 +416,53 @@ export default function Garnlager({ user, onRequestLogin }) {
     }
     loadProjects()
   }, [user.id])
+
+  // ── Sporbarhed: aktive projekter for det åbne garn ──────────────────────────
+  // Loader yarn_usage joinet med projects når brugeren åbner edit-modal på et
+  // konkret garn. Tomt for 'add'-mode. Defensiv: hvis kaldet fejler vises
+  // sektionen bare ikke (intet UI-disrupt).
+  useEffect(() => {
+    if (!modal || modal === 'add') {
+      setActiveProjects([])
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const { data } = await supabase
+          .from('yarn_usage')
+          .select('id, project_id, quantity_used, projects!inner(id, title, status)')
+          .eq('yarn_item_id', modal)
+          .eq('user_id', user.id)
+        if (cancelled) return
+        const lines = (data ?? []).map(r => ({
+          yarnUsageId:  r.id,
+          projectId:    r.projects?.id,
+          title:        r.projects?.title ?? null,
+          status:       r.projects?.status ?? 'i_gang',
+          quantityUsed: Number(r.quantity_used ?? 0),
+        }))
+        setActiveProjects(lines.filter(l => l.projectId))
+      } catch {
+        if (!cancelled) setActiveProjects([])
+      }
+    })()
+    return () => { cancelled = true }
+  }, [modal, user.id, supabase])
+
+  // ── Auto-åbn garn fra ?yarn=<id> query-param ────────────────────────────────
+  // Bruges til cross-link fra Arkiv ("Vis i Mit garn"). Trigger kun én gang per
+  // yarn-id så brugeren kan lukke modalen uden at den åbner igen.
+  useEffect(() => {
+    const yarnId = searchParams?.get('yarn')
+    if (!yarnId || !loaded) return
+    if (autoOpenedYarnId.current === yarnId) return
+    const row = yarns.find(y => y.id === yarnId)
+    if (!row) return
+    autoOpenedYarnId.current = yarnId
+    void openEdit(row)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, yarns, loaded])
 
   // ── Persist helpers ─────────────────────────────────────────────────────────
   function flashSave() {
@@ -838,9 +908,12 @@ export default function Garnlager({ user, onRequestLogin }) {
             const displayName = dedupeYarnNameFromBrand(y.name, y.brand)
             const colorBg = gradientFromHexColors(y.hexColors, y.hex)
             const isMulti = Array.isArray(y.hexColors) && y.hexColors.length >= 2
-            // Vis kun bruger-uploadede fotos (y.imageUrl). Katalog-thumbnails (y.catalogImageUrl)
-            // vises aldrig på kortet — de repræsenterer ikke nødvendigvis brugerens specifikke farve.
+            // Bruger-uploadet foto vinder altid. Ellers vises katalog-swatch (per-farve
+            // billede fra Permin/DROPS) hvis tilgængelig — den matcher brugerens valgte farve
+            // 1:1. Generiske hero-billeder vises stadig ikke (de repræsenterer ikke farven).
             const showUserPhoto = Boolean(y.imageUrl)
+            const showCatalogSwatch =
+              !showUserPhoto && y.catalogImageUrl && isCatalogSwatchUrl(y.catalogImageUrl)
             const colorPillText = y.colorName || (isMulti ? `Multi (${y.hexColors.length})` : '')
             const weightLabel = (y.weight && YARN_WEIGHT_LABELS[String(y.weight).toLowerCase()])
               || y.weight
@@ -867,6 +940,13 @@ export default function Garnlager({ user, onRequestLogin }) {
                     <img
                       src={y.imageUrl}
                       alt={y.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  )}
+                  {showCatalogSwatch && (
+                    <img
+                      src={y.catalogImageUrl}
+                      alt={y.colorName ? `Farveprøve: ${y.colorName}` : 'Farveprøve fra katalog'}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   )}
@@ -1323,6 +1403,46 @@ export default function Garnlager({ user, onRequestLogin }) {
                   style={{ ...inputStyle, resize: 'vertical' }}
                 />
               </div>
+
+              {modal !== 'add' && activeProjects.length > 0 && (
+                <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <Label>Bruges i projekter</Label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {activeProjects.map(p => (
+                      <button
+                        key={p.yarnUsageId}
+                        type="button"
+                        onClick={() => router.push(`/projekter?projekt=${p.projectId}`)}
+                        aria-label={`Åbn projekt ${p.title || 'Unavngivet'}`}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          padding: '8px 10px', textAlign: 'left',
+                          border: '1px solid #EDE7D8', background: '#F9F6F0',
+                          borderRadius: 8, cursor: 'pointer',
+                          fontFamily: "'DM Sans', sans-serif", fontSize: 13,
+                          color: '#302218', minHeight: 44,
+                        }}
+                      >
+                        <span style={{
+                          padding: '2px 8px', borderRadius: 4, fontSize: 10,
+                          fontWeight: 500, letterSpacing: '.05em',
+                          background: PROJECT_STATUS_BADGE_BG[p.status] ?? '#EDE7D8',
+                          color: PROJECT_STATUS_BADGE_FG[p.status] ?? '#302218',
+                          flexShrink: 0,
+                        }}>
+                          {PROJECT_STATUS_LABELS[p.status] ?? p.status}
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {p.title || 'Unavngivet projekt'}
+                        </span>
+                        <span style={{ color: '#8B7D6B', fontSize: 11, flexShrink: 0 }}>
+                          {p.quantityUsed} ngl
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {saveError && (

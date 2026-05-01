@@ -26,3 +26,6 @@ vite.config.js.timestamp-*.mjs
 # Rå foto-kilder (ikke serverede; originaler i OneDrive, serveringsfiler i public/garn-eksempler/)
 app/garn/Hannahs fotoeksempler af garn/
 
+# Lokale script-artefakter (sample-data, dev-logs, downloadede swatches)
+.cache/
+
