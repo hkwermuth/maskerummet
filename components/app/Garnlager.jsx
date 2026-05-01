@@ -25,7 +25,6 @@ import { detectColorFamily, COLOR_FAMILY_DEFAULT_HEX, yarnMatchesStashSearch } f
 import { parseCombinedColorInput, combineColorDisplay } from '@/lib/colorInput'
 import { dedupeYarnNameFromBrand, gradientFromHexColors, primaryFiberLabel } from '@/lib/yarn-display'
 import { YARN_WEIGHT_LABELS } from '@/lib/yarn-weight'
-import { exportGarnlager } from '@/lib/export/exportGarnlager'
 import { validateForm } from '@/lib/validators/yarnForm'
 import { toISODate } from '@/lib/date/formatDanish'
 import { PROJECT_STATUS_LABELS } from '@/lib/types'
@@ -45,8 +44,6 @@ const PROJECT_STATUS_BADGE_FG = {
 
 const WEIGHTS  = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky']
 const STATUSES = ['På lager', 'I brug', 'Brugt op', 'Ønskeliste']
-// Default-sortering på Mit Garnlager: På lager → I brug → Brugt op → Ønskeliste.
-const STATUS_SORT_ORDER = { 'På lager': 0, 'I brug': 1, 'Brugt op': 2, 'Ønskeliste': 3 }
 const FIBER_PILLS = ['Uld', 'Merino', 'Mohair', 'Alpaka', 'Silke', 'Bomuld', 'Hør', 'Akryl']
 
 // Skanning skjult indtil EAN-koder er fyldt på colors-tabellen i kataloget.
@@ -202,7 +199,7 @@ function YarnCatalogSearch({ value, onChange, onSelectYarn, placeholder, autoFoc
 const QUICK_START_STEPS = [
   { title: 'Opret garn', body: 'Find garnet i Garn-kataloget når du opretter, eller tilføj garnet manuelt.' },
   { title: 'Filtrér', body: 'Filtrér på fiber, vægt eller farve, når du vil finde noget bestemt.' },
-  { title: 'Print', body: 'Print en oversigt, hvis du også ønsker at have overblikket på papir.' },
+  { title: 'Brug garnet', body: "Aktiver dit garn på dine projekter eller ideer til dine projekter. Du kan stadig se det i dit lager under 'I brug' eller 'Brugt op'." },
 ]
 
 function QuickStartModal({ onClose }) {
@@ -691,7 +688,7 @@ export default function Garnlager({ user, onRequestLogin }) {
   // ── Filtering + sortering ──────────────────────────────────────────────────
   // Default-visning skjuler "Brugt op"-garn så lageret viser hvad brugeren har.
   // Brugeren kan eksplicit vælge "Brugt op" i status-dropdown for at se dem.
-  // Sortering: status (På lager → I brug → Brugt op → Ønskeliste), så alfabetisk på navn.
+  // Sortering: nyeste først (created_at desc), så alfabetisk på navn som tie-break.
   const filtered = yarns
     .filter(y => {
       const matchesSearch = yarnMatchesStashSearch(y, q)
@@ -704,9 +701,9 @@ export default function Garnlager({ user, onRequestLogin }) {
     })
     .slice()
     .sort((a, b) => {
-      const sa = STATUS_SORT_ORDER[a.status] ?? 99
-      const sb = STATUS_SORT_ORDER[b.status] ?? 99
-      if (sa !== sb) return sa - sb
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0
+      if (ta !== tb) return tb - ta
       return (a.name || '').localeCompare(b.name || '', 'da')
     })
 
@@ -828,16 +825,6 @@ export default function Garnlager({ user, onRequestLogin }) {
               <span>📷</span> Skann garn
             </button>
           )}
-          <button
-            onClick={async () => {
-              const result = await exportGarnlager(supabase)
-              if (!result.success) alert(result.error)
-            }}
-            style={{ background: '#FFFFFF', border: '1px solid #D0C8BA', borderRadius: '6px', padding: '6px 11px', fontSize: '12px', color: '#5A4E42', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px' }}
-            aria-label="Eksporter garnlager som CSV"
-          >
-            <span>📥</span> Eksporter
-          </button>
           <button
             onClick={openAdd}
             style={{ background: '#61846D', color: '#fff', border: 'none', borderRadius: '6px', padding: '7px 14px', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", fontWeight: 500, cursor: 'pointer' }}

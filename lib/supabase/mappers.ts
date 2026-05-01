@@ -65,6 +65,7 @@ export function fromDb(row: Record<string, any>) {
     catalogYarnId:   row.catalog_yarn_id   ?? null,
     catalogColorId:  row.catalog_color_id  ?? null,
     catalogImageUrl: row.catalog_image_url ?? null,
+    createdAt:       row.created_at        ?? null,
   }
 }
 
