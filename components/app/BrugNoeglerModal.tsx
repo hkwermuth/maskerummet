@@ -208,8 +208,12 @@ export default function BrugNoeglerModal({
         const combinedNotes = stampedNote
           ? (initialNotes ? `${initialNotes}\n\n${stampedNote}` : stampedNote)
           : (initialNotes || null)
+        // status='i_gang' (modalen er for aktiv brug; matcher F15-pattern fra
+        // Garnlager-create-project — uden eksplicit status falder DB-default
+        // til 'faerdigstrikket' og det giver ikke mening at logge "brug"-events
+        // på et færdigt projekt). Brugeren afslutter selv i Arkiv senere.
         const { data: project, error: pErr } = await supabase.from('projects')
-          .insert([{ user_id: user.id, title: newProject.title || null, used_at: newProject.usedAt || null, needle_size: newProject.needleSize || null, notes: combinedNotes }])
+          .insert([{ user_id: user.id, status: 'i_gang', title: newProject.title || null, used_at: newProject.usedAt || null, needle_size: newProject.needleSize || null, notes: combinedNotes }])
           .select().single()
         if (pErr) throw pErr
         projectId = (project as { id: string }).id
@@ -278,18 +282,16 @@ export default function BrugNoeglerModal({
       if (insertErr) throw insertErr
 
       // ── 5) Opdatér yarn_items quantity + status ────────────────────────────
-      // Status-regel:
-      //   newQty > 0  ⇒ 'På lager'  (nøgler tilbage at gribe efter; sporbarhed
-      //                              til aktivt projekt vises via "Bruges i
-      //                              projekter"-sektionen i Garnlager edit-modal,
-      //                              IKKE via status-skift — ellers forsvinder
-      //                              garnet fra "På lager"-filteret selv om
-      //                              brugeren stadig har nøgler tilbage).
-      //   newQty == 0 ⇒ 'I brug'    (alt aktivt brugt; 'Brugt op' sættes først
-      //                              når brugeren markerer projektet færdigt —
-      //                              håndteres af markYarnAsBrugtOp i mappers.ts).
+      // Status-regel: Garn der logges via BrugNoeglerModal er per design
+      // committeret til et aktivt projekt (mode='existing' loader kun
+      // 'i_gang'/'vil_gerne'; mode='new' opretter altid 'i_gang' i trin 1).
+      // Derfor: status='I brug' uanset restantal — også selv om der er nøgler
+      // tilbage. Brugerens mentale model: garnet "tilhører" nu projektet og
+      // er ikke længere ledigt 'På lager'-garn at gribe til andre projekter.
+      // 'Brugt op' sættes separat i Mit Garnlager via BrugtOpFoldeUd når
+      // brugeren markerer status='Brugt op' med projekt-link (F5/F15-flow).
       const newQty = Math.max(0, (parseFloat(String(yarn.antal)) || 0) - parseFloat(String(form.quantityUsed) || '0'))
-      const newStatus = newQty === 0 ? 'I brug' : 'På lager'
+      const newStatus = 'I brug'
       await supabase.from('yarn_items').update({ quantity: newQty, status: newStatus }).eq('id', yarn.id)
 
       onSaved(usageRow, newQty, newStatus)

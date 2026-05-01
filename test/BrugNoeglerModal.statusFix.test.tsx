@@ -1,6 +1,11 @@
 /**
- * AC-1: partial brug (4→2 nøgler) → status='På lager', quantity=2
- * AC-2: fuld brug (4→0 nøgler)    → status='I brug',   quantity=0
+ * BrugNoeglerModal er for aktive projekter — status efter save er ALTID 'I brug',
+ * uanset restantal. 'Brugt op' sættes via BrugtOpFoldeUd (F5/F15) når brugeren
+ * markerer projektet færdigt.
+ *
+ * AC-1: partial brug (4→2 nøgler) → status='I brug', quantity=2
+ * AC-2: fuld brug (4→0 nøgler)    → status='I brug', quantity=0
+ * AC-3: ny projekt fra modalen oprettes med status='i_gang' (ikke DB-default 'faerdigstrikket')
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -99,10 +104,10 @@ beforeEach(() => vi.clearAllMocks())
 
 // ── AC-1: partial brug ────────────────────────────────────────────────────────
 
-describe('AC-1 – partial brug sætter status=På lager', () => {
-  it('gemmer quantity=2 og status=På lager når 2 ud af 4 nøgler bruges', async () => {
+describe('AC-1 – partial brug sætter status=I brug (ikke På lager)', () => {
+  it('gemmer quantity=2 og status=I brug når 2 ud af 4 nøgler bruges på aktivt projekt', async () => {
     const user = userEvent.setup()
-    const { mock, updateFn, updateEqFn } = buildMock()
+    const { mock, updateFn } = buildMock()
     vi.mocked(useSupabase).mockReturnValue(mock as never)
 
     const onSaved = vi.fn()
@@ -130,21 +135,22 @@ describe('AC-1 – partial brug sætter status=På lager', () => {
     await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
 
     await waitFor(() => {
-      expect(updateFn).toHaveBeenCalledWith({ quantity: 2, status: 'På lager' })
+      expect(updateFn).toHaveBeenCalledWith({ quantity: 2, status: 'I brug' })
     })
 
-    // Callback receives new qty and status
+    // Callback receives new qty and status — status er 'I brug' fordi garnet
+    // nu er committeret til projektet (selv om der er 2 nøgler tilbage).
     expect(onSaved).toHaveBeenCalledWith(
       expect.anything(),
       2,
-      'På lager',
+      'I brug',
     )
   })
 })
 
 // ── AC-2: fuld brug ───────────────────────────────────────────────────────────
 
-describe('AC-2 – fuld brug sætter status=I brug', () => {
+describe('AC-2 – fuld brug sætter status=I brug (Brugt op kommer senere via BrugtOpFoldeUd)', () => {
   it('gemmer quantity=0 og status=I brug når alle 4 nøgler bruges', async () => {
     const user = userEvent.setup()
     const { mock, updateFn } = buildMock()
@@ -179,5 +185,83 @@ describe('AC-2 – fuld brug sætter status=I brug', () => {
       0,
       'I brug',
     )
+  })
+})
+
+// ── AC-3: ny projekt får status='i_gang' ──────────────────────────────────────
+
+describe('AC-3 – ny projekt fra modalen oprettes med status=i_gang', () => {
+  it('insert-payload på projects indeholder status=i_gang når mode=new', async () => {
+    const user = userEvent.setup()
+    const projectInsertPayloads: unknown[] = []
+    const projectInsertSelectSingle = vi.fn().mockResolvedValue({ data: { id: 'p-new' }, error: null })
+    const projectInsert = vi.fn((rows: unknown) => {
+      projectInsertPayloads.push(rows)
+      return { select: vi.fn(() => ({ single: projectInsertSelectSingle })) }
+    })
+    const updateFn = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
+
+    let projectsCallCount = 0
+    const supabaseMock = {
+      from: vi.fn().mockImplementation((table: string) => {
+        if (table === 'projects') {
+          projectsCallCount++
+          // Første call: load list (kan returnere tomt — modalen falder tilbage til mode='new')
+          if (projectsCallCount === 1) {
+            return {
+              select: vi.fn().mockReturnThis(),
+              eq: vi.fn().mockReturnThis(),
+              in: vi.fn().mockReturnThis(),
+              order: vi.fn().mockReturnThis(),
+              limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }
+          }
+          // Andet call: insert nyt projekt
+          return { insert: projectInsert }
+        }
+        if (table === 'yarn_usage') {
+          return {
+            insert: vi.fn(() => ({
+              select: vi.fn(() => ({
+                single: vi.fn().mockResolvedValue({ data: { id: 'usage-new' }, error: null }),
+              })),
+            })),
+          }
+        }
+        if (table === 'yarn_items') {
+          return { update: updateFn }
+        }
+        return {}
+      }),
+    }
+    vi.mocked(useSupabase).mockReturnValue(supabaseMock as never)
+
+    render(
+      <BrugNoeglerModal
+        yarn={makeYarn(4)}
+        user={{ id: 'user-1' }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    )
+
+    // Modalen falder automatisk til mode='new' når liste er tom — udfyld titel
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /arkivér nøgler/i })).toBeInTheDocument()
+    })
+
+    const titleInput = screen.getByPlaceholderText(/F\.eks\. Bluse/i)
+    await user.type(titleInput, 'Min bluse')
+
+    await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
+
+    await waitFor(() => {
+      expect(projectInsert).toHaveBeenCalled()
+    })
+
+    const insertedRow = (projectInsertPayloads[0] as Array<Record<string, unknown>>)[0]
+    expect(insertedRow.status).toBe('i_gang')
+    expect(insertedRow.title).toBe('Min bluse')
+    expect(insertedRow.user_id).toBe('user-1')
   })
 })
