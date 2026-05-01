@@ -10,9 +10,9 @@ import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 
 const NAV_LINKS = [
   { href: '/',               label: 'Hjem' },
-  { href: '/garnlager',      label: 'Garnlager' },
+  { href: '/garnlager',      label: 'Mit garn' },
   { href: '/projekter',      label: 'Projekter' },
-  { href: '/garn',           label: 'Garn-katalog' },
+  { href: '/garn',           label: 'Find garn' },
   { href: '/find-forhandler',label: 'Find forhandler' },
   { href: '/opskrifter',     label: 'Opskrifter' },
   { href: '/faellesskabet',  label: 'Fællesskabet' },

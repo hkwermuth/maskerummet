@@ -46,6 +46,11 @@ const WEIGHTS  = ['Lace', 'Fingering', 'Sport', 'DK', 'Worsted', 'Aran', 'Bulky'
 const STATUSES = ['På lager', 'I brug', 'Brugt op', 'Ønskeliste']
 const FIBER_PILLS = ['Uld', 'Merino', 'Mohair', 'Alpaka', 'Silke', 'Bomuld', 'Hør', 'Akryl']
 
+// Persistens-nøgle: bevarer brugerens filtervalg på tværs af reloads, navigation
+// og logud, så fx "I brug"-status forbliver aktiv indtil brugeren rydder eller
+// vælger noget andet. Lever i localStorage (ingen følsomme data, kun UI-state).
+const STASH_FILTERS_KEY = 'striq.garnlager.filters.v1'
+
 // Skanning skjult indtil EAN-koder er fyldt på colors-tabellen i kataloget.
 // Sæt til true for at gen-aktivere scanner-knappen + modal.
 const SHOW_SCANNER = false
@@ -338,6 +343,9 @@ export default function Garnlager({ user, onRequestLogin }) {
   const [filterWeight, setFilterWeight] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
   const [filterFiber, setFilterFiber] = useState('')
+  // Sat til true efter første hydrering fra localStorage, så vi undgår at
+  // overskrive gemte filtre med tom-state under SSR/initial-render.
+  const [filtersHydrated, setFiltersHydrated] = useState(false)
 
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
@@ -370,6 +378,38 @@ export default function Garnlager({ user, onRequestLogin }) {
   const [selectedYarn, setSelectedYarn] = useState(null)
   const [colorsForYarn, setColorsForYarn] = useState([])
   const [projects, setProjects] = useState([])
+
+  // ── Hydrér filtre fra localStorage (kun browser, kun ved mount) ─────────────
+  // Validerer mod kendte enum-værdier så stale gemte filtre (fx fjernet status)
+  // ikke ender med at filtrere alt væk. Lukker også af for ondsindet payload.
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STASH_FILTERS_KEY)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (typeof parsed?.q === 'string') setQ(parsed.q)
+        if (WEIGHTS.includes(parsed?.weight)) setFilterWeight(parsed.weight)
+        if (STATUSES.includes(parsed?.status)) setFilterStatus(parsed.status)
+        if (typeof parsed?.fiber === 'string') setFilterFiber(parsed.fiber)
+      }
+    } catch {
+      // korrupt JSON eller localStorage utilgængelig → bare fortsæt med tom state
+    }
+    setFiltersHydrated(true)
+  }, [])
+
+  // ── Persistér filtre når de ændres (efter hydrering) ────────────────────────
+  useEffect(() => {
+    if (!filtersHydrated) return
+    try {
+      window.localStorage.setItem(
+        STASH_FILTERS_KEY,
+        JSON.stringify({ q, weight: filterWeight, status: filterStatus, fiber: filterFiber }),
+      )
+    } catch {
+      // localStorage fuldt op / privat-tilstand → drop persistens, ikke fatalt
+    }
+  }, [filtersHydrated, q, filterWeight, filterStatus, filterFiber])
 
   // ── Load from Supabase ──────────────────────────────────────────────────────
   useEffect(() => {
