@@ -1,10 +1,15 @@
 'use client'
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import type { Yarn } from '@/lib/types'
 import { YarnCard } from './YarnCard'
-import { ScanFraKatalogButton } from './ScanFraKatalogButton'
 
-export function YarnFilters({ yarns }: { yarns: Yarn[] }) {
+type Props = {
+  yarns: Yarn[]
+  editorHref?: string
+}
+
+export function YarnFilters({ yarns, editorHref }: Props) {
   const [q, setQ] = useState('')
   const [thickness, setThickness] = useState<string>('')
 
@@ -31,7 +36,7 @@ export function YarnFilters({ yarns }: { yarns: Yarn[] }) {
 
   return (
     <div>
-      <div className="flex flex-wrap gap-3 mb-6">
+      <div className="flex flex-wrap gap-3 mb-6 items-center">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -48,9 +53,14 @@ export function YarnFilters({ yarns }: { yarns: Yarn[] }) {
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
-        <div className="w-full sm:w-auto">
-          <ScanFraKatalogButton />
-        </div>
+        {editorHref ? (
+          <Link
+            href={editorHref}
+            className="inline-flex items-center bg-striq-sage text-cream px-4 py-2 rounded-lg text-sm hover:opacity-95 whitespace-nowrap"
+          >
+            Editor
+          </Link>
+        ) : null}
       </div>
       <div className="text-xs text-striq-muted mb-3">{filtered.length} garner</div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

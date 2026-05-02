@@ -13,6 +13,10 @@ export type Variant =
   | 'forhandler-pin-nogle'
   | 'forhandler-lille-butik'
   | 'projekter-tre-stadier'
+  | 'garn-noegle-trio'
+  | 'garn-streng'
+  | 'garn-kage-pinde'
+  | 'garn-typer-trio'
 
 type Props = {
   variant?: Variant
@@ -67,6 +71,10 @@ function renderVariant(variant: Variant) {
     case 'forhandler-pin-nogle':    return <ForhandlerPinNogle />
     case 'forhandler-lille-butik':  return <ForhandlerLilleButik />
     case 'projekter-tre-stadier':   return <ProjekterTreStadier />
+    case 'garn-noegle-trio':        return <GarnNoegleTrio />
+    case 'garn-streng':             return <GarnStreng />
+    case 'garn-kage-pinde':         return <GarnKagePinde />
+    case 'garn-typer-trio':         return <GarnTyperTrio />
     case 'skab-bloed':
     default:                        return <SkabBloed />
   }
@@ -449,6 +457,208 @@ function ProjekterTreStadier() {
         {/* Lille check-flueben */}
         <circle cx="22" cy="-48" r="8" fill="#88A798" />
         <path d="M18 -48 L21 -45 L26 -51" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
+    </>
+  )
+}
+
+/* ── Garn-katalog 1: Tre garnnøgler i trio ───────────────────────────────── */
+
+function GarnNoegleTrio() {
+  return (
+    <>
+      <ellipse cx="140" cy="220" rx="100" ry="6" fill="#302218" fillOpacity="0.08" />
+
+      {/* Bagest til venstre — sage, lille */}
+      <g transform="translate(82 122)">
+        <circle r="32" fill="#88A798" filter="url(#heroSoftShadow)" />
+        <path d="M-24 -10 Q-8 -22 22 -16" stroke="#FFFCF7" strokeWidth="1.3" fill="none" strokeOpacity="0.6" strokeLinecap="round" />
+        <path d="M-26 -2 Q-8 -14 24 -6" stroke="#FFFCF7" strokeWidth="1.3" fill="none" strokeOpacity="0.6" strokeLinecap="round" />
+        <path d="M-26 8 Q-6 -2 26 6" stroke="#FFFCF7" strokeWidth="1.3" fill="none" strokeOpacity="0.6" strokeLinecap="round" />
+        <path d="M-24 18 Q-2 12 22 18" stroke="#FFFCF7" strokeWidth="1.3" fill="none" strokeOpacity="0.6" strokeLinecap="round" />
+        <path d="M-18 26 Q0 23 18 26" stroke="#FFFCF7" strokeWidth="1.3" fill="none" strokeOpacity="0.6" strokeLinecap="round" />
+      </g>
+
+      {/* Højre — cream, mellem */}
+      <g transform="translate(206 142)">
+        <circle r="38" fill="#EDD9D1" filter="url(#heroSoftShadow)" />
+        <path d="M-28 -14 Q-10 -28 26 -22" stroke="#C9B6A4" strokeWidth="1.4" fill="none" strokeOpacity="0.55" strokeLinecap="round" />
+        <path d="M-32 -4 Q-8 -18 30 -10" stroke="#C9B6A4" strokeWidth="1.4" fill="none" strokeOpacity="0.55" strokeLinecap="round" />
+        <path d="M-34 6 Q-8 -4 32 4" stroke="#C9B6A4" strokeWidth="1.4" fill="none" strokeOpacity="0.55" strokeLinecap="round" />
+        <path d="M-32 16 Q-4 10 30 16" stroke="#C9B6A4" strokeWidth="1.4" fill="none" strokeOpacity="0.55" strokeLinecap="round" />
+        <path d="M-26 26 Q0 22 26 26" stroke="#C9B6A4" strokeWidth="1.4" fill="none" strokeOpacity="0.55" strokeLinecap="round" />
+        <path d="M30 22 Q40 36 32 56" stroke="#EDD9D1" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      </g>
+
+      {/* Forrest — dusty pink, størst */}
+      <g transform="translate(140 156)">
+        <circle r="48" fill="#D4ADB6" filter="url(#heroSoftShadow)" />
+        <path d="M-36 -16 Q-14 -32 34 -26" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M-40 -4 Q-12 -22 38 -12" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M-42 8 Q-10 -4 40 4" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M-40 20 Q-6 12 38 18" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M-32 32 Q0 28 34 32" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M40 28 Q52 44 44 64" stroke="#D4ADB6" strokeWidth="1.7" fill="none" strokeLinecap="round" />
+      </g>
+    </>
+  )
+}
+
+/* ── Garn-katalog 2: Streng garn (hank) med banderole ────────────────────── */
+
+function GarnStreng() {
+  return (
+    <>
+      <ellipse cx="140" cy="222" rx="104" ry="5" fill="#302218" fillOpacity="0.07" />
+
+      {/* Bundt-form */}
+      <path
+        d="M50 124 Q42 96 80 88 L200 88 Q238 96 230 124 Q238 152 200 160 L80 160 Q42 152 50 124 Z"
+        fill="#9B6272"
+        filter="url(#heroSoftShadow)"
+      />
+
+      {/* Vandrette tråd-bølger */}
+      {[100, 108, 116, 124, 132, 140, 148].map((y) => (
+        <path
+          key={y}
+          d={`M58 ${y} Q100 ${y - 2} 140 ${y} T222 ${y}`}
+          stroke="#FFFCF7" strokeWidth="0.8" fill="none" strokeOpacity="0.32"
+        />
+      ))}
+
+      {/* Twist-konturer på siderne */}
+      <path d="M70 96 Q88 124 70 152" stroke="#7A4D5A" strokeWidth="1.8" fill="none" strokeOpacity="0.5" strokeLinecap="round" />
+      <path d="M210 96 Q192 124 210 152" stroke="#7A4D5A" strokeWidth="1.8" fill="none" strokeOpacity="0.5" strokeLinecap="round" />
+
+      {/* Banderole (papirbånd om midten) */}
+      <rect x="116" y="74" width="48" height="100" rx="1" fill="#F9F3E9" filter="url(#heroSoftShadow)" />
+      <circle cx="140" cy="98" r="3.5" fill="#88A798" />
+      <line x1="124" y1="116" x2="156" y2="116" stroke="#9B6272" strokeWidth="1.2" />
+      <line x1="124" y1="124" x2="148" y2="124" stroke="#8C7E74" strokeWidth="0.9" strokeOpacity="0.6" />
+      <line x1="124" y1="130" x2="152" y2="130" stroke="#8C7E74" strokeWidth="0.9" strokeOpacity="0.6" />
+
+      {/* Trådende der stikker ud */}
+      <path d="M48 106 Q34 100 30 92" stroke="#9B6272" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path d="M48 144 Q32 148 28 156" stroke="#9B6272" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path d="M232 106 Q246 100 250 92" stroke="#9B6272" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path d="M232 144 Q248 148 252 156" stroke="#9B6272" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+    </>
+  )
+}
+
+/* ── Garn-katalog 3: Garnkage med strikkepinde ───────────────────────────── */
+
+function GarnKagePinde() {
+  return (
+    <>
+      <ellipse cx="140" cy="222" rx="78" ry="6" fill="#302218" fillOpacity="0.08" />
+
+      {/* Cylinder-krop */}
+      <path
+        d="M76 100 L76 196 Q76 210 140 210 Q204 210 204 196 L204 100 Z"
+        fill="#D4ADB6"
+        filter="url(#heroSoftShadow)"
+      />
+
+      {/* Stribe-bånd (variegated) */}
+      <rect x="76" y="118" width="128" height="6" fill="#C68E99" opacity="0.45" />
+      <rect x="76" y="148" width="128" height="8" fill="#E2BFC5" opacity="0.6" />
+      <rect x="76" y="176" width="128" height="6" fill="#C68E99" opacity="0.4" />
+
+      {/* Top */}
+      <ellipse cx="140" cy="100" rx="64" ry="14" fill="#E2BFC5" />
+      <ellipse cx="140" cy="100" rx="64" ry="14" fill="none" stroke="#9B6272" strokeWidth="0.8" strokeOpacity="0.3" />
+      <ellipse cx="140" cy="100" rx="50" ry="10" fill="none" stroke="#9B6272" strokeWidth="0.6" strokeOpacity="0.18" />
+      <ellipse cx="140" cy="100" rx="34" ry="7" fill="none" stroke="#9B6272" strokeWidth="0.6" strokeOpacity="0.18" />
+
+      {/* Center-pull hul */}
+      <ellipse cx="140" cy="100" rx="10" ry="3" fill="#9B6272" opacity="0.55" />
+
+      {/* Strikkepinde — stikker op fra toppen */}
+      <line x1="124" y1="100" x2="106" y2="48" stroke="#C9B6A4" strokeWidth="3" strokeLinecap="round" />
+      <line x1="156" y1="100" x2="174" y2="48" stroke="#C9B6A4" strokeWidth="3" strokeLinecap="round" />
+      <circle cx="106" cy="48" r="3.5" fill="#C9B6A4" />
+      <circle cx="174" cy="48" r="3.5" fill="#C9B6A4" />
+
+      {/* Tråd ud af centerhullet */}
+      <path d="M138 100 Q134 114 144 126 Q152 138 138 152 Q124 168 142 188" stroke="#D4ADB6" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+    </>
+  )
+}
+
+/* ── Garn-katalog 4: Tre garn-typer side om side (streng + nøgle + cone) ── */
+
+function GarnTyperTrio() {
+  return (
+    <>
+      <ellipse cx="140" cy="222" rx="112" ry="5" fill="#302218" fillOpacity="0.07" />
+
+      {/* Streng (venstre) */}
+      <g transform="translate(54 188)">
+        <path
+          d="M-30 -16 Q-38 0 -30 16 L26 16 Q34 0 26 -16 Z"
+          fill="#9B6272"
+          filter="url(#heroSoftShadow)"
+        />
+        {[-10, -3, 4, 11].map((y) => (
+          <path
+            key={y}
+            d={`M-26 ${y} Q-2 ${y - 1.5} 22 ${y}`}
+            stroke="#FFFCF7" strokeWidth="0.7" fill="none" strokeOpacity="0.35"
+          />
+        ))}
+        <path d="M-14 -14 Q-4 0 -14 14" stroke="#7A4D5A" strokeWidth="1.3" fill="none" strokeOpacity="0.5" strokeLinecap="round" />
+        <path d="M14 -14 Q4 0 14 14" stroke="#7A4D5A" strokeWidth="1.3" fill="none" strokeOpacity="0.5" strokeLinecap="round" />
+        <rect x="-8" y="-22" width="16" height="44" fill="#F9F3E9" filter="url(#heroSoftShadow)" />
+        <line x1="-4" y1="-2" x2="4" y2="-2" stroke="#9B6272" strokeWidth="0.9" />
+        <line x1="-4" y1="3" x2="3" y2="3" stroke="#8C7E74" strokeWidth="0.7" strokeOpacity="0.6" />
+      </g>
+
+      {/* Klassisk garnnøgle (midten, størst) */}
+      <g transform="translate(140 158)">
+        <circle r="44" fill="#D4ADB6" filter="url(#heroSoftShadow)" />
+        <path d="M-32 -14 Q-12 -28 30 -22" stroke="#FFFCF7" strokeWidth="1.4" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M-36 -4 Q-10 -18 34 -10" stroke="#FFFCF7" strokeWidth="1.4" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M-38 6 Q-10 -4 36 4" stroke="#FFFCF7" strokeWidth="1.4" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M-36 16 Q-6 10 34 18" stroke="#FFFCF7" strokeWidth="1.4" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M-30 28 Q0 24 30 28" stroke="#FFFCF7" strokeWidth="1.4" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M36 22 Q46 38 38 56" stroke="#D4ADB6" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      </g>
+
+      {/* Cone (højre) — tilspidset spole */}
+      <g transform="translate(220 182)">
+        {/* Garn-vikling om cone */}
+        <path
+          d="M-5 -50 L-16 10 L16 10 L5 -50 Z"
+          fill="#88A798"
+          filter="url(#heroSoftShadow)"
+        />
+        {/* Vandrette tråd-linjer */}
+        {[-42, -32, -22, -12, -2].map((y) => {
+          const t = (y + 50) / 60
+          const halfWidth = 5 + t * 11
+          return (
+            <line
+              key={y}
+              x1={-halfWidth + 1}
+              y1={y}
+              x2={halfWidth - 1}
+              y2={y}
+              stroke="#FFFCF7"
+              strokeWidth="0.7"
+              strokeOpacity="0.4"
+            />
+          )
+        })}
+        {/* Top-elipse + cone-spids */}
+        <ellipse cx="0" cy="-50" rx="5" ry="1.5" fill="#C9E6DA" />
+        <path d="M-1.5 -52 L-3 -58 L3 -58 L1.5 -52 Z" fill="#C9B6A4" />
+        {/* Bund-base */}
+        <rect x="-20" y="10" width="40" height="6" rx="2" fill="#C9B6A4" />
+        <rect x="-22" y="16" width="44" height="4" rx="1" fill="#8C7E74" opacity="0.55" />
+        {/* Tråd ud af toppen */}
+        <path d="M0 -58 Q5 -68 -2 -78" stroke="#88A798" strokeWidth="1.3" fill="none" strokeLinecap="round" />
       </g>
     </>
   )

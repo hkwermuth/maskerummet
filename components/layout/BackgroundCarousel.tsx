@@ -15,7 +15,9 @@ type BackgroundCarouselProps = {
 }
 
 // Sider hvor brugerens eget indhold skal være tydeligt — baggrunden sløres der.
-const BLUR_PATH_PREFIXES = ['/garnlager', '/projekter', '/visualizer', '/garn']
+// /garn er bevidst udeladt: katalog-siden skal vise garn-baggrunden igennem,
+// ligesom forsiden, så brugeren ser garn-billederne mens de browser.
+const BLUR_PATH_PREFIXES = ['/garnlager', '/projekter', '/visualizer']
 
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(false)

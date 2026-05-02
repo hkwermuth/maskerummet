@@ -39,7 +39,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body style={{ minHeight: '100vh', background: '#F8F3EE', fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+      <body style={{ minHeight: '100vh', background: '#F8F3EE', fontFamily: "'DM Sans', system-ui, sans-serif", overflowX: 'clip' }}>
         <BackgroundCarousel images={BG_IMAGES} />
         <HashRedirect />
         <div style={{ position: 'relative', zIndex: 1 }}>
