@@ -254,45 +254,85 @@ function formatStashLabel(y) {
 const PILL_PREVIEW_COUNT = 6
 
 function CatalogColorPill({ color, isActive, onClick }) {
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
   const hex = color.hex_code
     ? (String(color.hex_code).startsWith('#') ? color.hex_code : `#${color.hex_code}`)
     : null
-  const label = [color.color_number, color.color_name].filter(Boolean).join(' ')
+  const label = [color.color_number, color.color_name].filter(Boolean).join(' ') || 'Uden navn'
+  const showTooltip = hovered || focused
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={isActive}
-      title={label}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '6px 10px 6px 6px',
-        minHeight: 32,
-        borderRadius: 999,
-        border: isActive ? '1.5px solid #2C4A3E' : '1px solid #D0C8BA',
-        background: isActive ? '#EAF3DE' : '#FFFCF7',
-        color: '#2C2018',
-        fontSize: 12,
-        fontFamily: "'DM Sans', sans-serif",
-        cursor: 'pointer',
-        maxWidth: '100%',
-      }}
-    >
-      <span
-        aria-hidden="true"
+    <span style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        type="button"
+        onClick={onClick}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        aria-pressed={isActive}
+        aria-label={label}
+        title={label}
         style={{
-          width: 18, height: 18, borderRadius: '50%',
-          background: hex || '#E5DDD9',
-          border: '1px solid rgba(0,0,0,.10)',
-          flexShrink: 0,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 3,
+          width: 36,
+          height: 36,
+          borderRadius: '50%',
+          border: isActive ? '2px solid #2C4A3E' : '1px solid #D0C8BA',
+          background: isActive ? '#EAF3DE' : '#FFFCF7',
+          cursor: 'pointer',
         }}
-      />
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {label || 'Uden navn'}
-      </span>
-    </button>
+      >
+        {color.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={color.image_url}
+            alt=""
+            style={{
+              width: '100%', height: '100%', borderRadius: '50%',
+              objectFit: 'cover', display: 'block',
+            }}
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            style={{
+              width: '100%', height: '100%', borderRadius: '50%',
+              background: hex || '#E5DDD9',
+              border: '1px solid rgba(0,0,0,.10)',
+              display: 'block',
+            }}
+          />
+        )}
+      </button>
+      {showTooltip && (
+        <span
+          role="tooltip"
+          style={{
+            position: 'absolute',
+            bottom: '100%',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            marginBottom: 4,
+            padding: '4px 8px',
+            borderRadius: 4,
+            background: '#2C4A3E',
+            color: '#FFFCF7',
+            fontSize: 11,
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            zIndex: 10,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          {label}
+        </span>
+      )}
+    </span>
   )
 }
 

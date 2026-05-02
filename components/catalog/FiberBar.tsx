@@ -16,7 +16,7 @@ const COLORS: Record<string, string> = {
   bomuld: '#F0E8D8',
   merceriseret_bomuld: '#F0E0C8',
   oekologisk_bomuld: '#E8E0C8',
-  lin: '#C8C0A8',
+  hør: '#C8C0A8',
   hamp: '#A8A088',
   viskose: '#B8B098',
   tencel: '#A8B0B8',

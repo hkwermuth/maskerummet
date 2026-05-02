@@ -11,7 +11,7 @@ type Props = { initial?: Partial<Yarn> & { fibers?: FiberComponent[] | null } }
 const FIBER_OPTIONS = [
   'merinould', 'uld', 'islandsk_uld', 'shetland_uld', 'kid_mohair', 'mohair',
   'alpaka', 'baby_alpaka', 'kashmir', 'silke', 'tussah_silke',
-  'bomuld', 'merceriseret_bomuld', 'lin', 'hamp', 'viskose', 'tencel',
+  'bomuld', 'merceriseret_bomuld', 'hør', 'hamp', 'viskose', 'tencel',
   'nylon_polyamid', 'polyester', 'acryl', 'courtelle', 'andet',
 ]
 

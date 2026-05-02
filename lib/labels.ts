@@ -61,7 +61,7 @@ const FIBER: Record<string, string> = {
   bomuld: 'bomuld',
   merceriseret_bomuld: 'merceriseret bomuld',
   oekologisk_bomuld: 'økologisk bomuld',
-  lin: 'lin',
+  hør: 'hør',
   hamp: 'hamp',
   viskose: 'viskose',
   tencel: 'tencel',

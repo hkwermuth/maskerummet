@@ -237,28 +237,52 @@ export default async function YarnDetailPage(
           <div className="flex flex-wrap gap-2">
             {colors.map((c) => {
               const isHighlighted = c.id === highlightedColorId
+              const label = c.color_name ?? c.color_number ?? ''
+              const tooltipText = isHighlighted ? `${label} — Skannet` : String(label)
               return (
                 <div
                   key={c.id}
                   className={
-                    'flex items-center gap-2 text-xs px-2 py-1 rounded ' +
+                    'group relative flex items-center gap-1 text-xs p-1 rounded ' +
                     (isHighlighted
                       ? 'bg-moss/30 ring-2 ring-striq-sage'
                       : 'bg-transparent')
                   }
                   aria-current={isHighlighted ? 'true' : undefined}
+                  title={String(tooltipText)}
                 >
                   {c.image_url ? (
-                    <img src={c.image_url} alt="" className="w-8 h-8 rounded object-cover border border-striq-border shrink-0" />
+                    <img
+                      src={c.image_url}
+                      alt={String(label)}
+                      className="w-8 h-8 rounded object-cover border border-striq-border shrink-0"
+                    />
                   ) : c.hex_code ? (
-                    <span className="w-5 h-5 rounded-full border border-striq-border shrink-0" style={{ background: c.hex_code }} />
-                  ) : null}
-                  <span>{c.color_name ?? c.color_number}</span>
+                    <span
+                      className="w-8 h-8 rounded-full border border-striq-border shrink-0"
+                      style={{ background: c.hex_code }}
+                      aria-label={String(label)}
+                      role="img"
+                    />
+                  ) : (
+                    <span
+                      className="w-8 h-8 rounded border border-striq-border shrink-0 flex items-center justify-center text-[10px] text-striq-muted px-1"
+                      aria-label={String(label)}
+                    >
+                      {c.color_number ?? '?'}
+                    </span>
+                  )}
                   {isHighlighted && (
-                    <span className="ml-1 text-[10px] uppercase tracking-wider text-striq-sage font-semibold">
+                    <span className="text-[10px] uppercase tracking-wider text-striq-sage font-semibold pr-1">
                       Skannet
                     </span>
                   )}
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 whitespace-nowrap rounded bg-striq-sage text-cream text-[11px] px-2 py-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-10 shadow-sm"
+                  >
+                    {String(tooltipText)}
+                  </span>
                 </div>
               )
             })}
