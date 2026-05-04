@@ -107,7 +107,7 @@ export async function generateMetadata(
     title: `${yarn.producer} ${yarn.name}`,
     description,
     openGraph: {
-      title: `${yarn.producer} ${yarn.name} — Striq`,
+      title: `${yarn.producer} ${yarn.name} — STRIQ`,
       description,
       type: 'website',
       images: yarn.hero_image_url

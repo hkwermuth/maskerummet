@@ -12,7 +12,7 @@ export function Footer() {
       fontFamily: "'DM Sans', sans-serif",
     }}>
       <div style={{ marginBottom: 6 }}>
-        &copy; {new Date().getFullYear()} Striq &mdash; Dit personlige garnunivers
+        &copy; {new Date().getFullYear()} STRIQ &mdash; Dit personlige garnunivers
       </div>
       <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
         <a href="/privatlivspolitik" style={{ color: '#8C7E74', textDecoration: 'underline' }}>Privatlivspolitik</a>

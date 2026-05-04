@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { BackgroundCarousel } from '@/components/layout/BackgroundCarousel'
 import { Nav } from '@/components/layout/Nav'
@@ -8,14 +8,27 @@ import { OnboardingGate } from '@/components/app/OnboardingGate'
 
 export const metadata: Metadata = {
   title: {
-    default: 'Striq — Dit personlige garnunivers',
-    template: '%s | Striq',
+    default: 'STRIQ — Dit personlige garnunivers',
+    template: '%s | STRIQ',
   },
   description:
     'Hold styr på dit garnlager, gem dine projekter, find inspiration og prøv nye farver — alt samlet et sted.',
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
   ),
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    title: 'STRIQ',
+    statusBarStyle: 'default',
+  },
+  icons: {
+    apple: '/icons/apple-touch-icon.png',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#61846D',
 }
 
 const BG_IMAGES = [

@@ -7,7 +7,7 @@ import { loadRecipes } from '@/lib/data/recipes'
 import { OPSKRIFTER_TOKENS as T } from '@/lib/opskrifter-tokens'
 
 export const metadata: Metadata = {
-  title: 'Opskrifter — Striq',
+  title: 'Opskrifter — STRIQ',
   description: 'Strikkeopskrifter fra DROPS Design og flere — søg, filtrér efter garn, fiber og pind.',
 }
 

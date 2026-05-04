@@ -89,7 +89,7 @@ export function OnboardingModal({ onClose }: Props) {
             margin: '0 0 6px',
           }}
         >
-          Velkommen til Striq
+          Velkommen til STRIQ
         </h2>
         <p style={{ fontSize: 14, color: '#8C7E74', margin: '0 0 22px', lineHeight: 1.6 }}>
           Dit personlige garnunivers — her er hvad du kan.

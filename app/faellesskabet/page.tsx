@@ -4,7 +4,7 @@ import { fetchSharedProjects } from '@/lib/community'
 import { FaellesskabClient } from './FaellesskabClient'
 
 export const metadata: Metadata = {
-  title: 'Fællesskabet — Striq',
+  title: 'Fællesskabet — STRIQ',
   description:
     'Hent inspiration fra Fællesskabet — se andre strikkeres færdige projekter. Søg på type, garn og opskrift.',
 }

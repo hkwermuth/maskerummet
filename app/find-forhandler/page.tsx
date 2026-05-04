@@ -5,7 +5,7 @@ import { fetchOnlineRetailers, fetchBrands } from '@/lib/data/retailers'
 import { FindForhandlerClient } from './FindForhandlerClient'
 
 export const metadata: Metadata = {
-  title: 'Find garnbutikker nær dig eller online — Striq',
+  title: 'Find garnbutikker nær dig eller online — STRIQ',
   description:
     'Søg på by, brug din placering eller udforsk kortet — eller gå direkte til online-oversigten og se hvem der forhandler dit yndlingsmærke.',
 }

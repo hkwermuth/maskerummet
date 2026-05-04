@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { FeatureCard } from '@/components/app/FeatureCards'
 
 export const metadata: Metadata = {
-  title: 'Striq — Dit personlige garnunivers',
+  title: 'STRIQ — Dit personlige garnunivers',
 }
 
 const FEATURES = [
@@ -163,7 +163,7 @@ export default function HomePage() {
       }}>
         <img
           src="/brand/striq-logo-creme-rosa-traad-3d-transparent.png"
-          alt="Striq"
+          alt="STRIQ"
           style={{
             height: 'clamp(96px, 22vw, 170px)',
             width: 'auto',

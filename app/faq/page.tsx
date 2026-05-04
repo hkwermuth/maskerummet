@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import { FaqClient } from '@/components/app/FaqClient'
 
 export const metadata: Metadata = {
-  title: 'FAQ — Striq',
+  title: 'FAQ — STRIQ',
   description: 'Svar på de mest stillede spørgsmål om strik og garn.',
 }
 

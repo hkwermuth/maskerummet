@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { href: '/find-forhandler',label: 'Find forhandler' },
   { href: '/opskrifter',     label: 'Opskrifter' },
   { href: '/faellesskabet',  label: 'Fællesskabet' },
-  { href: '/om-striq',       label: 'Om Striq' },
+  { href: '/om-striq',       label: 'Om STRIQ' },
 ]
 
 export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
@@ -129,11 +129,11 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
             padding: '0 12px 0 4px', flexShrink: 0,
             display: 'flex', alignItems: 'center',
           }}
-          aria-label="Striq — gå til forsiden"
+          aria-label="STRIQ — gå til forsiden"
         >
           <img
             src="/brand/striq-logo-sort-rosa-beskaaret.png"
-            alt="Striq"
+            alt="STRIQ"
             style={{ height: 'clamp(18px, 3.7vw, 32px)', width: 'auto', display: 'block' }}
           />
         </Link>
