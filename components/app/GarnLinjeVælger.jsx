@@ -182,6 +182,13 @@ function FraMitGarnTab({ line, patch, userYarnItems }) {
     return ''
   })
 
+  // Det valgte garn fra lageret. Vi kigger efter den specifikke yarn_item_id
+  // brugeren har valgt — det kan være enten en "På lager" eller "I brug"-række.
+  const selectedYarn = useMemo(
+    () => (line?.yarnItemId ? userYarnItems.find(y => y.id === line.yarnItemId) : null),
+    [line?.yarnItemId, userYarnItems],
+  )
+
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return userYarnItems.slice(0, 30)
@@ -214,6 +221,10 @@ function FraMitGarnTab({ line, patch, userYarnItems }) {
     )
   }
 
+  const stockAvailable = selectedYarn?.status === 'På lager' ? Number(selectedYarn?.antal ?? 0) : null
+  const requested      = Number(line?.quantityUsed ?? 0)
+  const overAllocated  = stockAvailable !== null && requested > stockAvailable && requested > 0
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div>
@@ -233,20 +244,61 @@ function FraMitGarnTab({ line, patch, userYarnItems }) {
           ))}
         </datalist>
       </div>
-      {line?.yarnItemId && (
+      {selectedYarn && (
         <div style={{ fontSize: 11, color: '#5A4E42' }}>
           Valgt: {line.yarnBrand} · {dedupeYarnNameFromBrand(line.yarnName, line.yarnBrand)}
           {line.colorName && ` · ${line.colorName}`}
+          <StockBadge yarn={selectedYarn} />
+        </div>
+      )}
+      {overAllocated && (
+        <div
+          role="alert"
+          className="bg-striq-src-warning-bg text-striq-src-warning-fg"
+          style={{
+            borderRadius: 6,
+            padding: '6px 10px',
+            fontSize: 12,
+            border: '1px solid #C77A3A',
+          }}
+        >
+          Du har kun {stockAvailable} {stockAvailable === 1 ? 'nøgle' : 'nøgler'} på lager — vælg færre.
         </div>
       )}
     </div>
   )
 }
 
+// Lille badge der viser hvor mange nøgler brugeren har af det valgte garn.
+// Tonen skifter farve afhængigt af om der er nok på lager.
+function StockBadge({ yarn }) {
+  const qty    = Number(yarn?.antal ?? 0)
+  const status = yarn?.status ?? ''
+  const label  = status === 'I brug'
+    ? `${qty} ${qty === 1 ? 'nøgle' : 'nøgler'} allerede i brug`
+    : `${qty} ${qty === 1 ? 'nøgle' : 'nøgler'} på lager`
+  return (
+    <span style={{
+      marginLeft: 8,
+      padding: '2px 8px',
+      borderRadius: 999,
+      background: qty > 0 ? '#EAF3DE' : '#F5E6D8',
+      color:      qty > 0 ? '#2A5C35' : '#7A3C10',
+      fontSize: 10,
+      fontWeight: 500,
+      whiteSpace: 'nowrap',
+    }}>
+      {label}
+    </span>
+  )
+}
+
 function formatStashLabel(y) {
   const name = dedupeYarnNameFromBrand(y.name || '', y.brand || '')
   const farve = [y.colorCode, y.colorName].filter(Boolean).join(' ')
-  return [y.brand, name, farve].filter(Boolean).join(' · ')
+  const qty   = Number(y.antal ?? 0)
+  const status = y.status === 'I brug' ? ` (${qty} i brug)` : ` (${qty} på lager)`
+  return [y.brand, name, farve].filter(Boolean).join(' · ') + status
 }
 
 // ── Tab 2: Fra kataloget ──────────────────────────────────────────────────────

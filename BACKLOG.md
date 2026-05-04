@@ -2,7 +2,7 @@
 
 Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
-**Sidst synkroniseret:** 2026-04-27 (Indtastning + garn-katalog brief nedbrudt til 8 features)
+**Sidst synkroniseret:** 2026-05-04 (Bæredygtighed-fokusgruppe + pris-runde + fold-ud-redesign med pris-felt promoveret til launch-blokerende #6)
 
 ---
 
@@ -79,6 +79,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - **F15: Brugt op-flow kobler garn til projekt + valgfrit projekt (2026-04-29)** — `BrugtOpFoldeUd.jsx` omformet til 3-mode pill-tabs (Intet projekt / Eksisterende / Nyt projekt) som matcher `BrugNoeglerModal`-vælgeren. Default = 'none'. `Garnlager.jsx:save()` opretter nu en `yarn_usage`-række når mode≠'none' så projektet faktisk ved at garnet er brugt der; `quantity_used = previousQty` (læst FØR toDb nuller den ud). 'Nyt projekt'-mode opretter automatisk projects-række med `status='i_gang'` (brugeren afslutter selv i Arkiv). `validateForm` kræver kun projekt/titel når mode='existing'/'new'. `loadProjects` filtrerer nu på `user_id`. Migration `20260429000004_backfill_brugt_op_yarn_usage.sql` retter eksisterende status='Brugt op'-rækker hvor `brugt_til_projekt` entydigt matcher en projekt-titel (case-insensitive trim, count=1, NOT EXISTS-guard idempotent). `yarn_usage.yarn_name` dedupes via `toUsageDb`. 24 nye tests (BrugtOpFoldeUd 3-mode + yarnForm.brugtOp). 6 Garnlager-test-filer fik tilføjet `toUsageDb` til mappers-mock.
 - **yarn_usage brand-præfix cleanup (2026-04-29)** — fjernet duplikeret brand-navn i projekt-visninger ("Permin Permin Hannah" → "Permin Hannah", "Gepard Gepard Kid Silk 5" → "Gepard Kid Silk 5"). Tre lag: (1) migration `20260429000002_clean_yarn_usage_brand_prefix.sql` strip'er brand+space-præfix fra `yarn_name` på 38 eksisterende rækker (idempotent, BC Garn-safe via `lower(yarn_name) like lower(yarn_brand) || ' %'`); (2) skrivelogik i `Arkiv.jsx` (to onSelectYarn-callbacks) sender nu `yarn.name` direkte (ikke `displayYarnName(y)`), plus defensiv strip i `lib/supabase/mappers.ts:toUsageDb` som invariant-håndhævelse for ALLE skrive-call-sites (inkl. `BrugNoeglerModal`); (3) display-fix i `Arkiv.jsx` (detalje-modal-liste bruger `dedupeYarnNameFromBrand`, projekt-grid-kort bruger `yarnDisplayLabel`) + `lib/export/exportProjekter.ts` (CSV `garnnavn`-kolonne dedupes). Community-siderne (`SharedProjectDetailModal` + `FaellesskabClient`) brugte allerede `yarnDisplayLabel`. Ny test `test/mappers.toUsageDb.test.ts` (10 cases) verificerer mapper-invariant. Genbrug af eksisterende `dedupeYarnNameFromBrand` (13 testede cases).
 - **Permin Bella + Bella Color naming-cleanup (2026-04-29)** — fjernet kosmetisk støj `(by Permin)` / `(Bella Color by Permin)` fra både `yarns`-rækker (series=NULL, full_name='Permin Bella' / 'Permin Bella Color') og 17 brugeres `yarn_items.name` via migration `20260429000001_clean_permin_bella_naming.sql`. Idempotent. Seed-filer (`lib/data/colorSeeds/permin-bella.mjs` + `permin-bella-color.mjs`) opdateret til `series: null` så `npm run seed:colors` matcher den nye DB-state. `dedupeYarnNameFromBrand` urørt (historisk safety net for ældre stash-data). **TODO**: opdater `content/yarns.xlsx` så `npm run import:yarns` ikke gen-introducerer støjen — kør IKKE import-scriptet før Excel er ryddet, eller migrationen rulles tilbage.
+- **Yarn-allocation-system: lager → projekt (2026-05-04)** — modsat-flow til retur-til-lager. Ny `lib/yarn-allocate.ts` med pure helpers: `validateLineStock` (client-side stock-validering før gem — Bella Koral-bug fixet: 8 ngl, prøver 10 → blokeres med inline-fejl), `findInUseRowMatch` (catalog_color_id → brand+name+code, ekskl. 'Brugt op'), `decrementYarnItemQuantity` (race-safe via gte-clause + 0-row detection), `allocateYarnToProject` (decrement source + merge til eksisterende I-brug-række ELLER createInUseRow med kopieret metadata), `splitYarnItemRow` (delvis status-flytning: 5 ud af 10 ngl flyttes til ny status, resten bevares — eller direkte status-update hvis qty=total). `Arkiv.jsx` (DetailModal + NytProjektModal) bruger `validateLineStock` før gem og `allocateYarnToProject` ved nye lager-koblede linjer. `GarnLinjeVælger.jsx` viser ny `<StockBadge>` ("X på lager" / "X i brug") + over-allocation alert (`role="alert"`, src-warning-tokens). Migration `20260504000001_yarn_items_brugt_til_projekt_id.sql` tilføjer `brugt_til_projekt_id UUID NULL` med FK til `projects.id` ON DELETE SET NULL + index — eliminerer fragiliteten i title-baseret de-cascade-match (dækker risiko #2 fra auto-cascade-planen). RLS arvet via eksisterende `user_id`-policies. 23 nye Vitest-tests dækker AC-1/2/3/6/13. Reviewer: APPROVE, ingen blokerende fund. **Kendte begrænsninger til BACKLOG før testbruger-launch:** (1) **Atomicitet**: hvis decrement lykkes men efterfølgende I-brug-merge/insert fejler (netværk/RLS), står source decrementeret uden modsvarende I-brug-række — datatab-risiko. Mitigation: pak i RPC-funktion eller valider i UI før kald. (2) **Delta-håndtering**: redigering af `quantityUsed` på eksisterende lager-koblet linje opdaterer kun `yarn_usage.quantity_used` uden at flytte garn — UI bør blokere ændring eller kalde split/decrement-flow. Begge er ikke-blokerende for v1 (almindeligt flow virker), men skal addresseres før launch.
 - **Sporbarhed garn ↔ projekt + retur-til-lager-flow (2026-05-01)** — to-vejs kobling mellem Mit garn og projekter, plus sikkert flow når garn fjernes fra et projekt. Tre dele: **(1) Retur-til-lager**: ny `lib/yarn-return.ts` med pure helpers `findYarnItemMatch()` (4-trins prioritet: `yarn_item_id` FK → `catalog_color_id` ekskl. 'Brugt op' → case-insensitive `(brand, color_name, color_code)` → null) + `returnYarnLinesToStash()` (merge inkrementerer quantity og resetter status='På lager' + nulstiller `brugt_til_projekt`/`brugt_op_dato`; race-fallback: 0-row UPDATE → INSERT). Ny `<ConfirmDeleteProjectModal>` ved sletning af projekt med garn (3 valg: Returnér / Slet alt / Annuller). Ny `<ReturnYarnConfirmModal>` med auto-merge short-circuit ved `by-yarn-item-id` (ingen UI når match er FK-direkte) + radio-valg per kandidat ved tvetydige match. Inline `<PendingRemoveLineConfirm>` i `Arkiv.jsx` ved fjernelse af enkelt-linje fra åbent projekt — markerer linjen `__pendingRemove`/`__shouldReturn` indtil "Gem ændringer". `handleSave` omstruktureret i 3 faser: prompt FØR uploads (cancel = 100% uændret state), derefter uploads + `projects.update`, derefter `returnYarnLinesToStash` + `yarn_usage` delete/upsert. `setSaving(false)` i `finally` så cancel-path frigiver knappen. Unmount-cleanup resolver dangling `openReturnConfirmModal`-promise når DetailModal lukkes mid-flow. **(2) Cross-link Garnlager ↔ Arkiv**: Garnlager edit-modal viser ny "Bruges i projekter"-sektion (joiner `yarn_usage` med `projects` for det åbne garn, kun read-mode). `?yarn=<id>` auto-åbner garn-edit i Garnlager; `?projekt=<id>` auto-åbner projekt-detail i Arkiv (begge med ref-guard mod re-trigger efter close). Garn-linjer i projekt-detail er klikbare når `yarnItemId` findes (router.push til Garnlager). **(3) Status-regel-fix i `BrugNoeglerModal`** (korrigeret 2026-05-01 efter Hannah-feedback): garn der logges via modalen er per design committeret til et aktivt projekt — status sættes til `'I brug'` uanset restantal (ikke quantity-drevet). Aftale: 'I brug' = bundet til i_gang/vil_gerne-projekt; 'Brugt op' sættes via BrugtOpFoldeUd når brugeren markerer projekt færdigt; 'På lager' kun for garn ikke-knyttet til projekt. Bonusfix: ny-projekt-fra-modalen oprettes nu med `status='i_gang'` (matcher F15-pattern; uden eksplicit status faldt DB-default til 'faerdigstrikket' som modsiger modalens formål). **Side-kvest**: DROPS Kid Silk farve-seed registreret; `isCatalogSwatchUrl()` udvidet til `images.garnstudio.com/img/shademap/`-mønster så DROPS-swatches vises som fallback når bruger-foto mangler. 8 nye DROPS-eksempel-billeder + `update-drops-hero-images.mjs` (jimp-dependency). Global `next/navigation`-mock i `test/setup.ts`. 51 nye Vitest-tests (yarn-return: 24, ConfirmDeleteProjectModal, ReturnYarnConfirmModal, BrugNoeglerModal.statusFix). Reviewer: 2 blokere fundet og fixet (saving-state-leak ved cancel; orphans+delvist-committet projekt) + 3 bør-fixes (Esc-handling på PendingRemoveLineConfirm, misvisende kommentar, unmount-cleanup).
 - **F9+F10: Datakilde-farve-tokens + dansk datoformat-helper (2026-04-27)** — fundament-PR for STRIQ_implementation_brief (A.1 + A.2). 4 nye Tailwind-tokens under `striq`: `src-catalog` (#EAF3DE/#173404 grøn), `src-ai` (#EEEDFE/#3C3489 lilla), `src-warning` (#FAEEDA/#633806 orange), `src-error` (#FCEBEB/#791F1F rød). Hver med `bg`+`fg`-key. WCAG AAA-kontrast (12:1 for src-catalog). Content-glob udvidet til `{ts,tsx,js,jsx}` så `.jsx`-komponenter ikke får purget Tailwind-klasser. `KatalogInfoblok.jsx` refaktoreret fra inline `style` til Tailwind-klasser (`bg-striq-src-catalog-bg text-striq-src-catalog-fg`). Ny `lib/date/formatDanish.ts` med `formatDanish(date) → "27. apr 2026"` (intet 0-pad, intet punktum efter måned via defensiv regex) og `toISODate(date) → "2026-04-27"` (UTC, samme semantik som eksisterende `toISOString().slice(0,10)`-mønster). Begge robuste over for null/undefined/''/Invalid Date → `''`. 4 UI-call-sites migreret: `SubstitutionsSection.tsx:516`, `Arkiv.jsx:104` (`formatDate`-alias), `YarnVisualizer.jsx:984+1071`. DB-lagring (csv.ts, mappers.ts, BrugNoeglerModal.tsx) berørt ikke. Senere features (F5/F6/F8/F11/F12) bygger oven på disse tokens. 15 nye Vitest-tests (566/566 grønne). Roadmap-ref: `~/.claude/plans/functional-exploring-cake.md`.
 
@@ -321,6 +322,43 @@ Opsamling fra Jespers råd (IT-arkitekt) + løbende diskussion. Markeret efter k
 - [ ] **5.13 Dashboard / observability** — opsaml fejl + performance-signaler i et sted (Sentry + Vercel Analytics). Del af 5.10 + 5.12.
 - [ ] **5.14 Code hardening fase 2** — `npm audit` + `dependency scanning` i CI, secrets-scanner (fx gitleaks). Ikke akut men hygiejne-mæssigt vigtigt.
 
+### 6. Fold-ud-redesign af Tilføj garn-formular + valgfrit pris-felt (2026-05-04, fra Hannah)
+
+Den nuværende Tilføj garn-modal viser 14+ felter samtidig — overvælder testbrugere. Identificeret som UX-problem 2026-04-19, lå tidligere som BØR-HAVE-redesign. **Promoveret til launch-blokerende 2026-05-04** efter pris-fokusgruppe-runden, hvor Hannah samtidig besluttede at det valgfri pris-felt skal tilføjes i samme strøm (den naturlige plads for et nyt valgfrit felt er den nye "Flere detaljer"-sektion — at gøre det først undgår at forværre den eksisterende form-bloat).
+
+**Hvorfor launch-blokerende**: Camilla/Mette/Kirsten-brugertyper (tids-fattige, ikke-research-tunge) er kerne-testbruger-segmentet. Hvis deres første møde med "Tilføj garn" er 14 felter ad gangen, er det et dårligt første-indtryk vi ikke kan tage tilbage. Mit Garnlager er kerne-flowet for testbrugere ifølge launch-krav.
+
+**Nyt layout (afløser nuværende form):**
+
+Synligt som default:
+- Navn / mærke / farve / antal nøgler / status
+
+Derefter knap: **"▸ Flere detaljer"** (kollapset som default på nye registreringer)
+
+Foldet ud (klik):
+- Løbelængde, vægt pr. nøgle, pind, fiber-detaljer, noter, billede, **pris (valgfri)**, oprindelse (når P0-1's tre-niveau-felter er på plads)
+
+**Pris-felt-detaljer** (afledt af pris-fokusgruppe 2026-05-04):
+- `pris_kr NUMERIC NULL` på `yarn_items`. Aldrig required, aldrig blokerende.
+- Pr. nøgle (matcher konsistens med øvrige antal-felter — afgøres endeligt i arkitekt-fasen).
+- Anden indgang: når garn tilknyttes projekt for første gang, blid prompt "Tilføj pris (valgfri)?" så data kan bruges til kr/projekt-summering.
+- Payoff i `Arkiv.jsx` projekt-detalje: "Garn-pris: 487 kr" når alle linjer har pris. Ved manglende data: "Mangler pris på X garn" — aldrig som advarsel.
+- Stash-værdi-visning: opt-in, ikke default (Mette-protection — ingen "30.000 kr"-overskrift over lageret).
+- "Ukendt"-håndtering grafisk neutralt — ingen skam, ingen farve-advarsler.
+
+**Filer berørt**:
+- `components/app/Garnlager.jsx` — Tilføj/Rediger-modal restruktureres med fold-ud-sektioner
+- Migration: `pris_kr NUMERIC NULL` på `yarn_items`
+- `Arkiv.jsx` — projekt-detalje får ny kr/projekt-summering når data findes
+- `NytProjektModal` — pris-prompt ved garn-kobling
+- Evt. ny indstilling for opt-in stash-værdi-visning
+
+⚠️ **Spørg Hannah ved opstart**: hvad præcis skal med i "synligt som default"-sektionen — kun navn/mærke/farve/antal/status, eller også løbelængde? Skal pris være DKK-only eller også valuta-felt? Skal "Flere detaljer" auto-folde ud hvis brugeren redigerer et garn der har data i de skjulte felter? Skal pris-feltet auto-foreslå sidst-anvendte pris for samme mærke+vægt?
+
+**Estimat**: ~2 dage for fold-ud + ~1 dag for pris-felt + projekt-summering + tests. Realistisk i launch-vinduet hvis prioriteret nu.
+
+**Kør med**: `/ny-feature Fold-ud-redesign af Tilføj garn-modal + valgfrit pris-felt`
+
 ---
 
 ## Ønsker / overvejelser
@@ -466,7 +504,7 @@ Tilføjet efter at vote-override-systemet og held-together-combos shippede. Hann
 
 **UX-review — større forbedringer (kræver design-tid):**
 - **UX-fix Slet-bekræftelse → centreret AlertDialog** — nuværende inline "Er du sikker?" i Garnlager-modalens footer er fat-finger-risiko på mobil
-- **Progressive disclosure i Tilføj-modal** — 14+ felter synlige samtidig overvælder. Sektioner: påkrævet → valgfri → "Flere detaljer ▸". ~2 dage.
+- ~~**Progressive disclosure i Tilføj-modal**~~ — **promoveret til launch-blokerende 2026-05-04** sammen med pris-felt. Se "Mangler — blokerende for testbruger-launch → 6. Fold-ud-redesign af Tilføj garn-formular + valgfrit pris-felt".
 - **Mobil bottom-sheet i stedet for centered modal** — matcher native mobile-conventions. ~1-2 dage.
 - **To-trins flow: [Søg katalog] / [Scan stregkode] / [Manuelt]** — slanker den ene mega-form til tre fokuserede spor. ~2-3 dage.
 - **Bulk-tilføj (tabel-UI, 5 tomme rækker)** — testbrugere skal importere eksisterende samling hurtigt. ~2 dage.
@@ -497,6 +535,52 @@ Tilføjet efter at vote-override-systemet og held-together-combos shippede. Hann
 
 ~~**Fællesskabet — tilretninger Runde 2 + 3**~~ — **implementeret 2026-04-28** (commits `2a70cf3` + `b30cd31`). Se "Fællesskabet — tilretninger Runde 1-3" i Implementeret-sektionen ovenfor.
 
+**Bæredygtighed — efter strikkeprofil-fokusgruppe (2026-05-04, snart prioriteres):**
+
+Fokusgruppe-interview gennemført 2026-05-04 med 8 strikkeprofiler (Sara 26 / Lone 64 / Mette 47 / Astrid 33 / Camilla 38 / Frida 29 / Kirsten 72 / Maria 41) over tre temaer: lokal vs. global produktion, stash-management, certificeringer. Output: 4 P0-features (snart prioriteres), 4 P1-features (post-launch), 3 anti-mønstre. Erstatter den åbne idé-fase-entry under KAN-VENTE → Fra Hannah (nyt ønske, 2026-05-04). Profil-noter + fuld interview-syntese: chat 2026-05-04 (overvej senere flytning til `content/research/`).
+
+**P0 — snart prioriteres:**
+
+- **Garn-oprindelse på 3 niveauer, ikke ét felt** — drevet af insight 1 (Maria: dansk garn er ofte spundet i udlandet, "dansk = grønt" er en romantik). I dag har `yarns`-tabellen `fiber_origin_country` + `origin_country` som groft samler det hele. Split eksplicit op i: **uld-oprindelse** (land + evt. race), **spundet hos** (mølleri/land), **farvet hos** (farveri/land). Alle valgfri — bedre tre tomme felter end ét forført. Påvirker `yarns`-schema (migration), admin-editor (`app/garn/admin/`), garndetaljeside (`app/garn/[slug]/page.tsx`). ⚠️ **Spørg Hannah ved opstart**: skal felterne også gælde `yarn_items` (bruger-egne) eller kun katalog-yarns? Skal alle tre vises eksplicit selvom kun ét er udfyldt, eller fold sammen til "Oprindelse: ikke oplyst"? Kør med: `/ny-feature Garn-oprindelse på tre niveauer i katalog`.
+
+- **Indkøbsdato + "ligger uberørt"-status på `yarn_items`** — drevet af insight 2 (Kirsten + Maria: mængde slår oprindelse) og insight 3 (Mette: stash-skam er emotionel, ikke logistisk). Tilføj `koebt_dato DATE NULL` på `yarn_items` (eller infer fra `created_at` indtil bruger korrigerer), udled "sidst brugt" fra `yarn_usage`-koblinger. Vis i lager-listen som nøgterne mærkater: "Tilføjet for 14 mdr. siden, ikke brugt endnu". **Ikke** rødt, **ikke** advarsel, **ikke** badge — bare data. Tone-invariant: dette må aldrig føles som en revisor. ⚠️ **Spørg Hannah ved opstart**: skal `koebt_dato` være redigerbar (så historisk stash kan dateres) eller kun nye registreringer? Skal "uberørt"-mærkat ramme via threshold (>6 mdr / >12 mdr) eller altid vise antal måneder? Skal mærkatet vises på alle status, eller kun "På lager"? Kør med: `/ny-feature Indkøbsdato og uberørt-status på garn-lager`.
+
+- **Certifikat-modal med ærlige "dækker / dækker ikke"-beskrivelser** — drevet af insight 4 (Sara's paralyse + Maria's punktering at GOTS ikke dækker mulesing). Hvor vi viser GOTS / RWS / mulesing-frit / OEKO-TEX / EU Ecolabel: ikke som badges men som klikbare info-elementer. Tap → kort dansk tekst der forklarer **hvad mærket dækker og hvad det ikke dækker**. Indeholder 5-7 certifikater. Genbrugelig komponent. **Dækker også** det eksisterende KAN-VENTE-ønske "Certificeringer forklaret" (Excel-listen) — flettes ind. ⚠️ **Spørg Hannah ved opstart**: skal ordbogen ligge som hardcoded TS-konstant i repo (hurtigst) eller som DB-tabel `certifications` med admin-redigering (mere fleksibelt, mere arbejde)? Hvilke 5-7 certifikater er prioritet? Kør med: minimum `software-arkitekt` → `tester` → `software-reviewer` ved repo-løsning, eller `/ny-feature` ved DB-løsning.
+
+- **Kuratér "anbefalede mærker"-liste til første-garn-tilføjelse** — drevet af insight 6 (Camilla: tids-fattige brugere skal ikke bære research-byrden). Når en ny bruger tilføjer sit første garn: vis 8-10 nordiske mærker som hurtig-vælger, ikke kun et tomt søgefelt. **Må ikke** brandes som "vores bæredygtige top-10" (greenwashing-fælde) — formuleres som "almindelige mærker danske strikkere bruger". Implementeres som content (kurateret liste i kode eller DB), kobler til onboarding-flow (særskilt eksisterende BØR-HAVE-punkt). ⚠️ **Spørg Hannah ved opstart**: hvilke mærker (sandsynligt: Filcolana, Permin, Sandnes, CaMaRose, Drops, Hjelholt, Isager, Knitting for Olive, Önling)? Alfabetisk, efter popularitet i kataloget, eller efter Hannas redaktionelle valg? Skal listen være filtrérbar (vægt/fiber)? Kør med: content-opgave + lille UI-feature, ikke fuld `/ny-feature`.
+
+**P1 — første sprint efter launch:**
+
+- **Stash-statistik på lager-siden** — "Du har tilføjet X garn det sidste år, brugt Y." Forholdstal, ikke domme. Falder naturligt ud af P0-2's `koebt_dato`-data koblet til `yarn_usage`.
+- **Restegarn-håndtering** — Kirstens kurv (insight 6 + Kirsten-citat: "Den er bæredygtig fordi den BLIVER brugt"). Felt på projekter til "her er hvad jeg har tilbage", senere kobling til "passer til X-projekt"-forslag.
+- **Filter i lager efter tre tillidsmodeller** — insight 5 (Lone/relations-tillid, Sara/system-tillid, Astrid/direkte-adgang). Filter-chips i Mit Garnlager: "Mærker jeg har brugt før" / "Har certifikater" / "Har dokumenteret kæde". Påvirker informations-arkitektur — kør gennem `software-arkitekt` inden bygning.
+- **Indkøbs-refleksion (blid)** — når garn tilføjes til lager *uden* projekt-kobling: en valgfri prompt "Skal vi parre det med et projekt nu eller senere?" Knytter sig til Mette's stress-shopping-mønster, men må ikke virke moraliserende. "Senere" skal være lige så validt som "nu".
+
+**Anti-mønstre — gør IKKE (afledt direkte af interviewet):**
+
+- **Ingen "bæredygtigheds-score" pr. garn.** Maria-pointen: enhver score smelter komplekse afvejninger til ét tal og er enten greenwashing eller arrogant. Bevidst fravalgt — modsiger den oprindelige open-ended idé-entry. Vis data, lad brugeren tolke selv.
+- **Ingen gamificering af stash-reduktion.** Mettes skam er ægte. Streak-counter på "dage uden at købe garn" gør appen til hendes fjende. Statistik må ikke være konkurrence.
+- **Ingen "research-skat" før man kan registrere et garn.** Hvis det kræver 12 felter at tilføje en pelote, taber vi Camilla, Kirsten og Mette på sekund 30. Default-tilføjelse må forblive navn + farve. P0-1's tre oprindelses-felter er **alle valgfri** netop af denne grund.
+
+**Bæredygtighed — Runde 2: Pris-akse (2026-05-04):**
+
+Anden fokusgruppe-runde med samme 8 profiler, denne gang med pris som indgang. Afslørede 5 indsigter der krydsskærer bæredygtighed og forbrug. Fuld interview-syntese: chat 2026-05-04.
+
+**5 indsigter (kort):**
+1. **"Bæredygtigt" er låst bag en prisbarriere** — Maria/Sara: hvis app'en taler bæredygtighed uden at adressere pris, taler den til Lone/Mette og lukker Sara/Camilla/Kirsten ude.
+2. **Kr/projekt > kr/nøgle** — Frida/Camilla: et projekt er den meningsfulde pris-enhed, ikke et nøgle. Mental model ingen anden app gør synlig.
+3. **Tilbud er stash-trigger, ikke gevinst** — Mette/Frida: pris-notifikationer forstærker overforbrugs-mønstret. Skal designes med dette i hånden.
+4. **Tid er en skjult pris-akse** — Astrid: research-tid og spind-tid er reelle omkostninger. Default-good-valg er pris-reduktion for tids-fattige.
+5. **Holdbarhed-narrativ er ikke universelt** — Lone/Camilla: kvalitet-over-kvantitet er sandt for voksen-tøj, falskt for børnetøj der vokses ud af.
+
+**Krydsreferencer til eksisterende backlog:**
+- "Tilbud-notifikationer på yndlingsgarn" (KAN-VENTE, fra Excel) — kvalificeres med insight 3: opt-in pr. garn, ikke generel feed.
+- "'Køb garn til opskriften'-flow" (KAN-VENTE 2026-04-30) — pris-drevet, kobler til insight 2 (kr/projekt).
+- P0-4 "anbefalede mærker"-liste — skal vise pris, ikke kun kvalitet (insight 1).
+- "Affiliate-model med garnbutikker" (KAN-VENTE) — insight 1 advarer om at affiliate-anbefalinger må ikke implicit forudsætte premium-budget.
+
+~~**Ny feature: Pris-felt på `yarn_items`**~~ — **promoveret til launch-blokerende 2026-05-04** og kombineret med fold-ud-redesignet. Se "Mangler — blokerende for testbruger-launch → 6. Fold-ud-redesign af Tilføj garn-formular + valgfrit pris-felt".
+
 ### KAN-VENTE (efter testbrugere)
 
 **Fra Jesper (IT-arkitekt, 2026-04-19):**
@@ -515,6 +599,9 @@ Tilføjet efter at vote-override-systemet og held-together-combos shippede. Hann
   1. **Find bedste tilbud på præcis dette garn** — direct link/redirect til den garnbutik der pt. har det originale garn billigst (kræver pris-tracking pr. butik + garn).
   2. **Vis gode billigere alternativer** — substitutter med fiber/vægt/metrage-match, sorteret efter pris (kobler op til AI-validering af substitutioner og evt. lager-badge-substitut-logik).
   Forudsætninger: butik↔garn-mapping (overlap med "Søgning på konkrete garntyper pr. garnbutik"), pris-felt på `store_yarns`/butiks-katalog, regelmæssig pris-opdatering (scrape/API/manuelt), og en CTA-komponent på opskriftssiden. Synergi med affiliate-modellen og tilbud-notifikationer.
+
+**Fra Hannah (nyt ønske, 2026-05-04):**
+- ~~**Bæredygtighed som aktiv del af appen — særligt i Garn-kataloget**~~ — **udfoldet 2026-05-04** via strikkeprofil-fokusgruppe; struktureret som 4 P0 + 4 P1 + 3 anti-mønstre under "BØR-HAVE → Bæredygtighed — efter strikkeprofil-fokusgruppe (2026-05-04)".
 
 **Fra Hannah (egne ønsker, 2026-04-19):**
 - **AI-validering af substitutioner** (Claude API) — AI der ved om fibre/vægt/metrage faktisk matcher. M-estimat

@@ -16,6 +16,7 @@ import { dedupeYarnNameFromBrand, yarnDisplayLabel } from '@/lib/yarn-display'
 import { exportProjekter } from '@/lib/export/exportProjekter'
 import { formatDanish } from '@/lib/date/formatDanish'
 import { findYarnItemMatch, returnYarnLinesToStash } from '@/lib/yarn-return'
+import { allocateYarnToProject, validateLineStock } from '@/lib/yarn-allocate'
 import { DelMedFaellesskabetModal } from '@/components/app/DelMedFaellesskabetModal'
 import GarnLinjeVælger from '@/components/app/GarnLinjeVælger'
 import ProjectCardPlaceholder from '@/components/app/ProjectCardPlaceholder'
@@ -52,6 +53,44 @@ function makeImagePath(userId, projectId) {
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   return (ext) => `${userId}/projects/${projectId}/${uuid}.${ext}`
+}
+
+// Find evt. eksisterende linje i samme projekt der matcher det nye garn
+// (samme yarn_item_id, eller samme catalog_color_id, eller samme
+// brand+colorName+colorCode case-insensitive). Bruges til dup-merge-prompt
+// når brugeren tilføjer et garn der allerede findes på projektet.
+function findDuplicateLineIndex(lines, current, currentIdx) {
+  const norm = s => (s ?? '').toString().trim().toLowerCase()
+  if (current.yarnItemId) {
+    const idx = lines.findIndex((l, i) => i !== currentIdx && l.yarnItemId === current.yarnItemId)
+    if (idx !== -1) return idx
+  }
+  if (current.catalogColorId) {
+    const idx = lines.findIndex((l, i) => i !== currentIdx && l.catalogColorId === current.catalogColorId)
+    if (idx !== -1) return idx
+  }
+  if (current.yarnBrand && current.colorName && current.colorCode) {
+    const idx = lines.findIndex((l, i) =>
+      i !== currentIdx &&
+      norm(l.yarnBrand) === norm(current.yarnBrand) &&
+      norm(l.colorName) === norm(current.colorName) &&
+      norm(l.colorCode) === norm(current.colorCode)
+    )
+    if (idx !== -1) return idx
+  }
+  return -1
+}
+
+// True hvis patch indeholder mindst ét felt der ændrer linjens identitet —
+// dvs. det er først nu vi skal trigger dup-detection.
+function patchTouchesIdentity(patch) {
+  return (
+    'yarnItemId'     in patch ||
+    'catalogColorId' in patch ||
+    'yarnBrand'      in patch ||
+    'colorName'      in patch ||
+    'colorCode'      in patch
+  )
 }
 
 function pathFromUrl(url) {
@@ -480,7 +519,7 @@ function PendingRemoveLineConfirm({ line, onCancel, onChoose }) {
             </button>
           </div>
           <div style={{ fontSize: 11, color: '#8C7E74', lineHeight: 1.5 }}>
-            Ændringen gemmes først når du klikker <strong>Gem ændringer</strong> på projektet.
+            Garnet fjernes med det samme.
           </div>
         </div>
       </div>
@@ -598,6 +637,28 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
 
   function setF(k, v) { setForm(p => ({ ...p, [k]: v })) }
   function setLine(i, patch) {
+    // Dup-merge: hvis patch ændrer linjens identitet OG det matcher en anden
+    // linje i projektet, spørg brugeren om de skal lægges sammen.
+    if (patchTouchesIdentity(patch)) {
+      const lines = form.yarnLines ?? []
+      const candidate = { ...(lines[i] ?? {}), ...patch }
+      const dupIdx = findDuplicateLineIndex(lines, candidate, i)
+      if (dupIdx !== -1) {
+        const ok = typeof window !== 'undefined' && window.confirm(
+          'Du har allerede dette garn på projektet. Læg sammen til én linje?'
+        )
+        if (ok) {
+          const sumQty = Number(lines[dupIdx].quantityUsed ?? 0) + Number(candidate.quantityUsed ?? 0)
+          setForm(p => ({
+            ...p,
+            yarnLines: (p.yarnLines ?? [])
+              .map((l, idx) => idx === dupIdx ? { ...l, quantityUsed: sumQty } : l)
+              .filter((_, idx) => idx !== i),
+          }))
+          return
+        }
+      }
+    }
     setForm(p => ({
       ...p,
       yarnLines: (p.yarnLines ?? []).map((l, idx) => idx === i ? { ...l, ...patch } : l),
@@ -618,22 +679,49 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     setPendingRemoveLine({ index: i, line })
   }
 
-  function confirmRemoveLine(shouldReturn) {
+  async function confirmRemoveLine(shouldReturn) {
     if (!pendingRemoveLine) return
     const { index, line } = pendingRemoveLine
-    if (!line.id) {
-      // Linjen er aldrig blevet gemt — fjern den fra form-state.
-      setForm(p => ({ ...p, yarnLines: (p.yarnLines ?? []).filter((_, idx) => idx !== index) }))
-    } else {
-      // Linjen findes i DB — markér til retur/slet ved næste gem.
-      setForm(p => ({
-        ...p,
-        yarnLines: (p.yarnLines ?? []).map((l, idx) =>
-          idx === index ? { ...l, __pendingRemove: true, __shouldReturn: shouldReturn } : l
-        ),
-      }))
-    }
     setPendingRemoveLine(null)
+
+    if (!line.id) {
+      // Linjen er aldrig blevet gemt — fjern den fra form-state med det samme.
+      setForm(p => ({ ...p, yarnLines: (p.yarnLines ?? []).filter((_, idx) => idx !== index) }))
+      return
+    }
+
+    // Linjen findes i DB → udfør sletning + evt. retur straks så brugeren ikke
+    // skal scrolle ned og trykke "Gem ændringer" bare for at fjerne et garn.
+    setSaving(true)
+    setSaveError(null)
+    try {
+      if (shouldReturn) {
+        const returnable = lineToReturnable(line)
+        const match = await findYarnItemMatch(supabase, user.id, returnable)
+        let decisions = new Map()
+        if (match && match.matchKind !== 'by-yarn-item-id') {
+          const result = await openReturnConfirmModal([{ source: returnable, match }])
+          if (result === null) {
+            setSaving(false)
+            return
+          }
+          decisions = result
+        }
+        await returnYarnLinesToStash(supabase, user.id, [returnable], decisions)
+      }
+      const { error: dErr } = await supabase.from('yarn_usage').delete().eq('id', line.id)
+      if (dErr) throw dErr
+
+      setForm(p => ({ ...p, yarnLines: (p.yarnLines ?? []).filter((_, idx) => idx !== index) }))
+      onSaved({
+        ...entry,
+        yarnLines: (entry.yarnLines ?? []).filter(l => l.id !== line.id),
+      })
+    } catch (e) {
+      setSaveError('Kunne ikke fjerne garn: ' + e.message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   // Konvertér en form-yarnLine til ReturnableLine for lib/yarn-return
@@ -977,9 +1065,63 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
       const lines = keptForms.filter(l =>
         (l.yarnName || l.yarnBrand || l.colorName || l.colorCode || l.quantityUsed)
       )
-      if (lines.length === 0) throw new Error('Tilføj mindst ét garn til projektet.')
+      // Min-1-kravet er fjernet — et projekt kan have 0 garn-linjer.
 
-      const usageRows = lines.map(l => ({
+      // Validér stock på alle NYE linjer før vi allokerer (Bella Koral-bug).
+      // Eksisterende linjer (med id) valideres ikke her — delta-håndtering er
+      // fremtidig udvidelse; for nu opdateres yarn_usage.quantity_used uden
+      // at decrement source.
+      for (const l of lines) {
+        if (l.id) continue // eksisterende linje, skip stock-validering
+        const v = validateLineStock(
+          { yarnItemId: l.yarnItemId ?? null, quantityUsed: Number(l.quantityUsed ?? 0) },
+          userYarnItems,
+        )
+        if (!v.valid && v.reason === 'insufficient-stock') {
+          throw new Error(`Du har kun ${v.available} nøgler på lager af ${l.yarnBrand || ''} ${l.colorName || ''} — vælg færre end ${v.requested}.`)
+        }
+      }
+
+      // Allokér nye linjer fra lageret. Vi rører ikke ved eksisterende linjer
+      // (med id) for at undgå dobbelt-decrement.
+      const allocatedLines = []
+      for (const l of lines) {
+        if (l.id) {
+          allocatedLines.push(l)
+          continue
+        }
+        const qty = Number(l.quantityUsed ?? 0)
+        const sourceItem = l.yarnItemId
+          ? userYarnItems.find(y => y.id === l.yarnItemId)
+          : null
+        const shouldAllocate =
+          form.status !== 'vil_gerne' &&
+          sourceItem?.status === 'På lager' &&
+          qty > 0
+        if (shouldAllocate) {
+          const result = await allocateYarnToProject(
+            supabase,
+            user.id,
+            {
+              yarnItemId:     l.yarnItemId,
+              yarnName:       l.yarnName       ?? null,
+              yarnBrand:      l.yarnBrand      ?? null,
+              colorName:      l.colorName      ?? null,
+              colorCode:      l.colorCode      ?? null,
+              hex:            l.hex            ?? null,
+              catalogYarnId:  l.catalogYarnId  ?? null,
+              catalogColorId: l.catalogColorId ?? null,
+            },
+            data.id,
+            qty,
+          )
+          allocatedLines.push({ ...l, yarnItemId: result.inUseYarnItemId })
+        } else {
+          allocatedLines.push(l)
+        }
+      }
+
+      const usageRows = allocatedLines.map(l => ({
         ...(l.id ? { id: l.id } : {}),
         ...toUsageDb({
           projectId: data.id,
@@ -1581,6 +1723,26 @@ function NytProjektModal({ user, onClose, onSaved }) {
 
   function setF(k, v) { setForm(p => ({ ...p, [k]: v })) }
   function setLine(i, patch) {
+    if (patchTouchesIdentity(patch)) {
+      const lines = form.yarnLines ?? []
+      const candidate = { ...(lines[i] ?? {}), ...patch }
+      const dupIdx = findDuplicateLineIndex(lines, candidate, i)
+      if (dupIdx !== -1) {
+        const ok = typeof window !== 'undefined' && window.confirm(
+          'Du har allerede dette garn på projektet. Læg sammen til én linje?'
+        )
+        if (ok) {
+          const sumQty = Number(lines[dupIdx].quantityUsed ?? 0) + Number(candidate.quantityUsed ?? 0)
+          setForm(p => ({
+            ...p,
+            yarnLines: (p.yarnLines ?? [])
+              .map((l, idx) => idx === dupIdx ? { ...l, quantityUsed: sumQty } : l)
+              .filter((_, idx) => idx !== i),
+          }))
+          return
+        }
+      }
+    }
     setForm(p => ({
       ...p,
       yarnLines: (p.yarnLines ?? []).map((l, idx) => idx === i ? { ...l, ...patch } : l),
@@ -1768,13 +1930,58 @@ function NytProjektModal({ user, onClose, onSaved }) {
       }
 
       const lines = (form.yarnLines ?? []).filter(l => (l.yarnName || l.yarnBrand || l.colorName || l.colorCode || l.quantityUsed))
-      // Ønskeprojekter må gerne oprettes uden garn — brugere har sjældent valgt
-      // garn på ønskestadiet. Igangværende og færdige projekter kræver mindst ét garn.
-      if (lines.length === 0 && form.status !== 'vil_gerne') {
-        throw new Error('Tilføj mindst ét garn til projektet.')
+      // Min-1-kravet er fjernet: et projekt kan have 0 garn-linjer i alle statusser.
+
+      // Validér stock før vi rører noget — afvis hvis brugeren har valgt
+      // flere nøgler end på lager (Bella Koral-bug'en).
+      for (const l of lines) {
+        const v = validateLineStock(
+          { yarnItemId: l.yarnItemId ?? null, quantityUsed: Number(l.quantityUsed ?? 0) },
+          userYarnItems,
+        )
+        if (!v.valid && v.reason === 'insufficient-stock') {
+          throw new Error(`Du har kun ${v.available} nøgler på lager af ${l.yarnBrand || ''} ${l.colorName || ''} — vælg færre end ${v.requested}.`)
+        }
       }
 
-      const usageRows = lines.map(l => ({
+      // Allokér garn fra lageret for nye linjer (ny i_gang/færdig-projekt med
+      // valgte yarn_items). Decrementer source-rækken og opretter/forøger
+      // "I brug"-række. Ønskeprojekter (status=vil_gerne) allokerer ikke.
+      const allocatedLines = []
+      for (const l of lines) {
+        const qty = Number(l.quantityUsed ?? 0)
+        const sourceItem = l.yarnItemId
+          ? userYarnItems.find(y => y.id === l.yarnItemId)
+          : null
+        const shouldAllocate =
+          form.status !== 'vil_gerne' &&
+          sourceItem?.status === 'På lager' &&
+          qty > 0
+        if (shouldAllocate) {
+          const result = await allocateYarnToProject(
+            supabase,
+            user.id,
+            {
+              yarnItemId:     l.yarnItemId,
+              yarnName:       l.yarnName       ?? null,
+              yarnBrand:      l.yarnBrand      ?? null,
+              colorName:      l.colorName      ?? null,
+              colorCode:      l.colorCode      ?? null,
+              hex:            l.hex            ?? null,
+              catalogYarnId:  l.catalogYarnId  ?? null,
+              catalogColorId: l.catalogColorId ?? null,
+            },
+            project.id,
+            qty,
+          )
+          // yarn_usage skal pege på den NYE "I brug"-række så retur-flow virker.
+          allocatedLines.push({ ...l, yarnItemId: result.inUseYarnItemId })
+        } else {
+          allocatedLines.push(l)
+        }
+      }
+
+      const usageRows = allocatedLines.map(l => ({
         ...toUsageDb({
           projectId: project.id,
           yarnItemId: l.yarnItemId ?? null,
@@ -1884,7 +2091,7 @@ function NytProjektModal({ user, onClose, onSaved }) {
                   line={l}
                   onChange={updated => setLine(i, updated)}
                   onRemove={() => removeLine(i)}
-                  canRemove={(form.yarnLines?.length ?? 0) > 1}
+                  canRemove={true}
                   status={form.status}
                   userYarnItems={userYarnItems}
                   catalogColors={colorsByYarnId.get(l.catalogYarnId) ?? []}
