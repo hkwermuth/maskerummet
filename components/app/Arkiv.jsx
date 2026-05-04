@@ -17,12 +17,18 @@ import { exportProjekter } from '@/lib/export/exportProjekter'
 import { formatDanish } from '@/lib/date/formatDanish'
 import { findYarnItemMatch, returnYarnLinesToStash } from '@/lib/yarn-return'
 import { allocateYarnToProject, validateLineStock } from '@/lib/yarn-allocate'
+import {
+  classifyFinalizableLines,
+  finalizeYarnLines,
+  revertCascadedYarns,
+} from '@/lib/yarn-finalize'
 import { DelMedFaellesskabetModal } from '@/components/app/DelMedFaellesskabetModal'
 import GarnLinjeVælger from '@/components/app/GarnLinjeVælger'
 import ProjectCardPlaceholder from '@/components/app/ProjectCardPlaceholder'
 import ImageCarousel from '@/components/app/ImageCarousel'
 import ConfirmDeleteProjectModal from '@/components/app/ConfirmDeleteProjectModal'
 import ReturnYarnConfirmModal from '@/components/app/ReturnYarnConfirmModal'
+import MarkYarnsBrugtOpModal from '@/components/app/MarkYarnsBrugtOpModal'
 import {
   PROJECT_STATUSES,
   PROJECT_STATUS_LABELS,
@@ -542,14 +548,20 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
   const [pendingRemoveLine, setPendingRemoveLine] = useState(null)
   // Promise-wrapped state for ReturnYarnConfirmModal (merge-spørgsmål)
   const [returnConfirmState, setReturnConfirmState] = useState(null)
+  // Promise-wrapped state for MarkYarnsBrugtOpModal (cascade-bekræftelse)
+  const [finalizeModalState, setFinalizeModalState] = useState(null)
 
-  // Hvis DetailModal unmounter mens merge-modalen er åben, skal pending
-  // openReturnConfirmModal-promise resolves med null så handleSave/performDelete
-  // ikke hænger og lækker. Bruger functional setState så vi får fat i seneste
-  // resolve-callback uden at gøre returnConfirmState til en effekt-dependency.
+  // Hvis DetailModal unmounter mens merge-/finalize-modalen er åben, skal
+  // pending-promises resolves med null så handleSave/performDelete ikke
+  // hænger og lækker. Functional setState så vi får fat i seneste resolve-
+  // callback uden at gøre state til effekt-dependency.
   useEffect(() => {
     return () => {
       setReturnConfirmState(prev => {
+        if (prev) prev.resolve(null)
+        return null
+      })
+      setFinalizeModalState(prev => {
         if (prev) prev.resolve(null)
         return null
       })
@@ -748,6 +760,28 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     })
   }
 
+  // Promise-wrapper: åbner MarkYarnsBrugtOpModal og resolver med decisions-Map
+  // (eller null hvis brugeren annullerer cascade).
+  function openFinalizeModal(classification) {
+    return new Promise(resolve => {
+      setFinalizeModalState({ classification, resolve })
+    })
+  }
+
+  // Konvertér en yarn-line til FinalizableSource for lib/yarn-finalize.
+  function lineToFinalizableSource(line) {
+    return {
+      yarnUsageId:  line.id,
+      yarnItemId:   line.yarnItemId   ?? null,
+      yarnName:     line.yarnName     ?? null,
+      yarnBrand:    line.yarnBrand    ?? null,
+      colorName:    line.colorName    ?? null,
+      colorCode:    line.colorCode    ?? null,
+      hex:          line.hex          ?? null,
+      quantityUsed: Number(line.quantityUsed ?? 0) || null,
+    }
+  }
+
   async function ensureColorsLoaded(yarnId) {
     if (!yarnId) return []
     if (colorsByYarnId.has(yarnId)) return colorsByYarnId.get(yarnId)
@@ -933,6 +967,38 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
             return
           }
           returnDecisions = result
+        }
+      }
+
+      // ── Fase 1.5: Cascade-trigger ved status-skift til faerdigstrikket ──
+      // Klassificér eksisterende linjer mod lageret og spørg brugeren pr. linje
+      // om "Brugt op" eller "Behold på lager". Bruger keptForms (ikke entry.yarnLines)
+      // så fjernede linjer ikke fejlagtigt cascades. Cancel her = ingen DB-mutationer.
+      const cascadeTriggered =
+        entry.status !== 'faerdigstrikket' && form.status === 'faerdigstrikket'
+      const deCascadeTriggered =
+        entry.status === 'faerdigstrikket' && form.status !== 'faerdigstrikket'
+      let cascadeDecisions = null
+      if (cascadeTriggered) {
+        const linesForCascade = keptForms
+          .filter(l => l.id) // kun eksisterende yarn_usage-rækker
+          .map(lineToFinalizableSource)
+        if (linesForCascade.length > 0) {
+          const classification = await classifyFinalizableLines(
+            supabase, user.id, entry.id, linesForCascade,
+          )
+          const showModal =
+            classification.finalizable.length > 0 ||
+            classification.multiProject.length > 0 ||
+            classification.noYarnItem.length > 0
+          if (showModal) {
+            const result = await openFinalizeModal(classification)
+            if (result === null) {
+              // Brugeren annullerede cascade-bekræftelsen → afbryd hele save.
+              return
+            }
+            cascadeDecisions = { classification, decisions: result }
+          }
         }
       }
 
@@ -1148,6 +1214,25 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         .select()
       if (uErr) throw uErr
 
+      // ── Fase 4: Cascade brugt-op (hvis trigger) eller de-cascade ──
+      // Cascade: brugerens valg fra Fase 1.5 anvendes nu hvor projects.update
+      // er committeret. De-cascade: silent revert via UUID-FK + legacy fallback.
+      if (cascadeDecisions) {
+        const today = new Date().toISOString().slice(0, 10)
+        await finalizeYarnLines(
+          supabase,
+          user.id,
+          cascadeDecisions.classification.finalizable,
+          cascadeDecisions.decisions,
+          data.title ?? '',
+          data.id,
+          today,
+        )
+      }
+      if (deCascadeTriggered) {
+        await revertCascadedYarns(supabase, user.id, entry.id, entry.title ?? null)
+      }
+
       // Reset removal-trackere; lokale URL-objekter overskrives af entry-data
       setRemovedProjectImageUrls([])
       setRemovedPatternImageUrls([])
@@ -1285,6 +1370,22 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
           onConfirm={async (decisions) => {
             const { resolve } = returnConfirmState
             setReturnConfirmState(null)
+            resolve(decisions)
+          }}
+        />
+      )}
+      {finalizeModalState && (
+        <MarkYarnsBrugtOpModal
+          classification={finalizeModalState.classification}
+          projektTitel={form.title || entry.title || ''}
+          onCancel={() => {
+            const { resolve } = finalizeModalState
+            setFinalizeModalState(null)
+            resolve(null)
+          }}
+          onConfirm={async (decisions) => {
+            const { resolve } = finalizeModalState
+            setFinalizeModalState(null)
             resolve(decisions)
           }}
         />
@@ -1692,15 +1793,28 @@ function NytProjektModal({ user, onClose, onSaved }) {
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState(null)
   const [colorsByYarnId, setColorsByYarnId] = useState(new Map())
+  // Promise-wrapped state for MarkYarnsBrugtOpModal når status=faerdigstrikket
+  const [finalizeModalState, setFinalizeModalState] = useState(null)
 
   useEffect(() => {
     return () => {
       projectImages.forEach(it => { if (!it.isExisting) URL.revokeObjectURL(it.url) })
       patternImages.forEach(it => { if (!it.isExisting) URL.revokeObjectURL(it.url) })
       if (pdfThumbnailPreview && pdfThumbnailPreview.startsWith('blob:')) URL.revokeObjectURL(pdfThumbnailPreview)
+      // Resolve dangling finalize-promise hvis modalen unmounter mid-flow
+      setFinalizeModalState(prev => {
+        if (prev) prev.resolve(null)
+        return null
+      })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  function openFinalizeModal(classification) {
+    return new Promise(resolve => {
+      setFinalizeModalState({ classification, resolve })
+    })
+  }
 
   // F11: hent brugerens lager én gang så "Fra mit garn"-tab kan vise det.
   // Kun garn som faktisk findes i lageret (status: På lager / I brug) — ikke
@@ -2011,6 +2125,50 @@ function NytProjektModal({ user, onClose, onSaved }) {
         usages = data ?? []
       }
 
+      // Cascade brugt-op hvis projektet oprettes som faerdigstrikket. Vi har
+      // lige insertet yarn_usage-rækker, så classify kan klassificere dem mod
+      // de allokerede yarn_items (status='I brug' efter allocateYarnToProject).
+      // Cancel her sletter ikke det netop oprettede projekt — brugeren kan
+      // markere garn brugt op senere via DetailModal.
+      if (form.status === 'faerdigstrikket' && usages.length > 0) {
+        const linesForCascade = usages.map(u => {
+          const m = fromUsageDb(u)
+          return {
+            yarnUsageId:  m.id,
+            yarnItemId:   m.yarnItemId   ?? null,
+            yarnName:     m.yarnName     ?? null,
+            yarnBrand:    m.yarnBrand    ?? null,
+            colorName:    m.colorName    ?? null,
+            colorCode:    m.colorCode    ?? null,
+            hex:          m.hex          ?? null,
+            quantityUsed: Number(m.quantityUsed ?? 0) || null,
+          }
+        })
+        const classification = await classifyFinalizableLines(
+          supabase, user.id, project.id, linesForCascade,
+        )
+        const showModal =
+          classification.finalizable.length > 0 ||
+          classification.multiProject.length > 0 ||
+          classification.noYarnItem.length > 0
+        if (showModal) {
+          const decisions = await openFinalizeModal(classification)
+          if (decisions !== null) {
+            const today = new Date().toISOString().slice(0, 10)
+            await finalizeYarnLines(
+              supabase,
+              user.id,
+              classification.finalizable,
+              decisions,
+              project.title ?? '',
+              project.id,
+              today,
+            )
+          }
+          // Cancel = projektet beholder I-brug-status; kan finaliseres senere.
+        }
+      }
+
       onSaved({
         ...project,
         yarnLines: usages.map(fromUsageDb),
@@ -2037,6 +2195,22 @@ function NytProjektModal({ user, onClose, onSaved }) {
       onClick={e => e.target === e.currentTarget && onClose()}
       style={{ position: 'fixed', inset: 0, background: 'rgba(44,32,24,.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 1200, overflowY: 'auto', padding: '20px 16px' }}
     >
+      {finalizeModalState && (
+        <MarkYarnsBrugtOpModal
+          classification={finalizeModalState.classification}
+          projektTitel={form.title || ''}
+          onCancel={() => {
+            const { resolve } = finalizeModalState
+            setFinalizeModalState(null)
+            resolve(null)
+          }}
+          onConfirm={async (decisions) => {
+            const { resolve } = finalizeModalState
+            setFinalizeModalState(null)
+            resolve(decisions)
+          }}
+        />
+      )}
       <div style={{ background: '#FFFCF7', borderRadius: '14px', width: '500px', maxWidth: '100%', boxShadow: '0 24px 60px rgba(44,32,24,.25)', margin: 'auto', overflow: 'hidden' }}>
 
         <div style={{ background: '#6A5638', padding: '18px 24px', position: 'relative' }}>

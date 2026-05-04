@@ -2,7 +2,7 @@
 
 Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
-**Sidst synkroniseret:** 2026-05-04 (Bæredygtighed-fokusgruppe + pris-runde + fold-ud-redesign med pris-felt promoveret til launch-blokerende #6)
+**Sidst synkroniseret:** 2026-05-04 (F16 Auto-cascade brugt-op shippet + yarn-allocation-system shippet)
 
 ---
 
@@ -79,6 +79,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 - **F15: Brugt op-flow kobler garn til projekt + valgfrit projekt (2026-04-29)** — `BrugtOpFoldeUd.jsx` omformet til 3-mode pill-tabs (Intet projekt / Eksisterende / Nyt projekt) som matcher `BrugNoeglerModal`-vælgeren. Default = 'none'. `Garnlager.jsx:save()` opretter nu en `yarn_usage`-række når mode≠'none' så projektet faktisk ved at garnet er brugt der; `quantity_used = previousQty` (læst FØR toDb nuller den ud). 'Nyt projekt'-mode opretter automatisk projects-række med `status='i_gang'` (brugeren afslutter selv i Arkiv). `validateForm` kræver kun projekt/titel når mode='existing'/'new'. `loadProjects` filtrerer nu på `user_id`. Migration `20260429000004_backfill_brugt_op_yarn_usage.sql` retter eksisterende status='Brugt op'-rækker hvor `brugt_til_projekt` entydigt matcher en projekt-titel (case-insensitive trim, count=1, NOT EXISTS-guard idempotent). `yarn_usage.yarn_name` dedupes via `toUsageDb`. 24 nye tests (BrugtOpFoldeUd 3-mode + yarnForm.brugtOp). 6 Garnlager-test-filer fik tilføjet `toUsageDb` til mappers-mock.
 - **yarn_usage brand-præfix cleanup (2026-04-29)** — fjernet duplikeret brand-navn i projekt-visninger ("Permin Permin Hannah" → "Permin Hannah", "Gepard Gepard Kid Silk 5" → "Gepard Kid Silk 5"). Tre lag: (1) migration `20260429000002_clean_yarn_usage_brand_prefix.sql` strip'er brand+space-præfix fra `yarn_name` på 38 eksisterende rækker (idempotent, BC Garn-safe via `lower(yarn_name) like lower(yarn_brand) || ' %'`); (2) skrivelogik i `Arkiv.jsx` (to onSelectYarn-callbacks) sender nu `yarn.name` direkte (ikke `displayYarnName(y)`), plus defensiv strip i `lib/supabase/mappers.ts:toUsageDb` som invariant-håndhævelse for ALLE skrive-call-sites (inkl. `BrugNoeglerModal`); (3) display-fix i `Arkiv.jsx` (detalje-modal-liste bruger `dedupeYarnNameFromBrand`, projekt-grid-kort bruger `yarnDisplayLabel`) + `lib/export/exportProjekter.ts` (CSV `garnnavn`-kolonne dedupes). Community-siderne (`SharedProjectDetailModal` + `FaellesskabClient`) brugte allerede `yarnDisplayLabel`. Ny test `test/mappers.toUsageDb.test.ts` (10 cases) verificerer mapper-invariant. Genbrug af eksisterende `dedupeYarnNameFromBrand` (13 testede cases).
 - **Permin Bella + Bella Color naming-cleanup (2026-04-29)** — fjernet kosmetisk støj `(by Permin)` / `(Bella Color by Permin)` fra både `yarns`-rækker (series=NULL, full_name='Permin Bella' / 'Permin Bella Color') og 17 brugeres `yarn_items.name` via migration `20260429000001_clean_permin_bella_naming.sql`. Idempotent. Seed-filer (`lib/data/colorSeeds/permin-bella.mjs` + `permin-bella-color.mjs`) opdateret til `series: null` så `npm run seed:colors` matcher den nye DB-state. `dedupeYarnNameFromBrand` urørt (historisk safety net for ældre stash-data). **TODO**: opdater `content/yarns.xlsx` så `npm run import:yarns` ikke gen-introducerer støjen — kør IKKE import-scriptet før Excel er ryddet, eller migrationen rulles tilbage.
+- **F16: Auto-cascade brugt-op + de-cascade ved revert (2026-05-04)** — afslutter cascade-flowet planlagt 2026-05-01. Når et projekt skifter til `status='faerdigstrikket'`, åbnes `<MarkYarnsBrugtOpModal>` med radio pr. linje (default 'behold'); 'brugt-op'-valg kalder `finalizeYarnLines` der sætter `status='Brugt op'`, `quantity=0`, `brugt_til_projekt`, `brugt_til_projekt_id` (nyt UUID-FK fra d3f26fe) og `brugt_op_dato`. Når status reverter til `i_gang`/`vil_gerne` kører `revertCascadedYarns` silent: matcher først via UUID-FK, fallback til title-ILIKE for legacy-rækker uden `_id`. Quantity restaureres som SUM af `yarn_usage.quantity_used` for samme yarn_item så I-brug-rækken får den oprindelige mængde tilbage (ikke 0 som planen ellers indikerede — bedre match for brugerens forventning "5 ngl I brug → 5 ngl Brugt op → revert → 5 ngl I brug igen"). Ny `lib/yarn-finalize.ts` med `classifyFinalizableLines` (4-bucket: finalizable/multiProject/noYarnItem/alreadyBrugtOp), `finalizeYarnLines`, `revertCascadedYarns`. Modal har "Anvend første valg på alle"-shortcut, multi-projekt-banner med projekttitler, no-yarn-item-banner, role=alert/status, ≥44px touch-targets, useEscapeKey. `Arkiv.jsx` DetailModal `handleSave` udvidet med Fase 1.5 (klassificér + åbn modal FØR uploads så cancel = 100% uændret state) + Fase 4 (finalize/de-cascade efter `projects.update`). NytProjektModal `save` udvidet med cascade efter `yarn_usage.insert`. Promise-wrapper-mønster + unmount-cleanup som `openReturnConfirmModal`. 36 nye Vitest-tests (yarn-finalize: 15, MarkYarnsBrugtOpModal: 11, Arkiv.cascadeBrugtOp: 10) — dækker AC-1 til AC-12 inkl. multi-projekt, legacy title-fallback, dedupe ved samme yarn-id via begge match-paths, defensiv quantity=0. Reviewer: APPROVE, ingen blokerende fund. **Kendt begrænsning til BACKLOG før testbruger-launch**: atomicitet i `finalizeYarnLines` og `revertCascadedYarns` — for-loops uden transaktion betyder at delvis cascade kan opstå hvis én update fejler midt i. Acceptabelt for v1; senere refactor til Postgres RPC-funktion eliminerer risikoen.
 - **Yarn-allocation-system: lager → projekt (2026-05-04)** — modsat-flow til retur-til-lager. Ny `lib/yarn-allocate.ts` med pure helpers: `validateLineStock` (client-side stock-validering før gem — Bella Koral-bug fixet: 8 ngl, prøver 10 → blokeres med inline-fejl), `findInUseRowMatch` (catalog_color_id → brand+name+code, ekskl. 'Brugt op'), `decrementYarnItemQuantity` (race-safe via gte-clause + 0-row detection), `allocateYarnToProject` (decrement source + merge til eksisterende I-brug-række ELLER createInUseRow med kopieret metadata), `splitYarnItemRow` (delvis status-flytning: 5 ud af 10 ngl flyttes til ny status, resten bevares — eller direkte status-update hvis qty=total). `Arkiv.jsx` (DetailModal + NytProjektModal) bruger `validateLineStock` før gem og `allocateYarnToProject` ved nye lager-koblede linjer. `GarnLinjeVælger.jsx` viser ny `<StockBadge>` ("X på lager" / "X i brug") + over-allocation alert (`role="alert"`, src-warning-tokens). Migration `20260504000001_yarn_items_brugt_til_projekt_id.sql` tilføjer `brugt_til_projekt_id UUID NULL` med FK til `projects.id` ON DELETE SET NULL + index — eliminerer fragiliteten i title-baseret de-cascade-match (dækker risiko #2 fra auto-cascade-planen). RLS arvet via eksisterende `user_id`-policies. 23 nye Vitest-tests dækker AC-1/2/3/6/13. Reviewer: APPROVE, ingen blokerende fund. **Kendte begrænsninger til BACKLOG før testbruger-launch:** (1) **Atomicitet**: hvis decrement lykkes men efterfølgende I-brug-merge/insert fejler (netværk/RLS), står source decrementeret uden modsvarende I-brug-række — datatab-risiko. Mitigation: pak i RPC-funktion eller valider i UI før kald. (2) **Delta-håndtering**: redigering af `quantityUsed` på eksisterende lager-koblet linje opdaterer kun `yarn_usage.quantity_used` uden at flytte garn — UI bør blokere ændring eller kalde split/decrement-flow. Begge er ikke-blokerende for v1 (almindeligt flow virker), men skal addresseres før launch.
 - **Sporbarhed garn ↔ projekt + retur-til-lager-flow (2026-05-01)** — to-vejs kobling mellem Mit garn og projekter, plus sikkert flow når garn fjernes fra et projekt. Tre dele: **(1) Retur-til-lager**: ny `lib/yarn-return.ts` med pure helpers `findYarnItemMatch()` (4-trins prioritet: `yarn_item_id` FK → `catalog_color_id` ekskl. 'Brugt op' → case-insensitive `(brand, color_name, color_code)` → null) + `returnYarnLinesToStash()` (merge inkrementerer quantity og resetter status='På lager' + nulstiller `brugt_til_projekt`/`brugt_op_dato`; race-fallback: 0-row UPDATE → INSERT). Ny `<ConfirmDeleteProjectModal>` ved sletning af projekt med garn (3 valg: Returnér / Slet alt / Annuller). Ny `<ReturnYarnConfirmModal>` med auto-merge short-circuit ved `by-yarn-item-id` (ingen UI når match er FK-direkte) + radio-valg per kandidat ved tvetydige match. Inline `<PendingRemoveLineConfirm>` i `Arkiv.jsx` ved fjernelse af enkelt-linje fra åbent projekt — markerer linjen `__pendingRemove`/`__shouldReturn` indtil "Gem ændringer". `handleSave` omstruktureret i 3 faser: prompt FØR uploads (cancel = 100% uændret state), derefter uploads + `projects.update`, derefter `returnYarnLinesToStash` + `yarn_usage` delete/upsert. `setSaving(false)` i `finally` så cancel-path frigiver knappen. Unmount-cleanup resolver dangling `openReturnConfirmModal`-promise når DetailModal lukkes mid-flow. **(2) Cross-link Garnlager ↔ Arkiv**: Garnlager edit-modal viser ny "Bruges i projekter"-sektion (joiner `yarn_usage` med `projects` for det åbne garn, kun read-mode). `?yarn=<id>` auto-åbner garn-edit i Garnlager; `?projekt=<id>` auto-åbner projekt-detail i Arkiv (begge med ref-guard mod re-trigger efter close). Garn-linjer i projekt-detail er klikbare når `yarnItemId` findes (router.push til Garnlager). **(3) Status-regel-fix i `BrugNoeglerModal`** (korrigeret 2026-05-01 efter Hannah-feedback): garn der logges via modalen er per design committeret til et aktivt projekt — status sættes til `'I brug'` uanset restantal (ikke quantity-drevet). Aftale: 'I brug' = bundet til i_gang/vil_gerne-projekt; 'Brugt op' sættes via BrugtOpFoldeUd når brugeren markerer projekt færdigt; 'På lager' kun for garn ikke-knyttet til projekt. Bonusfix: ny-projekt-fra-modalen oprettes nu med `status='i_gang'` (matcher F15-pattern; uden eksplicit status faldt DB-default til 'faerdigstrikket' som modsiger modalens formål). **Side-kvest**: DROPS Kid Silk farve-seed registreret; `isCatalogSwatchUrl()` udvidet til `images.garnstudio.com/img/shademap/`-mønster så DROPS-swatches vises som fallback når bruger-foto mangler. 8 nye DROPS-eksempel-billeder + `update-drops-hero-images.mjs` (jimp-dependency). Global `next/navigation`-mock i `test/setup.ts`. 51 nye Vitest-tests (yarn-return: 24, ConfirmDeleteProjectModal, ReturnYarnConfirmModal, BrugNoeglerModal.statusFix). Reviewer: 2 blokere fundet og fixet (saving-state-leak ved cancel; orphans+delvist-committet projekt) + 3 bør-fixes (Esc-handling på PendingRemoveLineConfirm, misvisende kommentar, unmount-cleanup).
 - **F9+F10: Datakilde-farve-tokens + dansk datoformat-helper (2026-04-27)** — fundament-PR for STRIQ_implementation_brief (A.1 + A.2). 4 nye Tailwind-tokens under `striq`: `src-catalog` (#EAF3DE/#173404 grøn), `src-ai` (#EEEDFE/#3C3489 lilla), `src-warning` (#FAEEDA/#633806 orange), `src-error` (#FCEBEB/#791F1F rød). Hver med `bg`+`fg`-key. WCAG AAA-kontrast (12:1 for src-catalog). Content-glob udvidet til `{ts,tsx,js,jsx}` så `.jsx`-komponenter ikke får purget Tailwind-klasser. `KatalogInfoblok.jsx` refaktoreret fra inline `style` til Tailwind-klasser (`bg-striq-src-catalog-bg text-striq-src-catalog-fg`). Ny `lib/date/formatDanish.ts` med `formatDanish(date) → "27. apr 2026"` (intet 0-pad, intet punktum efter måned via defensiv regex) og `toISODate(date) → "2026-04-27"` (UTC, samme semantik som eksisterende `toISOString().slice(0,10)`-mønster). Begge robuste over for null/undefined/''/Invalid Date → `''`. 4 UI-call-sites migreret: `SubstitutionsSection.tsx:516`, `Arkiv.jsx:104` (`formatDate`-alias), `YarnVisualizer.jsx:984+1071`. DB-lagring (csv.ts, mappers.ts, BrugNoeglerModal.tsx) berørt ikke. Senere features (F5/F6/F8/F11/F12) bygger oven på disse tokens. 15 nye Vitest-tests (566/566 grønne). Roadmap-ref: `~/.claude/plans/functional-exploring-cake.md`.
@@ -364,82 +365,6 @@ Foldet ud (klik):
 ## Ønsker / overvejelser
 
 Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
-
-### Planlagt: Auto-cascade brugt-op ved projekt-færdiggørelse (2026-05-01)
-
-Plan godkendt, ikke startet. Hannah går videre søndag/mandag (2026-05-03/04).
-
-**Mål:** Når et projekt skifter til `status='faerdigstrikket'` (i DetailModal **eller** NytProjektModal), skal alle linkede garn med yarn_item_id automatisk få `status='Brugt op'` — med modal-bekræftelse for at håndtere edge cases pr. linje.
-
-**3 designvalg afklaret med Hannah:**
-1. **Default for rest-nøgler**: "Behold på lager" (ikke-destruktivt default — modalen vil ikke nulstille `quantity` medmindre brugeren eksplicit vælger 'Brugt op').
-2. **De-cascade implementeres**: status `faerdigstrikket → i_gang/vil_gerne` reverter cascadede garn fra 'Brugt op' → 'I brug', rydder `brugt_til_projekt` + `brugt_op_dato`. **Quantity=0 bevares** (originalen er væk).
-3. **Fulde modal-version** (ikke minimal auto-cascade) — håndterer alle edge cases.
-
-**Edge cases der SKAL dækkes:**
-- Garn med restantal: pr-linje radio 'Brugt op' (sætter quantity=0) eller 'Behold på lager' (default).
-- Garn delt på flere aktive projekter: hvis `yarn_item_id` har andre `yarn_usage`-rows hvor projektet er 'i_gang'/'vil_gerne', vises som "Kan ikke markeres brugt op" + viser projekt-titler. Skip cascade.
-- Garn-linjer uden `yarn_item_id`: info-banner "X garn er ikke knyttet til dit lager — kan ikke automatisk markeres brugt op".
-- Idempotens: garn allerede status='Brugt op' skippes silently.
-
-**Filer der oprettes:**
-- `lib/yarn-finalize.ts` (~100 linjer): pure helpers `classifyFinalizableLines`, `finalizeYarnLines`, `revertCascadedYarns`. Match-pattern fra `lib/yarn-return.ts`.
-- `components/app/MarkYarnsBrugtOpModal.tsx` (~250 linjer): radio-pr-linje, info-sektioner, "Anvend første valg på alle"-shortcut, useEscapeKey, busy-state. Visuel reference: `ConfirmDeleteProjectModal` + `ReturnYarnConfirmModal`.
-- `test/yarn-finalize.test.ts`, `test/MarkYarnsBrugtOpModal.test.tsx`, `test/Arkiv.cascadeBrugtOp.test.tsx`.
-
-**Filer der ændres (`Arkiv.jsx`):**
-- DetailModal `handleSave`: ny **Fase 1.5** mellem merge-prompt (Fase 1) og uploads (Fase 2): detektér `entry.status !== 'faerdigstrikket' && form.status === 'faerdigstrikket'` → klassificér linjer → åbn modal (promise-wrapper-mønster fra `openReturnConfirmModal`). Cancel = early return, finally rydder saving-state.
-- DetailModal `handleSave`: detektér også **de-cascade** (`entry.status === 'faerdigstrikket' && form.status !== 'faerdigstrikket'`) → silent `revertCascadedYarns` (ingen ekstra modal — gem-knappen er bekræftelsen).
-- DetailModal `handleSave` Fase 3: efter `projects.update`, kør `finalizeYarnLines` med decisions.
-- NytProjektModal `save()`: efter `yarn_usage.insert`, hvis `form.status === 'faerdigstrikket'` og linjer findes → klassificér + åbn modal + finalize.
-- Tilføj `finalizeModalState` (samme pattern som `returnConfirmState`) + udvid unmount-cleanup useEffect (linje ~511) til at resolve dangling finalize-promise.
-
-**Interfaces (signaturer):**
-```ts
-type FinalizableSource = { yarnUsageId: string; yarnItemId: string|null; yarnName: string|null; ...quantityUsed: number|null }
-type FinalizableClassification = {
-  finalizable: Array<{ source: FinalizableSource; currentStockQuantity: number; currentStatus: string }>
-  multiProject: Array<{ source: FinalizableSource; otherProjectTitles: string[] }>
-  noYarnItem: FinalizableSource[]
-  alreadyBrugtOp: FinalizableSource[]
-}
-type FinalizeDecision = 'brugt-op' | 'behold'
-classifyFinalizableLines(supabase, userId, currentProjectId, lines) → FinalizableClassification
-finalizeYarnLines(supabase, finalizable, decisions: Map<yarnUsageId, FinalizeDecision>, projektTitel, brugtOpDato) → { markedBrugtOp: yarnItemIds[] }
-revertCascadedYarns(supabase, userId, projectId, projectTitle) → { reverted: yarnItemIds[] }
-```
-
-**De-cascade-detection:** match på `(user_id, status='Brugt op', brugt_til_projekt = entry.title)` (bruger pre-skift title — robust mod samtidig title-ændring). Sæt `status='I brug'`, `brugt_til_projekt=NULL`, `brugt_op_dato=NULL`.
-
-**Acceptkriterier (10 stk, alle testbare):**
-1. DetailModal status-skift non-faerdig → faerdig åbner modalen hvis ≥1 linje med yarn_item_id
-2. Modal viser pr. linje: garnnavn, brugt antal, restantal, default 'Behold på lager'
-3. Multi-projekt-linjer vises som "Kan ikke" + projekttitler
-4. Linjer uden yarn_item_id vises som info-banner
-5. Bekræft → `markYarnAsBrugtOp` pr. valgt 'Brugt op'
-6. Cancel = ingen DB-mutationer (Fase 1-mønster)
-7. De-cascade: faerdig → i_gang/vil_gerne reverter status + rydder brugt_til/dato
-8. NytProjektModal-cascade dækket
-9. Tests dækker alle ACs + race-håndtering
-10. a11y: aria-modal, useEscapeKey, ≥44px touch-targets
-
-**Risici (top 3):**
-1. **Multi-projekt-detection-falsk-positiv**: brugeren ser "Kan ikke" hvis hun lige har oprettet et i_gang-projekt med samme garn. Mitigation: vis projekt-titlerne så hun kan reagere.
-2. **De-cascade-match på title**: skrøbelig hvis title ændret samtidig. Mitigation: brug `entry.title` (DB pre-skift). Senere refactor til `brugt_til_projekt_id UUID` (F5-fremtidssikring) eliminerer problemet.
-3. **NytProjektModal-cancel**: hvis bruger cancler modalen efter projekt-insert, lever projektet uden cascade. Acceptabelt — kan finaliseres senere fra Arkiv.
-
-**Estimat:** Stor (~600 linjer kode + tests). Følger eksisterende mønster fra retur-flow tæt — lav arkitektur-risiko.
-
-**Implementerings-faser:**
-A. Pure helpers + tests (`lib/yarn-finalize.ts`)
-B. Modal-komponent + tests
-C. DetailModal-integration (Fase 1.5 + Fase 3 + de-cascade)
-D. NytProjektModal-integration
-E. Reviewer-sweep
-
-**Når featuren er shippet** flyttes denne post til "Implementeret → Garn-katalog" eller en ny "Sporbarhed"-undersektion (måske F16 i nummereringen efter F15).
-
----
 
 ### Planlagt: Indtastning + garn-katalog (brief 2026-04-27)
 
