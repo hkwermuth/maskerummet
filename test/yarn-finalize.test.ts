@@ -185,21 +185,34 @@ describe('classifyFinalizableLines – AC-1, AC-3, AC-4', () => {
 })
 
 // ── finalizeYarnLines ────────────────────────────────────────────────────────
+//
+// finalizeYarnLines kalder splitYarnItemRow som:
+//   1. fetch source-row (select * eq id eq user_id maybeSingle)
+//   2. hvis qty === currentQty: update source (status + ...extraOnNew) eq id eq user_id
+//   3. hvis qty < currentQty: decrement source + insert ny række
+// Ved qty < total redirect'es yarn_usage til den nye række.
 
-describe('finalizeYarnLines – AC-5', () => {
-  it('AC-5: brugt-op-decision sætter status, quantity=0, brugt_til_projekt + _id + dato', async () => {
+describe('finalizeYarnLines – AC-5 (qty === total: source bliver Brugt op direkte)', () => {
+  it('når yarn_usage forbruger HELE I-brug-rækkens quantity, skifter source-rækken status', async () => {
+    // makeEntry har quantityUsed=5, currentStockQuantity=5 → qty === total
+    // → splitYarnItemRow opdaterer source direkte (ingen ny række, ingen redirect)
+    const sourceBuilder = makeThenableBuilder({
+      data: { id: 'yarn-1', quantity: 5, name: 'Bella', brand: 'Permin' },
+      error: null,
+    })
     const updateBuilder = makeThenableBuilder({ data: null, error: null })
-    const supabase = { from: vi.fn(() => updateBuilder) } as never
+    let callCount = 0
+    const supabase = {
+      from: vi.fn(() => {
+        callCount++
+        if (callCount === 1) return sourceBuilder      // splitYarnItemRow fetch
+        return updateBuilder                            // splitYarnItemRow update
+      }),
+    } as never
 
     const decisions = new Map<string, FinalizeDecision>([['usage-1', 'brugt-op']])
     const result = await finalizeYarnLines(
-      supabase,
-      'user-1',
-      [makeEntry()],
-      decisions,
-      'Min Sweater',
-      'proj-1',
-      '2026-05-04',
+      supabase, 'user-1', [makeEntry()], decisions, 'Min Sweater', 'proj-1', '2026-05-04',
     )
 
     expect(result.markedBrugtOp).toEqual(['yarn-1'])
@@ -211,49 +224,114 @@ describe('finalizeYarnLines – AC-5', () => {
       brugt_op_dato:        '2026-05-04',
     })
   })
+})
 
-  it('behold-decision skipper opdatering (default når decision mangler)', async () => {
-    const updateBuilder = makeThenableBuilder({ data: null, error: null })
-    const supabase = { from: vi.fn(() => updateBuilder) } as never
+describe('finalizeYarnLines – AC-5 (qty < total: split + redirect af yarn_usage)', () => {
+  it('Bug 1 fix: kun valgt yarn_usage rammes når flere peger på samme yarn_item (merged)', async () => {
+    // Scenarie: I-brug-række har 5 ngl, men brugeren har to yarn_usage-rækker
+    // (3 ngl + 2 ngl) der peger på den. User markerer kun 3-ngl-linjen som
+    // Brugt op. Forventet: source decrement til 2 ngl, ny Brugt op-række
+    // (quantity=0), yarn_usage redirected til ny række.
+    const insertCaptured = vi.fn()
+    let callCount = 0
+    const supabase = {
+      from: vi.fn(() => {
+        callCount++
+        // 1: splitYarnItemRow fetch source
+        if (callCount === 1) return makeThenableBuilder({
+          data: {
+            id: 'yarn-merged', quantity: 5,
+            name: 'Bella', brand: 'Permin', color_name: 'Koral', color_code: '88301',
+            hex_color: '#FF7F6A',
+          },
+          error: null,
+        })
+        // 2: decrementYarnItemQuantity → fetch current quantity
+        if (callCount === 2) return makeThenableBuilder({ data: { quantity: 5 }, error: null })
+        // 3: decrementYarnItemQuantity → update with gte
+        if (callCount === 3) return makeThenableBuilder({
+          data: [{ id: 'yarn-merged', quantity: 2 }], error: null,
+        })
+        // 4: insert ny række (Brugt op, 0 ngl)
+        if (callCount === 4) {
+          const builder = makeThenableBuilder({ data: { id: 'yarn-brugtop-new' }, error: null })
+          builder.insert = vi.fn((payload: unknown) => {
+            insertCaptured(payload)
+            return builder
+          })
+          return builder
+        }
+        // 5: yarn_usage redirect-update
+        return makeThenableBuilder({ data: null, error: null })
+      }),
+    } as never
 
-    // Tom decisions-Map → default 'behold' → skip alle
+    const decisions = new Map<string, FinalizeDecision>([['usage-1', 'brugt-op']])
     const result = await finalizeYarnLines(
-      supabase,
-      'user-1',
+      supabase, 'user-1',
+      [makeEntry({
+        source:               makeSource({ yarnUsageId: 'usage-1', yarnItemId: 'yarn-merged', quantityUsed: 3 }),
+        currentStockQuantity: 5,
+      })],
+      decisions, 'Min Sweater', 'proj-1', '2026-05-04',
+    )
+
+    expect(result.markedBrugtOp).toEqual(['yarn-brugtop-new'])
+    // Insert payload skal indeholde quantity:0 (Brugt op-konvention) og brugt_til_projekt_id
+    expect(insertCaptured).toHaveBeenCalledWith([expect.objectContaining({
+      status:               'Brugt op',
+      quantity:             0,
+      brugt_til_projekt:    'Min Sweater',
+      brugt_til_projekt_id: 'proj-1',
+      brugt_op_dato:        '2026-05-04',
+    })])
+  })
+})
+
+describe('finalizeYarnLines – behold-decisions skippes', () => {
+  it('tom decisions-Map → default behold → ingen DB-mutationer', async () => {
+    const supabase = { from: vi.fn() } as never
+
+    const result = await finalizeYarnLines(
+      supabase, 'user-1',
       [makeEntry(), makeEntry({ source: makeSource({ yarnUsageId: 'usage-2', yarnItemId: 'yarn-2' }) })],
       new Map(),
-      'Min Sweater',
-      'proj-1',
-      '2026-05-04',
+      'Min Sweater', 'proj-1', '2026-05-04',
     )
 
     expect(result.markedBrugtOp).toEqual([])
-    expect(updateBuilder.update).not.toHaveBeenCalled()
+    expect(supabase.from).not.toHaveBeenCalled()
   })
 
-  it('blanded decisions: kun brugt-op-linjer markeres', async () => {
-    const updateBuilder = makeThenableBuilder({ data: null, error: null })
-    const supabase = { from: vi.fn(() => updateBuilder) } as never
+  it('blanded decisions: kun brugt-op-linje markeres, behold-linje urørt', async () => {
+    let callCount = 0
+    const supabase = {
+      from: vi.fn(() => {
+        callCount++
+        if (callCount === 1) return makeThenableBuilder({
+          data: { id: 'yarn-1', quantity: 5 }, error: null,
+        })
+        return makeThenableBuilder({ data: null, error: null })
+      }),
+    } as never
 
     const decisions = new Map<string, FinalizeDecision>([
       ['usage-1', 'brugt-op'],
       ['usage-2', 'behold'],
     ])
     const result = await finalizeYarnLines(
-      supabase,
-      'user-1',
+      supabase, 'user-1',
       [
         makeEntry({ source: makeSource({ yarnUsageId: 'usage-1', yarnItemId: 'yarn-1' }) }),
         makeEntry({ source: makeSource({ yarnUsageId: 'usage-2', yarnItemId: 'yarn-2' }) }),
       ],
       decisions,
-      'Min Sweater',
-      'proj-1',
-      '2026-05-04',
+      'Min Sweater', 'proj-1', '2026-05-04',
     )
 
     expect(result.markedBrugtOp).toEqual(['yarn-1'])
-    expect(updateBuilder.update).toHaveBeenCalledTimes(1)
+    // 2 from-calls: splitYarnItemRow fetch + update for usage-1, ingen for usage-2
+    expect(callCount).toBe(2)
   })
 })
 

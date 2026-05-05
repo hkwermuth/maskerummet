@@ -6,6 +6,7 @@ import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 import { toUsageDb } from '@/lib/supabase/mappers'
 import { uploadFile } from '@/lib/supabase/storage'
 import { renderPdfFirstPage } from '@/lib/pdf-thumbnail'
+import { allocateYarnToProject, validateLineStock } from '@/lib/yarn-allocate'
 import { MAX_PROJECT_IMAGES } from '@/lib/types'
 
 function safeExt(name: string, fallback = 'bin'): string {
@@ -263,11 +264,63 @@ export default function BrugNoeglerModal({
         if (updErr) throw updErr
       }
 
-      // ── 4) Insert yarn_usage (UDEN media-felter — de bor på projektet) ─────
+      // ── 4) Allokér garn fra lageret via shared yarn-allocate-flow ──────────
+      // Tidligere (pre-2026-05-05) skiftede modalen source-rækkens status til
+      // 'I brug' og pegede yarn_usage på source-rækken — det brød yarn-
+      // allocation-system'ets invariant (source skal blive 'På lager') og
+      // forhindrede merge til eksisterende I-brug-rækker. Nu går vi via
+      // allocateYarnToProject:
+      //   - Source decrementeres med qty, status forbliver 'På lager'
+      //   - Eksisterende 'I brug'-række for samme garn merges (catalog_color_id
+      //     eller brand+name+code), ellers oprettes en ny
+      //   - yarn_usage peger på I-brug-rækken (gør retur-flow + cascade muligt)
+      const qtyNum = parseFloat(String(form.quantityUsed) || '0')
+      const sourceQty = parseFloat(String(yarn.antal)) || 0
+      const sourceStatus = yarn.status ?? 'På lager'
+
+      // Validér stock client-side så vi får pæn fejlbesked før vi rører noget.
+      if (sourceStatus === 'På lager') {
+        const v = validateLineStock(
+          { yarnItemId: yarn.id, quantityUsed: qtyNum },
+          [{ id: yarn.id, status: sourceStatus, antal: sourceQty }],
+        )
+        if (!v.valid && v.reason === 'insufficient-stock') {
+          throw new Error(
+            `Du har kun ${v.available} ${v.available === 1 ? 'nøgle' : 'nøgler'} på lager — vælg færre end ${v.requested}.`,
+          )
+        }
+      }
+
+      // Kun source='På lager' allokerer (decrement + merge/insert I-brug). Hvis
+      // brugeren åbner modalen fra en allerede 'I brug'-række, peger vi
+      // yarn_usage direkte på den (ingen yarn_items-mutation — brugeren har
+      // allerede committeret garnet til et projekt).
+      let inUseYarnItemId: string = yarn.id
+      if (sourceStatus === 'På lager' && qtyNum > 0) {
+        const result = await allocateYarnToProject(
+          supabase,
+          user.id,
+          {
+            yarnItemId:     yarn.id,
+            yarnName:       yarn.name      ?? null,
+            yarnBrand:      yarn.brand     ?? null,
+            colorName:      yarn.colorName ?? null,
+            colorCode:      yarn.colorCode ?? null,
+            hex:            yarn.hex       ?? null,
+            catalogYarnId:  yarn.catalogYarnId  ?? null,
+            catalogColorId: yarn.catalogColorId ?? null,
+          },
+          projectId,
+          qtyNum,
+        )
+        inUseYarnItemId = result.inUseYarnItemId
+      }
+
+      // ── 5) Insert yarn_usage (UDEN media-felter — de bor på projektet) ─────
       const usageData = toUsageDb({
         ...form,
         projectId,
-        yarnItemId: yarn.id,
+        yarnItemId: inUseYarnItemId,        // peger på I-brug-rækken (ikke source)
         yarnName:   yarn.name,
         yarnBrand:  yarn.brand,
         colorName:  yarn.colorName,
@@ -281,20 +334,11 @@ export default function BrugNoeglerModal({
         .insert([{ ...usageData, user_id: user.id }]).select().single()
       if (insertErr) throw insertErr
 
-      // ── 5) Opdatér yarn_items quantity + status ────────────────────────────
-      // Status-regel: Garn der logges via BrugNoeglerModal er per design
-      // committeret til et aktivt projekt (mode='existing' loader kun
-      // 'i_gang'/'vil_gerne'; mode='new' opretter altid 'i_gang' i trin 1).
-      // Derfor: status='I brug' uanset restantal — også selv om der er nøgler
-      // tilbage. Brugerens mentale model: garnet "tilhører" nu projektet og
-      // er ikke længere ledigt 'På lager'-garn at gribe til andre projekter.
-      // 'Brugt op' sættes separat i Mit Garnlager via BrugtOpFoldeUd når
-      // brugeren markerer status='Brugt op' med projekt-link (F5/F15-flow).
-      const newQty = Math.max(0, (parseFloat(String(yarn.antal)) || 0) - parseFloat(String(form.quantityUsed) || '0'))
-      const newStatus = 'I brug'
-      await supabase.from('yarn_items').update({ quantity: newQty, status: newStatus }).eq('id', yarn.id)
-
-      onSaved(usageRow, newQty, newStatus)
+      // Tilbageraporter til Garnlager: source-rækken er decrementet, men
+      // status er IKKE skiftet (vigtig invariant fra yarn-allocation-system).
+      // Garnlager refresher selv stash-listen så ny I-brug-række vises.
+      const newQty = Math.max(0, sourceQty - qtyNum)
+      onSaved(usageRow, newQty, sourceStatus)
       onClose()
     } catch (e: any) {
       setError('Kunne ikke gemme: ' + e.message)

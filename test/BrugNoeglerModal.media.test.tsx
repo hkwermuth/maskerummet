@@ -59,7 +59,57 @@ function buildSupabaseMock(opts: {
   const usageInsertSingle = vi.fn().mockResolvedValue({ data: { id: 'usage-new' }, error: null })
   const usageInsert = vi.fn(() => ({ select: vi.fn(() => ({ single: usageInsertSingle })) }))
 
-  const yarnItemsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
+  // yarn_items mock dækker hele allocate-flow (Bug 2 fix 2026-05-05):
+  // 1: decrementYarnItemQuantity fetch (select.eq.eq.maybeSingle)
+  // 2: decrementYarnItemQuantity update (update.eq.eq.gte.select)
+  // 3: findInUseRowMatch (select.eq.eq.ilike.limit) — catalog_color_id=null så kun 1 call
+  // 4: createInUseRow fetch source (select.eq.eq.maybeSingle)
+  // 5: createInUseRow insert (insert.select.single)
+  let yarnItemsCall = 0
+  const yarnItemsUpdate = vi.fn(() => ({
+    eq: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        gte: vi.fn(() => ({
+          select: vi.fn().mockResolvedValue({ data: [{ id: 'y1', quantity: 0 }], error: null }),
+        })),
+      })),
+    })),
+  }))
+  const yarnItemsHandler = () => {
+    yarnItemsCall++
+    if (yarnItemsCall === 1) {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { quantity: 5 }, error: null }),
+      }
+    }
+    if (yarnItemsCall === 2) {
+      return { update: yarnItemsUpdate }
+    }
+    if (yarnItemsCall === 3) {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        ilike: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }
+    }
+    if (yarnItemsCall === 4) {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      }
+    }
+    return {
+      insert: vi.fn(() => ({
+        select: vi.fn(() => ({
+          single: vi.fn().mockResolvedValue({ data: { id: 'y-inuse-new' }, error: null }),
+        })),
+      })),
+    }
+  }
 
   const supabaseMock = {
     from: vi.fn((table: string) => {
@@ -89,7 +139,7 @@ function buildSupabaseMock(opts: {
         }
       }
       if (table === 'yarn_usage') return { insert: usageInsert }
-      if (table === 'yarn_items') return { update: yarnItemsUpdate }
+      if (table === 'yarn_items') return yarnItemsHandler()
       return {}
     }),
     _projectsUpdate: projectsUpdate,
@@ -234,31 +284,17 @@ describe('BrugNoeglerModal — note appendes til projects.notes med dato-stamp',
   })
 })
 
-describe('BrugNoeglerModal — yarn_items status-opdatering ved forbrug', () => {
-  it('sætter status til "I brug" når antal stadig er > 0 (sporbarhed: garn committeret til aktivt projekt fjernes fra "På lager"-filteret)', async () => {
+describe('BrugNoeglerModal — yarn_items status-opdatering ved forbrug (POST-FIX 2026-05-05)', () => {
+  it('Bug 2 fix: source-rækkens status forbliver "På lager" (allokering går via shared yarn-allocate)', async () => {
+    // Pre-fix: source-rækken fik status='I brug' med restantal — det brød
+    // yarn-allocation-system'ets invariant. Post-fix: allocateYarnToProject
+    // decrementer kun quantity og opretter separat I-brug-række.
+    // Dækkes detaljeret i BrugNoeglerModal.statusFix.test.tsx — denne test
+    // verificerer kun at source-status IKKE skiftes via update-call.
     const user = userEvent.setup()
-    const yarnItemsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
+    const mock = buildSupabaseMock()
+    vi.mocked(useSupabase).mockReturnValue(mock as never)
     const onSaved = vi.fn()
-
-    const supabaseMock = {
-      from: vi.fn((table: string) => {
-        if (table === 'projects') {
-          return {
-            select: vi.fn((cols: string) => {
-              if (cols.includes('project_image_urls')) {
-                return { eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { project_image_urls: [], pattern_image_urls: [], pattern_pdf_url: null }, error: null }) })) }
-              }
-              return { eq: vi.fn(() => ({ in: vi.fn(() => ({ order: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue({ data: [existingProject], error: null }) })) })) }
-            }),
-            update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })),
-          }
-        }
-        if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
-        if (table === 'yarn_items') return { update: yarnItemsUpdate }
-        return {}
-      }),
-    }
-    vi.mocked(useSupabase).mockReturnValue(supabaseMock as never)
 
     render(
       <BrugNoeglerModal
@@ -270,62 +306,12 @@ describe('BrugNoeglerModal — yarn_items status-opdatering ved forbrug', () => 
     )
 
     await waitFor(() => expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument())
-    // Default form.quantityUsed = 1 → 5 - 1 = 4 → "I brug" (garnet er nu
-    // committeret til projektet selv om der er 4 nøgler tilbage; brugeren
-    // ser det under "I brug"-filteret + i sporbarheds-sektionen i Garnlager).
     await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
 
-    await waitFor(() => expect(yarnItemsUpdate).toHaveBeenCalled())
-    const updatePayload = yarnItemsUpdate.mock.calls[0][0]
-    expect(updatePayload.status).toBe('I brug')
-    expect(updatePayload.quantity).toBe(4)
-    expect(onSaved).toHaveBeenCalledWith(expect.anything(), 4, 'I brug')
-  })
-
-  it('sætter status til "I brug" når antal når 0 (alt aktivt brugt — Brugt op sættes først når projekt markeres færdigt)', async () => {
-    const user = userEvent.setup()
-    const yarnItemsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
-    const onSaved = vi.fn()
-
-    const supabaseMock = {
-      from: vi.fn((table: string) => {
-        if (table === 'projects') {
-          return {
-            select: vi.fn((cols: string) => {
-              if (cols.includes('project_image_urls')) {
-                return { eq: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { project_image_urls: [], pattern_image_urls: [], pattern_pdf_url: null }, error: null }) })) }
-              }
-              return { eq: vi.fn(() => ({ in: vi.fn(() => ({ order: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue({ data: [existingProject], error: null }) })) })) }
-            }),
-            update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })),
-          }
-        }
-        if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
-        if (table === 'yarn_items') return { update: yarnItemsUpdate }
-        return {}
-      }),
-    }
-    vi.mocked(useSupabase).mockReturnValue(supabaseMock as never)
-
-    render(
-      <BrugNoeglerModal
-        yarn={{ ...sampleYarn, antal: 1, status: 'På lager' }}
-        user={{ id: 'user-1' }}
-        onClose={vi.fn()}
-        onSaved={onSaved}
-      />
-    )
-
-    await waitFor(() => expect(screen.getByText(/pindestørrelse brugt/i)).toBeInTheDocument())
-    // antal=1, brug 1 → 0 → "I brug" (alt aktivt brugt; bliver først 'Brugt op'
-    // når brugeren markerer projektet færdigt — håndteres af markYarnAsBrugtOp).
-    await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
-
-    await waitFor(() => expect(yarnItemsUpdate).toHaveBeenCalled())
-    const updatePayload = yarnItemsUpdate.mock.calls[0][0]
-    expect(updatePayload.status).toBe('I brug')
-    expect(updatePayload.quantity).toBe(0)
-    expect(onSaved).toHaveBeenCalledWith(expect.anything(), 0, 'I brug')
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    // onSaved tilbagerapporterer source-status (skal være 'På lager', ikke 'I brug')
+    const [, , reportedStatus] = onSaved.mock.calls[0]
+    expect(reportedStatus).toBe('På lager')
   })
 })
 

@@ -115,8 +115,19 @@ describe('AC-8: NytProjektModal-cascade: nyinsertet I-brug-linje klassificeres s
   })
 
   it('AC-8: finalizeYarnLines markerer den nyoprettede linje brugt op med korrekt projekt-data', async () => {
+    // qty===total scenario: NytProjektModal har lige insertet 1 yarn_usage med 5 ngl
+    // og I-brug-rækken har 5 ngl → splitYarnItemRow opdaterer source direkte.
     const updateBuilder = makeThenableBuilder({ data: null, error: null })
-    const supabase = { from: vi.fn(() => updateBuilder) } as never
+    let callCount = 0
+    const supabase = {
+      from: vi.fn(() => {
+        callCount++
+        if (callCount === 1) return makeThenableBuilder({
+          data: { id: 'yarn-new', quantity: 5, brand: 'Permin', name: 'Bella' }, error: null,
+        })
+        return updateBuilder
+      }),
+    } as never
 
     const decisions = new Map<string, FinalizeDecision>([['usage-new', 'brugt-op']])
     const result = await finalizeYarnLines(

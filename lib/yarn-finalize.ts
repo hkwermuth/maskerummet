@@ -17,6 +17,7 @@
 //      migration 20260504000001 hvor _id-kolonnen ikke fandtes)
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { splitYarnItemRow } from './yarn-allocate'
 
 // ── Typer ─────────────────────────────────────────────────────────────────────
 
@@ -172,21 +173,41 @@ export async function finalizeYarnLines(
     const yarnItemId = entry.source.yarnItemId
     if (!yarnItemId) continue
 
-    // user_id-filter dublerer RLS men giver eksplicit defense-in-depth +
-    // matcher mønstret i revertCascadedYarns (linje 263).
-    const { error } = await supabase
-      .from('yarn_items')
-      .update({
-        status:               'Brugt op',
-        quantity:             0,
+    const qty = Number(entry.source.quantityUsed ?? 0)
+    if (!Number.isFinite(qty) || qty <= 0) continue
+
+    // Brug splitYarnItemRow så kun denne yarn_usage's andel rammes — afgørende
+    // når flere yarn_usage-rækker peger på samme merged 'I brug'-yarn_item.
+    // Hvis qty === total quantity → split-helperen opdaterer source direkte
+    // (ingen ny række, ingen redirect nødvendig). Hvis qty < total → der
+    // oprettes en ny 'Brugt op'-række med quantity=0 (Brugt op-konvention),
+    // og vi redirect'er denne yarn_usage til den nye række så de-cascade
+    // (revertCascadedYarns) kan finde tilbage via brugt_til_projekt_id.
+    const splitResult = await splitYarnItemRow(
+      supabase,
+      userId,
+      yarnItemId,
+      qty,
+      'Brugt op',
+      {
+        quantity:             0,                     // Brugt op-konvention (consumed)
         brugt_til_projekt:    projektTitel || null,
         brugt_til_projekt_id: projektId,
         brugt_op_dato:        brugtOpDato || null,
-      })
-      .eq('id', yarnItemId)
-      .eq('user_id', userId)
-    if (error) throw error
-    markedBrugtOp.push(yarnItemId)
+      },
+    )
+
+    // Redirect kun hvis der blev oprettet en NY række (qty < total).
+    if (splitResult.newYarnItemId !== splitResult.sourceYarnItemId) {
+      const { error: redirErr } = await supabase
+        .from('yarn_usage')
+        .update({ yarn_item_id: splitResult.newYarnItemId })
+        .eq('id', entry.source.yarnUsageId)
+        .eq('user_id', userId)
+      if (redirErr) throw redirErr
+    }
+
+    markedBrugtOp.push(splitResult.newYarnItemId)
   }
 
   return { markedBrugtOp }
@@ -250,6 +271,7 @@ export async function revertCascadedYarns(
       .from('yarn_usage')
       .select('quantity_used')
       .eq('yarn_item_id', yarnItemId)
+      .eq('user_id', userId)
     if (uErr) throw uErr
     const restoredQty = (usages ?? [])
       .reduce((sum, u) => sum + Number((u as { quantity_used: number | null }).quantity_used ?? 0), 0)

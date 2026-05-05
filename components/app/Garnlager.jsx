@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSupabase } from '@/lib/supabase/client'
 import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
@@ -412,21 +412,26 @@ export default function Garnlager({ user, onRequestLogin }) {
   }, [filtersHydrated, q, filterWeight, filterStatus, filterFiber])
 
   // ── Load from Supabase ──────────────────────────────────────────────────────
-  useEffect(() => {
-    async function fetchYarns() {
-      const { data, error } = await supabase
-        .from('yarn_items')
-        .select('*')
-        .order('created_at', { ascending: true })
+  // fetchYarns er stable callback så vi kan refresh fra fx BrugNoeglerModal-
+  // onSaved (hvor allocate-flow kan have oprettet en ny I-brug-række der ikke
+  // er repræsenteret i lokal state).
+  const fetchYarns = useMemo(() => async () => {
+    const { data, error } = await supabase
+      .from('yarn_items')
+      .select('*')
+      .order('created_at', { ascending: true })
 
-      if (error) {
-        console.error('Fejl ved hentning af garnlager:', error.message)
-      } else {
-        setYarns((data ?? []).map(fromDb))
-      }
-      setLoaded(true)
+    if (error) {
+      console.error('Fejl ved hentning af garnlager:', error.message)
+    } else {
+      setYarns((data ?? []).map(fromDb))
     }
+    setLoaded(true)
+  }, [supabase])
+
+  useEffect(() => {
     fetchYarns()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // ── Projects til "Brugt op"-folde-ud autocomplete ───────────────────────────
@@ -769,7 +774,11 @@ export default function Garnlager({ user, onRequestLogin }) {
           yarn={brugModal}
           user={user}
           onClose={() => setBrugModal(null)}
-          onSaved={(usageRow, newQty, newStatus) => {
+          onSaved={async (usageRow, newQty, newStatus) => {
+            // Optimistisk lokal opdatering af source-rækken så UI ikke
+            // flickerer mens vi henter ny stash. fetchYarns synkroniserer
+            // bagefter (allocate-flow kan have oprettet ny I-brug-række
+            // og merget kvantiteter — kan ikke afledes fra parametrene).
             setYarns(prev => prev.map(y =>
               y.id === brugModal.id
                 ? { ...y, antal: newQty, status: newStatus ?? y.status }
@@ -777,6 +786,7 @@ export default function Garnlager({ user, onRequestLogin }) {
             ))
             setBrugModal(null)
             setModal(null)
+            await fetchYarns()
           }}
         />
       )}
