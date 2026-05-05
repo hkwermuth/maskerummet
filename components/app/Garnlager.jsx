@@ -423,11 +423,46 @@ export default function Garnlager({ user, onRequestLogin }) {
 
     if (error) {
       console.error('Fejl ved hentning af garnlager:', error.message)
-    } else {
-      setYarns((data ?? []).map(fromDb))
+      setLoaded(true)
+      return
     }
+
+    const mapped = (data ?? []).map(fromDb)
+
+    // Hent yarn_usage + projekt-info for "Brugt op"-garn i ÉT bulk-kald (ingen N+1)
+    // så grid-kortet kan vise hvilke projekter garnet blev brugt i + nøgle-antal
+    // direkte uden at åbne edit-modal. Andre statuser har ikke brug for det her.
+    const brugtOpIds = mapped.filter(y => y.status === 'Brugt op').map(y => y.id)
+    if (brugtOpIds.length > 0) {
+      const { data: usageRows, error: usageError } = await supabase
+        .from('yarn_usage')
+        .select('id, yarn_item_id, project_id, quantity_used, projects(id, title, status)')
+        .in('yarn_item_id', brugtOpIds)
+        .eq('user_id', user.id)
+      if (usageError) {
+        console.error('Fejl ved hentning af projekt-brug for Brugt op-garn:', usageError.message)
+      }
+      const byYarnId = new Map()
+      for (const r of usageRows ?? []) {
+        if (!r.projects) continue
+        const list = byYarnId.get(r.yarn_item_id) ?? []
+        list.push({
+          yarnUsageId:  r.id,
+          projectId:    r.projects.id,
+          title:        r.projects.title ?? null,
+          status:       r.projects.status ?? 'i_gang',
+          quantityUsed: r.quantity_used == null ? null : Number(r.quantity_used),
+        })
+        byYarnId.set(r.yarn_item_id, list)
+      }
+      for (const y of mapped) {
+        if (y.status === 'Brugt op') y.usages = byYarnId.get(y.id) ?? []
+      }
+    }
+
+    setYarns(mapped)
     setLoaded(true)
-  }, [supabase])
+  }, [supabase, user.id])
 
   useEffect(() => {
     fetchYarns()
@@ -1084,6 +1119,37 @@ export default function Garnlager({ user, onRequestLogin }) {
                       <Chip style={{ background: '#E4EEE4', color: '#2A4A2A' }}>{fiberLabel}</Chip>
                     )}
                   </div>
+                  {/* Brugt op-garn: vis hvilke projekter garnet blev brugt i + nøgle-antal pr. projekt.
+                      Kapper visuelt ved 3 linjer + "…og N flere" så kortet ikke sprænger.
+                      Statisk tekst (ingen klik) — selve kortet åbner edit-modalen.
+                      Skjules helt for legacy "Brugt op" uden yarn_usage-relation. */}
+                  {y.status === 'Brugt op' && y.usages && y.usages.length > 0 && (
+                    <ul
+                      data-testid="brugt-op-projects"
+                      style={{
+                        listStyle: 'none', padding: 0, margin: '8px 0 0',
+                        display: 'flex', flexDirection: 'column', gap: 3,
+                        fontSize: '11.5px', color: '#6B5D4F', lineHeight: 1.5,
+                      }}
+                    >
+                      {y.usages.slice(0, 3).map(u => (
+                        <li key={u.yarnUsageId} style={{ display: 'flex', gap: 6, alignItems: 'baseline', minWidth: 0 }}>
+                          <span aria-hidden="true" style={{ color: '#A89888', flexShrink: 0 }}>•</span>
+                          <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {u.title || 'Unavngivet projekt'}
+                          </span>
+                          <span style={{ color: '#8B7D6B', flexShrink: 0 }}>
+                            {u.quantityUsed == null ? '—' : `${u.quantityUsed} ngl`}
+                          </span>
+                        </li>
+                      ))}
+                      {y.usages.length > 3 && (
+                        <li style={{ color: '#8B7D6B', fontStyle: 'italic', paddingLeft: 12 }}>
+                          …og {y.usages.length - 3} flere
+                        </li>
+                      )}
+                    </ul>
+                  )}
                   {y.noter && <div style={{ marginTop: '8px', fontSize: '11px', color: '#8B7D6B', fontStyle: 'italic', lineHeight: '1.45' }}>{y.noter}</div>}
                 </div>
               </div>

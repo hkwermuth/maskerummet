@@ -212,8 +212,7 @@ export default function MarkYarnsBrugtOpModal({
                 ? 'Behandler…'
                 : brugtOpCount === 0
                   ? 'Markér færdig (intet brugt op)'
-                  // 'garn' er uregelmæssig dansk flertal — samme form ental/flertal.
-                  : `Markér ${brugtOpCount} garn brugt op`}
+                  : 'Markér garn brugt op'}
             </button>
           </div>
         </div>

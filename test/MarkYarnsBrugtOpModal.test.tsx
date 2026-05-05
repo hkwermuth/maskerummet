@@ -117,8 +117,8 @@ describe('MarkYarnsBrugtOpModal – AC-5 vælg brugt-op', () => {
       />
     )
     await userEvent.click(screen.getByLabelText(/brugt op — markér som forbrugt/i))
-    expect(screen.getByRole('button', { name: /markér 1 garn brugt op/i })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /markér 1 garn brugt op/i }))
+    expect(screen.getByRole('button', { name: /^markér garn brugt op$/i })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /^markér garn brugt op$/i }))
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 
@@ -146,7 +146,7 @@ describe('MarkYarnsBrugtOpModal – AC-5 vælg brugt-op', () => {
     const u2Group = screen.getAllByRole('radiogroup')[1]
     expect(within(u2Group).getByLabelText(/brugt op — markér som forbrugt/i)).toBeChecked()
 
-    await userEvent.click(screen.getByRole('button', { name: /markér 2 garn brugt op/i }))
+    await userEvent.click(screen.getByRole('button', { name: /^markér garn brugt op$/i }))
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 })
