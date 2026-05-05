@@ -154,6 +154,65 @@ export async function findInUseRowMatch(
   return null
 }
 
+/**
+ * Find en eksisterende "På lager"-yarn_items-række for samme garn-identitet.
+ * Bruges af delta-håndtering (applyAllocationDelta): når brugeren øger antallet
+ * på en eksisterende projekt-linje med delta>0, skal vi finde den korrekte
+ * "På lager"-pendant at trække fra.
+ *
+ * Match-rækkefølge:
+ *   1. catalog_color_id (samme katalog-farve) — ekskl. 'Brugt op'/'I brug'
+ *   2. case-insensitive brand + color_name + color_code (alle tre kræves)
+ *
+ * Vi kræver eksplicit status='På lager' (ikke kun !='Brugt op') så delta-flowet
+ * altid trækker fra reelt ledigt lager — ikke en anden I-brug-allokering.
+ */
+export async function findOnStockRowMatch(
+  supabase: SupabaseClient,
+  userId:   string,
+  line:     AllocatableLine,
+): Promise<InUseMatch | null> {
+  if (line.catalogColorId) {
+    const { data } = await supabase
+      .from('yarn_items')
+      .select('id, quantity, status')
+      .eq('user_id', userId)
+      .eq('catalog_color_id', line.catalogColorId)
+      .eq('status', 'På lager')
+      .limit(1)
+    const row = (data ?? [])[0] as { id: string; quantity: number | null; status: string } | undefined
+    if (row) {
+      return {
+        yarnItemId:      row.id,
+        currentQuantity: Number(row.quantity ?? 0),
+        matchKind:       'by-catalog-color',
+      }
+    }
+  }
+
+  if (nonEmpty(line.yarnBrand) && nonEmpty(line.colorName) && nonEmpty(line.colorCode)) {
+    const { data } = await supabase
+      .from('yarn_items')
+      .select('id, quantity, status')
+      .eq('user_id', userId)
+      .eq('status', 'På lager')
+      .ilike('brand', line.yarnBrand)
+      .ilike('color_name', line.colorName)
+      .ilike('color_code', line.colorCode)
+      .limit(1)
+    const row = (data ?? [])[0] as { id: string; quantity: number | null; status: string } | undefined
+    if (row) {
+      return {
+        yarnItemId:      row.id,
+        currentQuantity: Number(row.quantity ?? 0),
+        matchKind:       'by-name-color',
+      }
+    }
+  }
+
+  return null
+}
+
 // ── Decrement (race-safe) ────────────────────────────────────────────────────
 
 /**
@@ -314,6 +373,175 @@ async function createInUseRow(
     .single()
   if (insErr) throw insErr
   return (inserted as { id: string }).id
+}
+
+// ── Increment helper (modsat decrement) ──────────────────────────────────────
+
+/**
+ * Inkrementér yarn_items.quantity med qty. Bruges ved delta<0-flow (returnerer
+ * nøgler til "På lager") og ved delta>0 (forøg "I brug"-rækken).
+ *
+ * Race-handling: vi læser current quantity og skriver ny værdi med eq-guard
+ * på den læste værdi. Hvis race opstår mellem læs og skriv, kaster vi.
+ */
+export async function incrementYarnItemQuantity(
+  supabase:   SupabaseClient,
+  userId:     string,
+  yarnItemId: string,
+  qty:        number,
+): Promise<number> {
+  if (!Number.isFinite(qty) || qty <= 0) {
+    throw new Error('incrementYarnItemQuantity: qty skal være > 0')
+  }
+
+  const { data: current, error: fetchErr } = await supabase
+    .from('yarn_items')
+    .select('quantity')
+    .eq('id', yarnItemId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (fetchErr) throw fetchErr
+  if (!current) {
+    throw new Error('incrementYarnItemQuantity: target-rækken findes ikke')
+  }
+  const currentQty = Number((current as { quantity: number | null }).quantity ?? 0)
+  const newQty = currentQty + qty
+
+  const { data: updated, error: updErr } = await supabase
+    .from('yarn_items')
+    .update({ quantity: newQty })
+    .eq('id', yarnItemId)
+    .eq('user_id', userId)
+    .eq('quantity', currentQty)         // race-guard: skriv kun hvis værdien er uændret
+    .select('id, quantity')
+  if (updErr) throw updErr
+  if (!updated || updated.length === 0) {
+    throw new Error('incrementYarnItemQuantity: race detected — quantity ændret af anden session')
+  }
+  return Number((updated[0] as { quantity: number | null }).quantity ?? 0)
+}
+
+// ── Delta-håndtering ved redigering af eksisterende projekt-linje ────────────
+
+export type DeltaResult = {
+  delta:           number
+  decrementedFrom: string | null    // id på "På lager"-pendant der blev trukket fra (delta>0)
+  incrementedTo:   string | null    // id på "I brug"-rækken (eller "På lager"-pendant ved delta<0)
+  createdRowId:    string | null    // id på ny "På lager"-række hvis vi skulle oprette en (delta<0, ingen pendant)
+}
+
+/**
+ * Anvend delta på en eksisterende projekt-linje. Holder invariant
+ * `yarn_items.quantity = SUM(yarn_usage.quantity_used pegende på den)` ved at
+ * flytte den nødvendige mængde mellem "På lager"-pendant og "I brug"-rækken.
+ *
+ * Krav: line.yarnItemId peger på en EKSISTERENDE "I brug"-række (typisk fra en
+ * tidligere allokering). Hvis den ikke længere er 'I brug' (fx allerede Brugt
+ * op), kaster vi — kalder må håndtere status-skift separat.
+ *
+ * delta > 0:  brugeren bruger MERE garn end før.
+ *   - Find På-lager-pendant (catalog_color_id eller brand+name+code)
+ *   - Validér at pendant har nok stock (kaster ellers)
+ *   - Decrement pendant med delta
+ *   - Increment I-brug-rækken med delta
+ *
+ * delta < 0:  brugeren bruger MINDRE garn end før (returnerer overskydende).
+ *   - Find På-lager-pendant
+ *   - Hvis pendant findes: increment den med |delta|
+ *   - Hvis ingen pendant: opret ny "På lager"-række med |delta| ngl + metadata
+ *   - Decrement I-brug-rækken med |delta|
+ *
+ * Returnerer DeltaResult med id'er på rørte rækker.
+ */
+export async function applyAllocationDelta(
+  supabase:   SupabaseClient,
+  userId:     string,
+  line:       AllocatableLine & { yarnItemId: string },
+  delta:      number,
+): Promise<DeltaResult> {
+  if (!Number.isFinite(delta) || delta === 0) {
+    throw new Error('applyAllocationDelta: delta skal være ≠ 0')
+  }
+
+  if (delta > 0) {
+    // Brug mere garn — træk fra "På lager"-pendant, læg på I-brug-rækken.
+    const pendant = await findOnStockRowMatch(supabase, userId, line)
+    if (!pendant) {
+      throw new Error(
+        `Du har ingen ${line.yarnBrand ?? ''} ${line.colorName ?? ''}-rækker på lager — kan ikke øge antallet med ${delta} ngl.`,
+      )
+    }
+    if (pendant.currentQuantity < delta) {
+      throw new Error(
+        `Du har kun ${pendant.currentQuantity} ${pendant.currentQuantity === 1 ? 'nøgle' : 'nøgler'} på lager af ${line.yarnBrand ?? ''} ${line.colorName ?? ''} — kan ikke øge med ${delta}.`,
+      )
+    }
+    await decrementYarnItemQuantity(supabase, userId, pendant.yarnItemId, delta)
+    // Best-effort rollback: hvis increment fejler (race på I-brug-rækken),
+    // forsøg at rulle dec'et tilbage så vi ikke "taber" nøgler. Hvis rollback
+    // også fejler, kaster vi den oprindelige fejl — bruger ser fejlbeskeden
+    // og kan re-loade for at se faktisk state.
+    try {
+      await incrementYarnItemQuantity(supabase, userId, line.yarnItemId, delta)
+    } catch (incErr) {
+      try {
+        await incrementYarnItemQuantity(supabase, userId, pendant.yarnItemId, delta)
+      } catch { /* best-effort rollback — ignore secondary failure */ }
+      throw incErr
+    }
+    return {
+      delta,
+      decrementedFrom: pendant.yarnItemId,
+      incrementedTo:   line.yarnItemId,
+      createdRowId:    null,
+    }
+  }
+
+  // delta < 0 — returner overskydende til "På lager".
+  const absDelta = -delta
+  // Decrement I-brug-rækken først (race-safe — kaster hvis ikke nok).
+  await decrementYarnItemQuantity(supabase, userId, line.yarnItemId, absDelta)
+
+  const pendant = await findOnStockRowMatch(supabase, userId, line)
+  if (pendant) {
+    await incrementYarnItemQuantity(supabase, userId, pendant.yarnItemId, absDelta)
+    return {
+      delta,
+      decrementedFrom: line.yarnItemId,
+      incrementedTo:   pendant.yarnItemId,
+      createdRowId:    null,
+    }
+  }
+
+  // Ingen På-lager-pendant — opret ny række med absDelta ngl. Vi henter
+  // metadata fra I-brug-rækken så den nye "På lager"-række har korrekt
+  // brand/farve/fiber/etc.
+  const { data: source } = await supabase
+    .from('yarn_items')
+    .select('name, brand, color_name, color_code, color_category, fiber, yarn_weight, hex_color, hex_colors, notes, image_url, gauge, meters, catalog_yarn_id, catalog_color_id, catalog_image_url')
+    .eq('id', line.yarnItemId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  const metadata = (source ?? {}) as Record<string, unknown>
+
+  const { data: inserted, error: insErr } = await supabase
+    .from('yarn_items')
+    .insert([{
+      ...metadata,
+      user_id:  userId,
+      quantity: absDelta,
+      status:   'På lager',
+    }])
+    .select('id')
+    .single()
+  if (insErr) throw insErr
+  const newId = (inserted as { id: string }).id
+  return {
+    delta,
+    decrementedFrom: line.yarnItemId,
+    incrementedTo:   null,
+    createdRowId:    newId,
+  }
 }
 
 // ── Splitting (status-skift på dele af en række) ─────────────────────────────

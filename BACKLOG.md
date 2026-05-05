@@ -367,7 +367,33 @@ Foldet ud (klik):
 
 Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
 
-### Planlagt: Indtastning + garn-katalog (brief 2026-04-27)
+### Planlagt: Brugt op-rækker bevarer antal + per-projekt-rækker (Bug 5, 2026-05-05)
+
+Fra Hannahs feedback: Brugt op-rækker bør bevare antal ngl (i stedet for at dumpe til 0) og vises pr. projekt så samme garn kan figurere flere gange i Mit Garn — én række per projekt det blev brugt op til.
+
+**Datamodel-skift**: stop med at sætte `quantity=0` på Brugt op-rækker. Bevar antallet brugt til det specifikke projekt.
+
+**Filer der skal røres:**
+- `lib/supabase/mappers.ts` — `toDb` (fjern `isBrugtOp ? 0` logikken) + `markYarnAsBrugtOp` (sæt ikke quantity=0)
+- `lib/yarn-finalize.ts` — `finalizeYarnLines`: fjern `quantity:0` override i extraOnNew til splitYarnItemRow så split-qty bevares
+- `lib/yarn-finalize.ts` — `revertCascadedYarns`: brug row's quantity i stedet for SUM yarn_usage (mere korrekt nu hvor quantity er bevaret)
+- `components/app/BrugtOpFoldeUd.tsx` — tilføj editerbar "Antal nøgler brugt"-felt (default = nuværende antal)
+- `components/app/Garnlager.jsx` — verificér at Brugt-op-rækker vises pr. projekt (cascade-split opretter allerede separate rækker)
+- Migration: backfill eksisterende Brugt op-rækker fra yarn_usage.quantity_used (matchet via brugt_til_projekt_id eller fri-tekst-match for legacy)
+- Eksisterende tests der asserter quantity=0 for Brugt op (~5-6 tests)
+
+**Acceptkriterier:**
+- Marker garn med 5 ngl som Brugt op via BrugtOpFoldeUd → row har quantity=5 (ikke 0), brugt_til_projekt_id sat
+- Cascade fra projekt-færdig → split bevarer antallet (ikke quantity=0 længere)
+- Mit Garn-listen viser 2 separate Brugt-op-rækker når samme garn er brugt op i 2 forskellige projekter
+- Backfill-migration retter eksisterende Brugt op-rækker korrekt
+- De-cascade restaurerer korrekt antal (test mod begge stier — quantity bevaret OG legacy quantity=0-rækker)
+
+**Estimat**: middel — ca. 200 linjer kode + migration + 6-8 test-opdateringer.
+
+**Kør med**: `/ny-feature Brugt op-antal + per-projekt-rækker`
+
+
 
 Stort brief om hele indtastnings-flowet og bidragsflow til STRIQs garn-katalog. Nedbrudt til 8 sekventerbare features. Tre datakilder skal være visuelt adskilte gennem hele appen: **grøn = katalog (read-only)**, **lilla = AI-forslag**, **neutral = bruger-input**.
 

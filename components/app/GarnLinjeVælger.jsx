@@ -74,6 +74,9 @@ export default function GarnLinjeVælger({
   catalogSearch,            // <YarnCatalogSearch>-komponent passes ind så vi ikke laver dobbelt-import
   catalogColors = [],       // colors for det aktuelt valgte katalog-garn
   onSelectCatalogColor,     // (color) => void
+  onlyOnStock = false,      // Bug 3 fix (2026-05-05): filtrér picker til kun "På lager"-rækker
+                            // for nye linjer, så bruger ikke pikker en I-brug-række
+                            // (allokering springes over, invariant brydes).
 }) {
   const initialResolved = initialTab || (line?.yarnItemId || line?.catalogYarnId
     ? inferTabFromLine(line)
@@ -81,6 +84,13 @@ export default function GarnLinjeVælger({
   const [tab, setTab] = useState(initialResolved)
 
   function patch(p) { onChange({ ...line, ...p }) }
+
+  // Filtrér til kun "På lager"-rækker når onlyOnStock=true. Hvis brugeren
+  // redigerer en eksisterende linje hvis yarn_item er "I brug", inkluderer vi
+  // den så valget bevares (ellers ville selectedYarn-fallback i pickeren miste kontekst).
+  const filteredYarnItems = onlyOnStock
+    ? userYarnItems.filter(y => y.status === 'På lager' || y.id === line?.yarnItemId)
+    : userYarnItems
 
   return (
     <div style={{ border: '1px solid #EDE7D8', background: '#F9F6F0', borderRadius: 10, padding: 10 }}>
@@ -91,7 +101,7 @@ export default function GarnLinjeVælger({
           <TabBar tab={tab} setTab={setTab} />
 
           {tab === TAB_MIT_GARN && (
-            <FraMitGarnTab line={line} patch={patch} userYarnItems={userYarnItems} />
+            <FraMitGarnTab line={line} patch={patch} userYarnItems={filteredYarnItems} />
           )}
 
           {tab === TAB_KATALOG && (

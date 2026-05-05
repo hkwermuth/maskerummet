@@ -16,7 +16,7 @@ import { dedupeYarnNameFromBrand, yarnDisplayLabel } from '@/lib/yarn-display'
 import { exportProjekter } from '@/lib/export/exportProjekter'
 import { formatDanish } from '@/lib/date/formatDanish'
 import { findYarnItemMatch, returnYarnLinesToStash } from '@/lib/yarn-return'
-import { allocateYarnToProject, validateLineStock } from '@/lib/yarn-allocate'
+import { allocateYarnToProject, applyAllocationDelta, validateLineStock } from '@/lib/yarn-allocate'
 import {
   classifyFinalizableLines,
   finalizeYarnLines,
@@ -649,28 +649,11 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
 
   function setF(k, v) { setForm(p => ({ ...p, [k]: v })) }
   function setLine(i, patch) {
-    // Dup-merge: hvis patch ændrer linjens identitet OG det matcher en anden
-    // linje i projektet, spørg brugeren om de skal lægges sammen.
-    if (patchTouchesIdentity(patch)) {
-      const lines = form.yarnLines ?? []
-      const candidate = { ...(lines[i] ?? {}), ...patch }
-      const dupIdx = findDuplicateLineIndex(lines, candidate, i)
-      if (dupIdx !== -1) {
-        const ok = typeof window !== 'undefined' && window.confirm(
-          'Du har allerede dette garn på projektet. Læg sammen til én linje?'
-        )
-        if (ok) {
-          const sumQty = Number(lines[dupIdx].quantityUsed ?? 0) + Number(candidate.quantityUsed ?? 0)
-          setForm(p => ({
-            ...p,
-            yarnLines: (p.yarnLines ?? [])
-              .map((l, idx) => idx === dupIdx ? { ...l, quantityUsed: sumQty } : l)
-              .filter((_, idx) => idx !== i),
-          }))
-          return
-        }
-      }
-    }
+    // Bug 4 fix (2026-05-05): dup-merge-prompten er flyttet til handleSave-tid
+    // så brugeren har mulighed for at skrive antal-nøgler FØR den fyrer. Tidligere
+    // triggede `patchTouchesIdentity` confirm-prompt allerede ved picker-valg —
+    // hvilket meant at sumQty altid blev eksisterende-qty + 0 (ny linje var
+    // tom), og brugerens påtænkte 5,5 ngl gik tabt.
     setForm(p => ({
       ...p,
       yarnLines: (p.yarnLines ?? []).map((l, idx) => idx === i ? { ...l, ...patch } : l),
@@ -766,6 +749,60 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
     return new Promise(resolve => {
       setFinalizeModalState({ classification, resolve })
     })
+  }
+
+  // Bug 4 (2026-05-05): merge-duplikater detekteres nu ved handleSave-tid, så
+  // brugeren har skrevet qty FØR vi spørger. Returnerer enten merged-liste
+  // (hvis mindst én bekræftelse skete) eller oprindelig liste. window.confirm-
+  // beskeden inkluderer konkrete antal så valget er gennemskueligt.
+  //
+  // `seen`-sættet forhindrer re-prompt for samme garn-identitet hvis bruger
+  // har sagt nej én gang — undgår at vise samme prompt for hver dup-par i
+  // en triple-dup-situation (A,B,C alle samme garn).
+  function mergeDuplicateLines(lines) {
+    if (typeof window === 'undefined') return lines
+    let merged = [...lines]
+    let mergeCount = 0
+    const declined = new Set()
+    function identityKey(l) {
+      if (l.yarnItemId)     return `id:${l.yarnItemId}`
+      if (l.catalogColorId) return `cat:${l.catalogColorId}`
+      const norm = s => (s ?? '').toString().trim().toLowerCase()
+      return `bnc:${norm(l.yarnBrand)}|${norm(l.colorName)}|${norm(l.colorCode)}`
+    }
+    for (let i = 0; i < merged.length; i++) {
+      const dupIdx = findDuplicateLineIndex(merged, merged[i], i)
+      if (dupIdx === -1) continue
+      // Behold altid linjen med LAVERE index, fjern den med højere — så prompten
+      // viser ngl i samme rækkefølge som linjerne i UI'et (først → anden).
+      const keepIdx   = Math.min(i, dupIdx)
+      const removeIdx = Math.max(i, dupIdx)
+      const a = merged[keepIdx]
+      const b = merged[removeIdx]
+      const aQty = Number(a.quantityUsed ?? 0) || 0
+      const bQty = Number(b.quantityUsed ?? 0) || 0
+      // Skip prompt hvis ÉN af linjerne er tom (qty=0).
+      if (aQty === 0 || bQty === 0) continue
+      const key = identityKey(a)
+      if (declined.has(key)) continue           // bruger har allerede sagt nej for denne identitet
+      const label = [a.yarnBrand, a.yarnName].filter(Boolean).join(' · ') || 'samme garn'
+      const sum = aQty + bQty
+      const ok = window.confirm(
+        `Du har ${label} på 2 linjer (${aQty} ngl + ${bQty} ngl). Læg sammen til én linje med ${sum} ngl?`
+      )
+      if (ok) {
+        merged = merged
+          .map((l, idx) => idx === keepIdx ? { ...l, quantityUsed: sum } : l)
+          .filter((_, idx) => idx !== removeIdx)
+        mergeCount++
+        i = -1                                   // restart for at finde flere dups
+      } else {
+        declined.add(key)
+      }
+    }
+    // Returnér merged hvis mindst én bekræftelse skete. Cancels på efterfølgende
+    // dup-par bevarer tidligere bekræftede merges (bevidst — bruger sagde ja én gang).
+    return mergeCount > 0 ? merged : lines
   }
 
   // Konvertér en yarn-line til FinalizableSource for lib/yarn-finalize.
@@ -1119,7 +1156,13 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         await returnYarnLinesToStash(supabase, user.id, returnable, returnDecisions)
       }
 
-      const keptIds = new Set(keptForms.map(l => l.id).filter(Boolean))
+      // Bug 4 fix (2026-05-05): merge-prompt for duplikat-linjer kører nu HER
+      // hvor brugeren har skrevet alle qty-felter. mergeDuplicateLines spørger
+      // brugeren med konkrete antal og returnerer enten merget liste eller
+      // original. Cancel-path: ingen DB-ændringer (vi er stadig før allocate).
+      const mergedKept = mergeDuplicateLines(keptForms)
+
+      const keptIds = new Set(mergedKept.map(l => l.id).filter(Boolean))
       const originalIds = (entry.yarnLines ?? []).map(l => l.id).filter(Boolean)
       const toDelete = originalIds.filter(id => !keptIds.has(id))
 
@@ -1128,17 +1171,14 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         if (dErr) throw dErr
       }
 
-      const lines = keptForms.filter(l =>
+      const lines = mergedKept.filter(l =>
         (l.yarnName || l.yarnBrand || l.colorName || l.colorCode || l.quantityUsed)
       )
       // Min-1-kravet er fjernet — et projekt kan have 0 garn-linjer.
 
       // Validér stock på alle NYE linjer før vi allokerer (Bella Koral-bug).
-      // Eksisterende linjer (med id) valideres ikke her — delta-håndtering er
-      // fremtidig udvidelse; for nu opdateres yarn_usage.quantity_used uden
-      // at decrement source.
       for (const l of lines) {
-        if (l.id) continue // eksisterende linje, skip stock-validering
+        if (l.id) continue // eksisterende linje — valideres af applyAllocationDelta
         const v = validateLineStock(
           { yarnItemId: l.yarnItemId ?? null, quantityUsed: Number(l.quantityUsed ?? 0) },
           userYarnItems,
@@ -1148,15 +1188,85 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         }
       }
 
-      // Allokér nye linjer fra lageret. Vi rører ikke ved eksisterende linjer
-      // (med id) for at undgå dobbelt-decrement.
+      // Allokér NYE linjer + apply delta/identity-change på EKSISTERENDE linjer.
+      // Bug 3 fix (2026-05-05): tre paths for eksisterende linjer:
+      //   - Identity uændret + delta=0:           skip (kun yarn_usage upsert af noter etc.)
+      //   - Identity uændret + delta!=0:          applyAllocationDelta
+      //   - Identity ÆNDRET (l.yarnItemId !== oldLine.yarnItemId):
+      //     full return af oldQty på gammel identitet + full allocate på ny.
       const allocatedLines = []
       for (const l of lines) {
+        const qty = Number(l.quantityUsed ?? 0)
         if (l.id) {
+          const oldLine = (entry.yarnLines ?? []).find(o => o.id === l.id)
+          const oldQty = Number(oldLine?.quantityUsed ?? 0)
+          const delta  = qty - oldQty
+          const identityChanged =
+            (oldLine?.yarnItemId ?? null) !== (l.yarnItemId ?? null)
+
+          if (identityChanged && form.status !== 'vil_gerne') {
+            // Full return af gammel identitets allokering — fungerer kun hvis
+            // den gamle linje var lager-koblet.
+            if (oldLine?.yarnItemId && oldQty > 0) {
+              await returnYarnLinesToStash(supabase, user.id, [{
+                yarnUsageId:    l.id,
+                yarnItemId:     oldLine.yarnItemId,
+                yarnName:       oldLine.yarnName    ?? null,
+                yarnBrand:      oldLine.yarnBrand   ?? null,
+                colorName:      oldLine.colorName   ?? null,
+                colorCode:      oldLine.colorCode   ?? null,
+                hex:            oldLine.hex         ?? null,
+                quantityUsed:   oldQty,
+                catalogYarnId:  oldLine.catalogYarnId  ?? null,
+                catalogColorId: oldLine.catalogColorId ?? null,
+              }], new Map())     // empty decisions → auto-merge ved by-yarn-item-id
+            }
+            // Full allocate på ny identitet hvis den er lager-koblet.
+            const newSourceItem = l.yarnItemId
+              ? userYarnItems.find(y => y.id === l.yarnItemId)
+              : null
+            if (l.yarnItemId && newSourceItem?.status === 'På lager' && qty > 0) {
+              const result = await allocateYarnToProject(
+                supabase, user.id,
+                {
+                  yarnItemId:     l.yarnItemId,
+                  yarnName:       l.yarnName       ?? null,
+                  yarnBrand:      l.yarnBrand      ?? null,
+                  colorName:      l.colorName      ?? null,
+                  colorCode:      l.colorCode      ?? null,
+                  hex:            l.hex            ?? null,
+                  catalogYarnId:  l.catalogYarnId  ?? null,
+                  catalogColorId: l.catalogColorId ?? null,
+                },
+                data.id,
+                qty,
+              )
+              allocatedLines.push({ ...l, yarnItemId: result.inUseYarnItemId })
+            } else {
+              allocatedLines.push(l)
+            }
+            continue
+          }
+
+          if (Math.abs(delta) > 0.001 && l.yarnItemId && form.status !== 'vil_gerne') {
+            await applyAllocationDelta(
+              supabase, user.id,
+              {
+                yarnItemId:     l.yarnItemId,
+                yarnName:       l.yarnName       ?? null,
+                yarnBrand:      l.yarnBrand      ?? null,
+                colorName:      l.colorName      ?? null,
+                colorCode:      l.colorCode      ?? null,
+                hex:            l.hex            ?? null,
+                catalogYarnId:  l.catalogYarnId  ?? null,
+                catalogColorId: l.catalogColorId ?? null,
+              },
+              delta,
+            )
+          }
           allocatedLines.push(l)
           continue
         }
-        const qty = Number(l.quantityUsed ?? 0)
         const sourceItem = l.yarnItemId
           ? userYarnItems.find(y => y.id === l.yarnItemId)
           : null
@@ -1546,6 +1656,7 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
                       canRemove={true}
                       status={form.status}
                       userYarnItems={userYarnItems}
+                      onlyOnStock={!l.id && form.status !== 'vil_gerne'}
                       catalogColors={colorsByYarnId.get(l.catalogYarnId) ?? []}
                       onSelectCatalogColor={c => {
                         setLine(i, {
@@ -1837,26 +1948,7 @@ function NytProjektModal({ user, onClose, onSaved }) {
 
   function setF(k, v) { setForm(p => ({ ...p, [k]: v })) }
   function setLine(i, patch) {
-    if (patchTouchesIdentity(patch)) {
-      const lines = form.yarnLines ?? []
-      const candidate = { ...(lines[i] ?? {}), ...patch }
-      const dupIdx = findDuplicateLineIndex(lines, candidate, i)
-      if (dupIdx !== -1) {
-        const ok = typeof window !== 'undefined' && window.confirm(
-          'Du har allerede dette garn på projektet. Læg sammen til én linje?'
-        )
-        if (ok) {
-          const sumQty = Number(lines[dupIdx].quantityUsed ?? 0) + Number(candidate.quantityUsed ?? 0)
-          setForm(p => ({
-            ...p,
-            yarnLines: (p.yarnLines ?? [])
-              .map((l, idx) => idx === dupIdx ? { ...l, quantityUsed: sumQty } : l)
-              .filter((_, idx) => idx !== i),
-          }))
-          return
-        }
-      }
-    }
+    // Bug 4 fix (2026-05-05): merge-prompt flyttet til save-tid (mergeDuplicateLines).
     setForm(p => ({
       ...p,
       yarnLines: (p.yarnLines ?? []).map((l, idx) => idx === i ? { ...l, ...patch } : l),
@@ -1867,6 +1959,45 @@ function NytProjektModal({ user, onClose, onSaved }) {
   }
   function removeLine(i) {
     setForm(p => ({ ...p, yarnLines: (p.yarnLines ?? []).filter((_, idx) => idx !== i) }))
+  }
+
+  function mergeDuplicateLines(lines) {
+    if (typeof window === 'undefined') return lines
+    let merged = [...lines]
+    let mergeCount = 0
+    const declined = new Set()
+    function identityKey(l) {
+      if (l.yarnItemId)     return `id:${l.yarnItemId}`
+      if (l.catalogColorId) return `cat:${l.catalogColorId}`
+      const norm = s => (s ?? '').toString().trim().toLowerCase()
+      return `bnc:${norm(l.yarnBrand)}|${norm(l.colorName)}|${norm(l.colorCode)}`
+    }
+    for (let i = 0; i < merged.length; i++) {
+      const dupIdx = findDuplicateLineIndex(merged, merged[i], i)
+      if (dupIdx === -1) continue
+      const a = merged[dupIdx]
+      const b = merged[i]
+      const aQty = Number(a.quantityUsed ?? 0) || 0
+      const bQty = Number(b.quantityUsed ?? 0) || 0
+      if (aQty === 0 || bQty === 0) continue
+      const key = identityKey(b)
+      if (declined.has(key)) continue
+      const label = [b.yarnBrand, b.yarnName].filter(Boolean).join(' · ') || 'samme garn'
+      const sum = aQty + bQty
+      const ok = window.confirm(
+        `Du har ${label} på 2 linjer (${aQty} ngl + ${bQty} ngl). Læg sammen til én linje med ${sum} ngl?`
+      )
+      if (ok) {
+        merged = merged
+          .map((l, idx) => idx === dupIdx ? { ...l, quantityUsed: sum } : l)
+          .filter((_, idx) => idx !== i)
+        mergeCount++
+        i = -1
+      } else {
+        declined.add(key)
+      }
+    }
+    return mergeCount > 0 ? merged : lines
   }
 
   async function ensureColorsLoaded(yarnId) {
@@ -2043,7 +2174,10 @@ function NytProjektModal({ user, onClose, onSaved }) {
         Object.assign(project, upd)
       }
 
-      const lines = (form.yarnLines ?? []).filter(l => (l.yarnName || l.yarnBrand || l.colorName || l.colorCode || l.quantityUsed))
+      // Bug 4 fix (2026-05-05): merge dup-linjer ved save så bruger har skrevet
+      // qty FØR vi spørger.
+      const mergedFormLines = mergeDuplicateLines(form.yarnLines ?? [])
+      const lines = mergedFormLines.filter(l => (l.yarnName || l.yarnBrand || l.colorName || l.colorCode || l.quantityUsed))
       // Min-1-kravet er fjernet: et projekt kan have 0 garn-linjer i alle statusser.
 
       // Validér stock før vi rører noget — afvis hvis brugeren har valgt
@@ -2268,6 +2402,7 @@ function NytProjektModal({ user, onClose, onSaved }) {
                   canRemove={true}
                   status={form.status}
                   userYarnItems={userYarnItems}
+                  onlyOnStock={form.status !== 'vil_gerne'}
                   catalogColors={colorsByYarnId.get(l.catalogYarnId) ?? []}
                   onSelectCatalogColor={c => {
                     setLine(i, {

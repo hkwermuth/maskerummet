@@ -185,7 +185,16 @@ describe('BrugNoeglerModal — note appendes til projects.notes med dato-stamp',
           }
         }
         if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
-        if (table === 'yarn_items') return { update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })) }
+        if (table === 'yarn_items') {
+          // Generisk passthrough-builder der ikke throws — yarn_items-detaljer
+          // testes i andre filer; her drejer det sig om project-side adfærd.
+          const b: Record<string, unknown> = {}
+          for (const m of ['select','eq','neq','in','is','ilike','gte','limit','order','update','insert','delete']) b[m] = vi.fn(() => b)
+          b.single = vi.fn().mockResolvedValue({ data: { id: 'y-stub' }, error: null })
+          b.maybeSingle = vi.fn().mockResolvedValue({ data: { quantity: 100 }, error: null })
+          b.then = (onF: (r: { data: unknown; error: unknown }) => unknown) => Promise.resolve({ data: [{ id: 'y-stub', quantity: 0 }], error: null }).then(onF)
+          return b
+        }
         return {}
       }),
     }
@@ -236,7 +245,16 @@ describe('BrugNoeglerModal — note appendes til projects.notes med dato-stamp',
           }
         }
         if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
-        if (table === 'yarn_items') return { update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })) }
+        if (table === 'yarn_items') {
+          // Generisk passthrough-builder der ikke throws — yarn_items-detaljer
+          // testes i andre filer; her drejer det sig om project-side adfærd.
+          const b: Record<string, unknown> = {}
+          for (const m of ['select','eq','neq','in','is','ilike','gte','limit','order','update','insert','delete']) b[m] = vi.fn(() => b)
+          b.single = vi.fn().mockResolvedValue({ data: { id: 'y-stub' }, error: null })
+          b.maybeSingle = vi.fn().mockResolvedValue({ data: { quantity: 100 }, error: null })
+          b.then = (onF: (r: { data: unknown; error: unknown }) => unknown) => Promise.resolve({ data: [{ id: 'y-stub', quantity: 0 }], error: null }).then(onF)
+          return b
+        }
         return {}
       }),
     }
@@ -334,7 +352,16 @@ describe('BrugNoeglerModal — projekt-liste-filtrering (sikkerhed + UX)', () =>
           }
         }
         if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
-        if (table === 'yarn_items') return { update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })) }
+        if (table === 'yarn_items') {
+          // Generisk passthrough-builder der ikke throws — yarn_items-detaljer
+          // testes i andre filer; her drejer det sig om project-side adfærd.
+          const b: Record<string, unknown> = {}
+          for (const m of ['select','eq','neq','in','is','ilike','gte','limit','order','update','insert','delete']) b[m] = vi.fn(() => b)
+          b.single = vi.fn().mockResolvedValue({ data: { id: 'y-stub' }, error: null })
+          b.maybeSingle = vi.fn().mockResolvedValue({ data: { quantity: 100 }, error: null })
+          b.then = (onF: (r: { data: unknown; error: unknown }) => unknown) => Promise.resolve({ data: [{ id: 'y-stub', quantity: 0 }], error: null }).then(onF)
+          return b
+        }
         return {}
       }),
     }
@@ -368,7 +395,16 @@ describe('BrugNoeglerModal — projekt-liste-filtrering (sikkerhed + UX)', () =>
           }
         }
         if (table === 'yarn_usage') return { insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn().mockResolvedValue({ data: { id: 'u' }, error: null }) })) })) }
-        if (table === 'yarn_items') return { update: vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) })) }
+        if (table === 'yarn_items') {
+          // Generisk passthrough-builder der ikke throws — yarn_items-detaljer
+          // testes i andre filer; her drejer det sig om project-side adfærd.
+          const b: Record<string, unknown> = {}
+          for (const m of ['select','eq','neq','in','is','ilike','gte','limit','order','update','insert','delete']) b[m] = vi.fn(() => b)
+          b.single = vi.fn().mockResolvedValue({ data: { id: 'y-stub' }, error: null })
+          b.maybeSingle = vi.fn().mockResolvedValue({ data: { quantity: 100 }, error: null })
+          b.then = (onF: (r: { data: unknown; error: unknown }) => unknown) => Promise.resolve({ data: [{ id: 'y-stub', quantity: 0 }], error: null }).then(onF)
+          return b
+        }
         return {}
       }),
     }
