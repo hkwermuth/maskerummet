@@ -46,12 +46,16 @@ begin
       yi.quantity,
       yi.image_url,
       yi.created_at,
+      -- Tekst-identitet vinder over katalog-uuid: to rækker med samme
+      -- brand+color_name+color_code er samme garn, selv hvis kun én er
+      -- katalog-koblet (Hannah's Råhvid 883150-bug). Katalog-uuid er kun
+      -- fallback når tekst er ufuldstændig.
       case
-        when yi.catalog_color_id is not null then yi.catalog_color_id::text
         when btrim(coalesce(yi.brand,'')) <> ''
          and btrim(coalesce(yi.color_name,'')) <> ''
          and btrim(coalesce(yi.color_code,'')) <> ''
           then 'bnc:' || lower(btrim(yi.brand)) || '|' || lower(btrim(yi.color_name)) || '|' || lower(btrim(yi.color_code))
+        when yi.catalog_color_id is not null then yi.catalog_color_id::text
         else null
       end as identity_key
     from public.yarn_items yi
@@ -149,12 +153,16 @@ begin
   with normalized2 as (
     select
       yi.user_id, yi.status, yi.brugt_til_projekt_id,
+      -- Tekst-identitet vinder over katalog-uuid: to rækker med samme
+      -- brand+color_name+color_code er samme garn, selv hvis kun én er
+      -- katalog-koblet (Hannah's Råhvid 883150-bug). Katalog-uuid er kun
+      -- fallback når tekst er ufuldstændig.
       case
-        when yi.catalog_color_id is not null then yi.catalog_color_id::text
         when btrim(coalesce(yi.brand,'')) <> ''
          and btrim(coalesce(yi.color_name,'')) <> ''
          and btrim(coalesce(yi.color_code,'')) <> ''
           then 'bnc:' || lower(btrim(yi.brand)) || '|' || lower(btrim(yi.color_name)) || '|' || lower(btrim(yi.color_code))
+        when yi.catalog_color_id is not null then yi.catalog_color_id::text
         else null
       end as identity_key
     from public.yarn_items yi

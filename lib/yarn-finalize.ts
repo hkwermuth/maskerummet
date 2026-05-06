@@ -450,14 +450,26 @@ type PaaLagerRow = IdentityRow & {
 }
 
 export function sameYarnIdentity(a: IdentityRow, b: IdentityRow): boolean {
-  if (a.catalog_color_id && b.catalog_color_id && a.catalog_color_id === b.catalog_color_id) {
-    return true
-  }
   const lower = (s: string | null) => (s ?? '').trim().toLowerCase()
-  if (!lower(a.brand) || !lower(a.color_name) || !lower(a.color_code)) return false
-  return (
-    lower(a.brand) === lower(b.brand) &&
-    lower(a.color_name) === lower(b.color_name) &&
-    lower(a.color_code) === lower(b.color_code)
-  )
+  const aHasText = !!(lower(a.brand) && lower(a.color_name) && lower(a.color_code))
+  const bHasText = !!(lower(b.brand) && lower(b.color_name) && lower(b.color_code))
+
+  // Tekst-identitet vinder: to rækker med samme brand+color_name+color_code er
+  // samme garn, uanset om kun én af dem også er katalog-koblet (Hannah's
+  // Råhvid 883150-bug 2026-05-06: én række havde catalog_color_id, en anden
+  // ikke, men begge var samme garn — de skulle merges).
+  if (aHasText && bHasText) {
+    return (
+      lower(a.brand) === lower(b.brand) &&
+      lower(a.color_name) === lower(b.color_name) &&
+      lower(a.color_code) === lower(b.color_code)
+    )
+  }
+
+  // Fallback til katalog-uuid kun når mindst én side mangler tekst-felter.
+  if (a.catalog_color_id && b.catalog_color_id) {
+    return a.catalog_color_id === b.catalog_color_id
+  }
+
+  return false
 }
