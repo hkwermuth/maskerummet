@@ -310,6 +310,13 @@ export async function allocateYarnToProject(
     } else {
       inUseYarnItemId = match.yarnItemId
       merged = true
+      // B2 (2026-05-06): backfill manglende metadata på target I-brug-række
+      // fra source. Bevarer target's eksisterende non-NULL værdier — overskriver
+      // ikke. Fixer Hannah's bug hvor billede uploadet på lager-rækken ikke
+      // blev synlig på den merged I-brug-række.
+      if (source.yarnItemId) {
+        await backfillMetadataFromSource(supabase, userId, source.yarnItemId, match.yarnItemId)
+      }
     }
   } else {
     inUseYarnItemId = await createInUseRow(supabase, userId, source, qty, projectId)
@@ -320,6 +327,63 @@ export async function allocateYarnToProject(
     decrementedFrom: source.yarnItemId,
     merged,
   }
+}
+
+// ── Metadata-backfill (B2) ───────────────────────────────────────────────────
+//
+// Når vi merger til en eksisterende I-brug-række via allocateYarnToProject,
+// skal target arve metadata fra source hvis target har NULL og source har
+// værdi. Bevarer target's eksisterende non-NULL — overskriver aldrig.
+//
+// Felter: image_url, fiber, yarn_weight, hex_colors, gauge, meters, notes,
+// color_category, catalog_image_url. Disse er metadata der ikke ændrer sig
+// mellem statusser men ofte mangler på en ad-hoc oprettet I-brug-række.
+
+const METADATA_BACKFILL_FIELDS = [
+  'image_url',
+  'fiber',
+  'yarn_weight',
+  'hex_colors',
+  'gauge',
+  'meters',
+  'notes',
+  'color_category',
+  'catalog_image_url',
+] as const
+
+async function backfillMetadataFromSource(
+  supabase:     SupabaseClient,
+  userId:       string,
+  sourceId:     string,
+  targetId:     string,
+): Promise<void> {
+  const fields = METADATA_BACKFILL_FIELDS.join(', ')
+  const [{ data: srcRow }, { data: tgtRow }] = await Promise.all([
+    supabase.from('yarn_items').select(fields).eq('id', sourceId).eq('user_id', userId).maybeSingle(),
+    supabase.from('yarn_items').select(fields).eq('id', targetId).eq('user_id', userId).maybeSingle(),
+  ])
+  if (!srcRow || !tgtRow) return
+
+  const src = srcRow as Record<string, unknown>
+  const tgt = tgtRow as Record<string, unknown>
+
+  const backfill: Record<string, unknown> = {}
+  for (const field of METADATA_BACKFILL_FIELDS) {
+    const tv = tgt[field]
+    const sv = src[field]
+    const targetEmpty = tv === null || tv === undefined || tv === ''
+    const sourceHas   = sv !== null && sv !== undefined && sv !== ''
+    if (targetEmpty && sourceHas) backfill[field] = sv
+  }
+
+  if (Object.keys(backfill).length === 0) return
+
+  const { error: updErr } = await supabase
+    .from('yarn_items')
+    .update(backfill)
+    .eq('id', targetId)
+    .eq('user_id', userId)
+  if (updErr) throw updErr
 }
 
 async function createInUseRow(

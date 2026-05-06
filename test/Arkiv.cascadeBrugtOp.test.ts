@@ -398,3 +398,97 @@ describe('AC-9: race condition — yarn_item slettet efter yarn_usage.insert', (
     })
   })
 })
+
+// ── B1: Arkiv-niveau slut-til-slut: to yarn_usage paa samme yarn_item → EN Brugt op-raekke ──
+//
+// Verificerer at Arkiv.jsx-flowet (classifyFinalizableLines + finalizeYarnLines)
+// haandterer Hannah's Bella Koral-bug korrekt:
+//   - To yarn_usage-linjer peger paa samme yarn_item_id='yarn-bella-koral'
+//   - Begge linjer haenger paa samme projekt ('proj-sweater')
+//   - classifyFinalizableLines klassificerer dem som finalizable (ingen andre projekter)
+//   - finalizeYarnLines grupperer dem og opretter KUN én Brugt op-raekke
+
+describe('B1: end-to-end: to yarn_usage paa samme yarn_item giver EN Brugt op-raekke', () => {
+  it('Hannah Bella Koral-bug: to yarn_usage → EN Brugt op-raekke med summeret qty', async () => {
+    // Fase 1: classifyFinalizableLines
+    //   For hver yarn_usage-linje:
+    //     1. yarn_items-lookup (maybeSingle) → 'I brug', qty=8
+    //     2. yarn_usage-check andre projekter (then) → []
+    //   To linjer → 4 from-kald.
+    //
+    // Fase 2: finalizeYarnLines
+    //   Gruppe: yarnItemId='yarn-bella-koral', totalUseUp=8=source.quantity → source flippes direkte.
+    //     5. splitYarnItemRow fetch source
+    //     6. update source → Brugt op
+
+    const updateCaptured = vi.fn()
+    let callCount = 0
+    const supabase = {
+      from: vi.fn(() => {
+        callCount++
+        // Fase 1: classifyFinalizableLines (4 kald: 2x yarn_items + 2x yarn_usage)
+        if (callCount === 1) return makeThenableBuilder({
+          data: { id: 'yarn-bella-koral', status: 'I brug', quantity: 8 },
+          error: null,
+        })
+        if (callCount === 2) return makeThenableBuilder({ data: [], error: null })  // ingen andre projekter for usage-1
+        if (callCount === 3) return makeThenableBuilder({
+          data: { id: 'yarn-bella-koral', status: 'I brug', quantity: 8 },
+          error: null,
+        })
+        if (callCount === 4) return makeThenableBuilder({ data: [], error: null })  // ingen andre projekter for usage-2
+
+        // Fase 2: finalizeYarnLines (2 kald: fetch + update)
+        if (callCount === 5) return makeThenableBuilder({
+          data: { id: 'yarn-bella-koral', quantity: 8, name: 'Bella', brand: 'Permin' },
+          error: null,
+        })
+        // kald 6: update source direkte (totalUseUp=8 === source.quantity=8)
+        const b = makeThenableBuilder({ data: null, error: null })
+        b.update = vi.fn((payload: unknown) => {
+          updateCaptured(payload)
+          return b
+        })
+        return b
+      }),
+    } as never
+
+    // Trin 1: classifyFinalizableLines
+    const sources: FinalizableSource[] = [
+      makeSource({ yarnUsageId: 'usage-koral-1', yarnItemId: 'yarn-bella-koral', quantityUsed: 5 }),
+      makeSource({ yarnUsageId: 'usage-koral-2', yarnItemId: 'yarn-bella-koral', quantityUsed: 3 }),
+    ]
+    const classification = await classifyFinalizableLines(
+      supabase, 'user-1', 'proj-sweater', sources,
+    )
+    expect(classification.finalizable).toHaveLength(2)  // begge linjer er finalizable
+
+    // Trin 2: finalizeYarnLines med begge linjer
+    const decisions = new Map<string, FinalizeDecision>([
+      ['usage-koral-1', { kind: 'brugt-op' }],
+      ['usage-koral-2', { kind: 'brugt-op' }],
+    ])
+    const result = await finalizeYarnLines(
+      supabase, 'user-1',
+      classification.finalizable,
+      decisions,
+      'Bella Sweater', 'proj-sweater', '2026-05-06',
+    )
+
+    // EN Brugt op-raekke (ikke to separate)
+    expect(result.markedBrugtOp).toHaveLength(1)
+    expect(result.markedBrugtOp[0]).toBe('yarn-bella-koral')
+
+    // Korrekt update-payload med summeret qty i status (source flippes direkte)
+    expect(updateCaptured).toHaveBeenCalledWith({
+      status:               'Brugt op',
+      brugt_til_projekt:    'Bella Sweater',
+      brugt_til_projekt_id: 'proj-sweater',
+      brugt_op_dato:        '2026-05-06',
+    })
+
+    // Ingen redirect-kald (newYarnItemId === sourceYarnItemId ved direct-flip)
+    // 6 kald total: 4 (classify) + 2 (finalize)
+    expect(callCount).toBe(6)
+  })
+})

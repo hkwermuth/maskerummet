@@ -15,6 +15,7 @@
 // til INSERT i stedet for at kaste.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { consolidateOnStockDuplicates } from './yarn-consolidate'
 
 export type ReturnableLine = {
   yarnUsageId: string
@@ -27,6 +28,19 @@ export type ReturnableLine = {
   quantityUsed: number | null
   catalogYarnId: string | null
   catalogColorId: string | null
+  // B2 (2026-05-06): valgfrie metadata-felter. Hvis caller udfylder dem,
+  // bruges de direkte i INSERT-grenen. Hvis udeladt OG line.yarnItemId er
+  // sat, henter returnYarnLinesToStash dem fra source-rækken så billede +
+  // fiber/vægt-info ikke tabes ved status-skift.
+  imageUrl?: string | null
+  fiber?: string | null
+  yarnWeight?: string | null
+  hexColors?: string[] | null
+  gauge?: string | null
+  meters?: number | null
+  notes?: string | null
+  colorCategory?: string | null
+  catalogImageUrl?: string | null
 }
 
 export type MatchKind = 'by-yarn-item-id' | 'by-catalog-color' | 'by-name-color'
@@ -186,10 +200,15 @@ export async function returnYarnLinesToStash(
       const { data, error } = await supabase
         .from('yarn_items')
         .update({
-          quantity:          newQty,
-          status:            'På lager',
-          brugt_til_projekt: null,
-          brugt_op_dato:     null,
+          quantity:             newQty,
+          status:               'På lager',
+          brugt_til_projekt:    null,
+          // Ryd UUID-marker så en evt. behold-split-marker ikke overlever en
+          // retur-cyklus og senere får revertCascadedYarns til at flippe hele
+          // (oppustede) rækken til 'I brug' (dobbelt-tælling). Reviewer-fund
+          // 2026-05-06.
+          brugt_til_projekt_id: null,
+          brugt_op_dato:        null,
         })
         .eq('id', match.yarnItemId)
         .eq('user_id', userId)
@@ -197,11 +216,20 @@ export async function returnYarnLinesToStash(
       if (error) throw error
       if (data && data.length > 0) {
         summary.updated.push(match.yarnItemId)
+        // B3 (2026-05-06): efter merge til lager, konsolidér eventuelle andre
+        // duplikater for samme garn-identitet (Hannah's Råhvid 883150-bug
+        // hvor to På lager-rækker eksisterede parallelt).
+        await consolidateOnStockDuplicates(supabase, userId, match.yarnItemId)
         continue
       }
       // 0 rækker opdateret → target er slettet i mellemtiden. Fald igennem
       // til INSERT-grenen så brugeren ikke mister sit garn.
     }
+
+    // B2 (2026-05-06): hent metadata fra source-yarn_item hvis caller ikke har
+    // udfyldt dem. Sikrer at billede + fiber/vægt-info bevares når en ny På
+    // lager-række oprettes (fx hvis match=null eller race ved merge).
+    const metadata = await resolveLineMetadata(supabase, userId, line)
 
     // Insert-grenen (ingen match, decision='separate', eller race ved merge)
     const { data: inserted, error: insErr } = await supabase
@@ -217,12 +245,64 @@ export async function returnYarnLinesToStash(
         status:           'På lager',
         catalog_yarn_id:  line.catalogYarnId,
         catalog_color_id: line.catalogColorId,
+        ...metadata,
       }])
       .select('id')
       .single()
     if (insErr) throw insErr
-    summary.created.push((inserted as { id: string }).id)
+    const newId = (inserted as { id: string }).id
+    summary.created.push(newId)
+    // B3: konsolidér efter insert (hvis findYarnItemMatch returnerede null
+    // pga. race eller manglende felter, men der nu findes match-rækker).
+    await consolidateOnStockDuplicates(supabase, userId, newId)
   }
 
   return summary
+}
+
+// ── Metadata-fallback ────────────────────────────────────────────────────────
+
+// Henter metadata-felter fra yarn_items hvis caller ikke har udfyldt dem på
+// ReturnableLine. Bevarer caller-værdier (de vinder over DB-værdier hvis
+// begge er sat). Mappes til DB-kolonne-navne.
+async function resolveLineMetadata(
+  supabase: SupabaseClient,
+  userId:   string,
+  line:     ReturnableLine,
+): Promise<Record<string, unknown>> {
+  const explicit: Record<string, unknown> = {}
+  if (line.imageUrl !== undefined)        explicit.image_url        = line.imageUrl
+  if (line.fiber !== undefined)           explicit.fiber            = line.fiber
+  if (line.yarnWeight !== undefined)      explicit.yarn_weight      = line.yarnWeight
+  if (line.hexColors !== undefined)       explicit.hex_colors       = line.hexColors
+  if (line.gauge !== undefined)           explicit.gauge            = line.gauge
+  if (line.meters !== undefined)          explicit.meters           = line.meters
+  if (line.notes !== undefined)           explicit.notes            = line.notes
+  if (line.colorCategory !== undefined)   explicit.color_category   = line.colorCategory
+  if (line.catalogImageUrl !== undefined) explicit.catalog_image_url = line.catalogImageUrl
+
+  // Ingen yarn_item_id → ingen DB-fallback mulig. Returner kun explicit.
+  if (!line.yarnItemId) return explicit
+
+  // Felter caller IKKE har udfyldt — hent fra source.
+  const fields = ['image_url', 'fiber', 'yarn_weight', 'hex_colors', 'gauge', 'meters', 'notes', 'color_category', 'catalog_image_url'] as const
+  const missing = fields.filter(f => !(f in explicit))
+  if (missing.length === 0) return explicit
+
+  const { data: src } = await supabase
+    .from('yarn_items')
+    .select(missing.join(', '))
+    .eq('id', line.yarnItemId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (!src) return explicit
+
+  const merged = { ...explicit }
+  const srcRow = src as Record<string, unknown>
+  for (const f of missing) {
+    if (srcRow[f] !== null && srcRow[f] !== undefined) {
+      merged[f] = srcRow[f]
+    }
+  }
+  return merged
 }

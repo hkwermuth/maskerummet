@@ -180,6 +180,18 @@ export async function finalizeYarnLines(
   const markedBrugtOp: string[] = []
   const keptOnStock:   string[] = []
 
+  // B1 (2026-05-06): Gruppér på yarn_item_id så flere yarn_usage-linjer der
+  // peger på samme garn på samme projekt konsolideres til én cascade-split
+  // i stedet for at oprette duplikat-rækker (Hannah's Bella Koral-bug).
+  type Group = {
+    yarnItemId: string
+    entries:    FinalizableEntry[]
+    totalQty:   number
+    totalKeep:  number
+    totalUseUp: number
+  }
+  const groups = new Map<string, Group>()
+
   for (const entry of finalizable) {
     const yarnItemId = entry.source.yarnItemId
     if (!yarnItemId) continue
@@ -195,16 +207,30 @@ export async function finalizeYarnLines(
       : 0
     const useUp = qty - keepOnStock
 
+    let group = groups.get(yarnItemId)
+    if (!group) {
+      group = { yarnItemId, entries: [], totalQty: 0, totalKeep: 0, totalUseUp: 0 }
+      groups.set(yarnItemId, group)
+    }
+    group.entries.push(entry)
+    group.totalQty   += qty
+    group.totalKeep  += keepOnStock
+    group.totalUseUp += useUp
+  }
+
+  for (const group of groups.values()) {
+    const { yarnItemId, entries, totalKeep, totalUseUp } = group
+
     // Step 1: hvis nogen del skal beholdes på lager, split den ud først.
     // Splittet markeres med brugt_til_projekt_id som "tilhørs-marker" så
     // revertCascadedYarns kan finde den (utraditionelt på en På lager-række,
     // men nødvendigt uden ny kolonne — se kommentar dér).
-    if (keepOnStock > 0) {
+    if (totalKeep > 0) {
       const lagerSplit = await splitYarnItemRow(
         supabase,
         userId,
         yarnItemId,
-        keepOnStock,
+        totalKeep,
         'På lager',
         {
           brugt_til_projekt:    null,
@@ -215,17 +241,17 @@ export async function finalizeYarnLines(
       keptOnStock.push(lagerSplit.newYarnItemId)
     }
 
-    // Step 2: resten markeres brugt op. Hvis useUp===0 (behold-full), skip.
-    // Bug 5 (2026-05-05): rækken bevarer `useUp` som quantity (ikke 0) så Mit
-    // Garn kan vise faktisk forbrug pr. projekt. splitYarnItemRow sætter
-    // automatisk quantity=useUp på den nye række (eller bevarer source.quantity
-    // når useUp===total og source flippes direkte).
-    if (useUp > 0) {
+    // Step 2: resten markeres brugt op. Hvis totalUseUp===0 (behold-full), skip.
+    // Bug 5 (2026-05-05): rækken bevarer `totalUseUp` som quantity (ikke 0) så
+    // Mit Garn kan vise faktisk forbrug pr. projekt. splitYarnItemRow sætter
+    // automatisk quantity=totalUseUp på den nye række (eller bevarer
+    // source.quantity når totalUseUp===total og source flippes direkte).
+    if (totalUseUp > 0) {
       const brugtOpSplit = await splitYarnItemRow(
         supabase,
         userId,
         yarnItemId,
-        useUp,
+        totalUseUp,
         'Brugt op',
         {
           brugt_til_projekt:    projektTitel || null,
@@ -234,15 +260,18 @@ export async function finalizeYarnLines(
         },
       )
 
-      // Redirect yarn_usage til Brugt op-rækken så revert kan finde den via
-      // SUM(yarn_usage.quantity_used) → restored I brug-quantity.
+      // Redirect ALLE yarn_usage-id'er i gruppen til den ene Brugt op-række så
+      // revert kan finde dem via SUM(yarn_usage.quantity_used) → restored I
+      // brug-quantity.
       if (brugtOpSplit.newYarnItemId !== brugtOpSplit.sourceYarnItemId) {
-        const { error: redirErr } = await supabase
-          .from('yarn_usage')
-          .update({ yarn_item_id: brugtOpSplit.newYarnItemId })
-          .eq('id', entry.source.yarnUsageId)
-          .eq('user_id', userId)
-        if (redirErr) throw redirErr
+        for (const entry of entries) {
+          const { error: redirErr } = await supabase
+            .from('yarn_usage')
+            .update({ yarn_item_id: brugtOpSplit.newYarnItemId })
+            .eq('id', entry.source.yarnUsageId)
+            .eq('user_id', userId)
+          if (redirErr) throw redirErr
+        }
       }
 
       markedBrugtOp.push(brugtOpSplit.newYarnItemId)
@@ -404,7 +433,7 @@ export async function revertCascadedYarns(
 
 // ── Identity-match helper ────────────────────────────────────────────────────
 
-type IdentityRow = {
+export type IdentityRow = {
   id:                string
   catalog_color_id:  string | null
   brand:             string | null
@@ -420,7 +449,7 @@ type PaaLagerRow = IdentityRow & {
   quantity: number | null
 }
 
-function sameYarnIdentity(a: IdentityRow, b: IdentityRow): boolean {
+export function sameYarnIdentity(a: IdentityRow, b: IdentityRow): boolean {
   if (a.catalog_color_id && b.catalog_color_id && a.catalog_color_id === b.catalog_color_id) {
     return true
   }

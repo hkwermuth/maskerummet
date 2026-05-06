@@ -317,7 +317,19 @@ describe('allocateYarnToProject – AC-1', () => {
   })
 
   it('merger til eksisterende I-brug-række når match findes (AC-6 dup-merge ved allokering)', async () => {
+    // Kald-rækkefølge (merge-gren med catalogColorId):
+    //   1: decrementYarnItemQuantity fetch maybeSingle
+    //   2: decrementYarnItemQuantity update gte
+    //   3: findInUseRowMatch catalog limit
+    //   4: UPDATE I-brug-raekken (forøg quantity)
+    //   5: backfillMetadataFromSource: source maybeSingle (Promise.all)
+    //   6: backfillMetadataFromSource: target maybeSingle (Promise.all)
+    //   [ingen 7: ingen felter at backfille → ingen backfill-update]
     const updateSelectFn = vi.fn().mockResolvedValue({ data: [{ id: 'in-use-1' }], error: null })
+    const nullMetadata = {
+      image_url: null, fiber: null, yarn_weight: null, hex_colors: null,
+      gauge: null, meters: null, notes: null, color_category: null, catalog_image_url: null,
+    }
 
     let callCount = 0
     const supabase = {
@@ -344,7 +356,7 @@ describe('allocateYarnToProject – AC-1', () => {
           }
         }
         if (callCount === 3) {
-          // findInUseRowMatch → catalog match
+          // findInUseRowMatch: catalog match
           return {
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
@@ -352,15 +364,24 @@ describe('allocateYarnToProject – AC-1', () => {
             limit: vi.fn().mockResolvedValue({ data: [IN_USE_ROW], error: null }),
           }
         }
-        // UPDATE: forøg quantity på I-brug-rækken
-        return {
-          update: vi.fn(() => ({
-            eq: vi.fn(() => ({
+        if (callCount === 4) {
+          // UPDATE I-brug-raekken (forøg quantity)
+          return {
+            update: vi.fn(() => ({
               eq: vi.fn(() => ({
-                select: updateSelectFn,
+                eq: vi.fn(() => ({
+                  select: updateSelectFn,
+                })),
               })),
             })),
-          })),
+          }
+        }
+        // kald 5+6: backfillMetadataFromSource reads (Promise.all parallel)
+        // begge returnerer null-metadata → ingen backfill-update
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: nullMetadata, error: null }),
         }
       }),
     } as never
