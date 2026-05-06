@@ -168,6 +168,7 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
   const [externalUrl, setExternalUrl] = useState('')
   const [suggestNote, setSuggestNote] = useState('')
   const [suggestErr, setSuggestErr] = useState<string | null>(null)
+  const [showAllSubs, setShowAllSubs] = useState(false)
 
   async function loadAll() {
     setLoading(true); setSaveErr(null)
@@ -385,7 +386,7 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
       </div>
 
       <ul className="divide-y divide-striq-border border border-striq-border rounded-lg overflow-hidden bg-white">
-        {orderedSubstitutions.map(({ sub: s, effectiveVerdict: effVerdict, overridden, summary: sum }) => {
+        {(showAllSubs ? orderedSubstitutions : orderedSubstitutions.slice(0, 3)).map(({ sub: s, effectiveVerdict: effVerdict, overridden, summary: sum }) => {
           const slug = toSlug(s.producer, s.name, s.series)
           const my = myVoteByCandidate[s.yarn_id] ?? null
           const totalVotes = sum.perfekt + sum.god + sum.forbehold + sum.virker_ikke
@@ -459,6 +460,21 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
           )
         })}
       </ul>
+
+      {orderedSubstitutions.length > 3 && (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setShowAllSubs((v) => !v)}
+            aria-expanded={showAllSubs}
+            className="text-sm text-striq-sage underline hover:text-striq-link"
+          >
+            {showAllSubs
+              ? 'Vis færre alternativer'
+              : `Vis flere alternativer (${orderedSubstitutions.length - 3})`}
+          </button>
+        </div>
+      )}
 
       {(suggestions.length > 0 || myPendingExternal.length > 0) && (
         <section className="mt-8">

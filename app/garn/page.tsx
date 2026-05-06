@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import type { Yarn } from '@/lib/types'
 import { YarnFilters } from '@/components/catalog/YarnFilters'
@@ -11,11 +12,6 @@ export const metadata = {
   description: 'Dansk garn-katalog med fibre, løbelængde, pinde, strikkefasthed, pleje og oprindelse.',
 }
 
-// Skift variant her for at prøve et andet logo:
-//   'garn-noegle-trio'  – tre garnnøgler i sage/cream/dusty pink
-//   'garn-streng'       – streng/hank med papir-banderole
-//   'garn-kage-pinde'   – garnkage med strikkepinde stikkende op
-//   'garn-typer-trio'   – streng + nøgle + cone side om side (anbefales)
 const HERO_VARIANT: Variant = 'garn-typer-trio'
 
 function GarnHero() {
@@ -34,7 +30,7 @@ function GarnHero() {
     >
       <div
         style={{
-          maxWidth: 1080, margin: '0 auto',
+          maxWidth: 1200, margin: '0 auto',
           display: 'flex', gap: 28,
           alignItems: 'center', justifyContent: 'space-between',
           flexWrap: 'wrap',
@@ -95,9 +91,20 @@ export default async function GarnPage() {
   const yarns = (data ?? []) as Yarn[]
 
   return (
-    <div>
-      <GarnHero />
-      <YarnFilters yarns={yarns} editorHref={showEditor ? '/garn/admin' : undefined} />
+    <div
+      style={{
+        marginLeft: 'calc(50% - 50vw)',
+        marginRight: 'calc(50% - 50vw)',
+        paddingLeft: 20,
+        paddingRight: 20,
+      }}
+    >
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+        <GarnHero />
+        <Suspense fallback={<div className="text-xs text-striq-muted">Indlæser…</div>}>
+          <YarnFilters yarns={yarns} editorHref={showEditor ? '/garn/admin' : undefined} />
+        </Suspense>
+      </div>
     </div>
   )
 }

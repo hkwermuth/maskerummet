@@ -1,17 +1,52 @@
 // Danske labels og værdi-formattering for enum-felter fra Supabase.
 
 const THICKNESS: Record<string, string> = {
-  lace: 'lace (meget tyndt)',
-  light_fingering: 'light fingering (tyndt)',
-  fingering: 'fingering (tyndt)',
-  sport: 'sport (let)',
-  dk: 'DK (medium)',
-  worsted: 'worsted (medium)',
-  aran: 'aran (kraftigt)',
-  bulky: 'bulky (tykt)',
-  super_bulky: 'super bulky (meget tykt)',
-  jumbo: 'jumbo',
+  lace:            'lace (ultra tyndt garn — fx sjaler og blonder)',
+  light_fingering: 'light fingering (meget tyndt garn)',
+  fingering:       'fingering (tyndt garn — fx sokker og fine sjaler)',
+  sport:           'sport (let garn)',
+  dk:              'DK (= Double Knitting — medium-let garn)',
+  worsted:         'worsted (medium garn)',
+  aran:            'aran (kraftigt garn)',
+  bulky:           'bulky (tykt garn)',
+  super_bulky:     'super bulky (meget tykt garn)',
+  jumbo:           'jumbo (ekstremt tykt garn)',
+  unspun:          'uspundet (specialgarn — uden snoning)',
 }
+
+/** Kanonisk rækkefølge: tyndeste øverst, tykkeste nederst, særtyper sidst. */
+export const THICKNESS_ORDER: readonly string[] = [
+  'lace',
+  'light_fingering',
+  'fingering',
+  'sport',
+  'dk',
+  'worsted',
+  'aran',
+  'bulky',
+  'super_bulky',
+  'jumbo',
+  'unspun',
+]
+
+const CERTIFICATIONS: Record<string, string> = {
+  'Oeko-Tex Standard 100': 'Oeko-Tex Standard 100 — testet fri for sundhedsskadelige stoffer',
+  'GOTS':                  'GOTS — økologisk fra fiber til færdigt produkt',
+  'OCS':                   'OCS — verificerer økologisk fiber-indhold',
+  'RWS':                   'RWS — dyrevelfærd og bæredygtig fåreavl',
+  'RMS':                   'RMS — dyrevelfærd for mohairgeder',
+  'RAS':                   'RAS — dyrevelfærd for alpakaer',
+}
+
+/** Saml inkonsistente skrivemåder (Oeko-Tex 100, Oeko-Tex Standard 100 (Class I)…) til ét navn. */
+export function normalizeCertification(c: string): string {
+  const t = c.trim()
+  if (/^oeko-?tex/i.test(t)) return 'Oeko-Tex Standard 100'
+  if (/^gots\b/i.test(t)) return 'GOTS'
+  return t
+}
+
+export const labelCertification = (v: string) => CERTIFICATIONS[v] ?? v
 
 const SPIN_TYPE: Record<string, string> = {
   plied: 'snoet',
