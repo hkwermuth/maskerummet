@@ -364,8 +364,10 @@ async function backfillMetadataFromSource(
   ])
   if (!srcRow || !tgtRow) return
 
-  const src = srcRow as Record<string, unknown>
-  const tgt = tgtRow as Record<string, unknown>
+  // Cast via unknown: select(fields)-string-form giver Supabase
+  // GenericStringError som ikke kan caste'es direkte til Record.
+  const src = srcRow as unknown as Record<string, unknown>
+  const tgt = tgtRow as unknown as Record<string, unknown>
 
   const backfill: Record<string, unknown> = {}
   for (const field of METADATA_BACKFILL_FIELDS) {

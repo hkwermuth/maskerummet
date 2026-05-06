@@ -298,7 +298,8 @@ async function resolveLineMetadata(
   if (!src) return explicit
 
   const merged = { ...explicit }
-  const srcRow = src as Record<string, unknown>
+  // Cast via unknown: select(fields)-string-form giver GenericStringError.
+  const srcRow = src as unknown as Record<string, unknown>
   for (const f of missing) {
     if (srcRow[f] !== null && srcRow[f] !== undefined) {
       merged[f] = srcRow[f]
