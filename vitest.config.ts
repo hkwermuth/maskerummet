@@ -8,6 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./test/setup.ts'],
     globals: true,
+    clearMocks: true,
     exclude: ['node_modules', 'dist', '.next', '.claude/worktrees/**'],
   },
   resolve: {

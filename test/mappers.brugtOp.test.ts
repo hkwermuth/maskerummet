@@ -1,7 +1,8 @@
 /**
  * F5-acceptkriterier for toDb / fromDb / markYarnAsBrugtOp — Brugt op-felter.
  *
- * AC: toDb med status='Brugt op' sætter quantity=0 + persisterer brugt_til_projekt + brugt_op_dato.
+ * AC: toDb med status='Brugt op' bevarer antal som quantity (Bug 5, 2026-05-05)
+ *     + persisterer brugt_til_projekt + brugt_op_dato.
  * AC: toDb med status≠'Brugt op' sender brugt_til_projekt=null, brugt_op_dato=null.
  * AC: fromDb mapper DB-felterne til camelCase (brugtTilProjekt, brugtOpDato).
  * AC: markYarnAsBrugtOp kalder .update().eq().select().single() korrekt og returnerer rækken.
@@ -57,9 +58,9 @@ const BASE_DB_ROW = {
 // ── toDb: Brugt op-felter ──────────────────────────────────────────────────────
 
 describe('mappers.toDb — Brugt op-felter', () => {
-  it('status="Brugt op" sætter quantity=0 automatisk', () => {
+  it('Bug 5 (2026-05-05): status="Brugt op" bevarer antal som quantity (ikke 0)', () => {
     const result = toDb({ ...BASE_FORM, status: 'Brugt op', antal: 5, brugtTilProjekt: 'Sierraknit', brugtOpDato: '2026-04-27' })
-    expect(result.quantity).toBe(0)
+    expect(result.quantity).toBe(5)
   })
 
   it('status="Brugt op" persisterer brugt_til_projekt', () => {
@@ -144,7 +145,8 @@ describe('mappers.fromDb — brugtTilProjekt og brugtOpDato', () => {
       brugt_op_dato: dbPayload.brugt_op_dato,
     }
     const mapped = fromDb(dbRow)
-    expect(mapped.antal).toBe(0)
+    // Bug 5 (2026-05-05): Brugt op-rækker bevarer antal forbrugt (her 5).
+    expect(mapped.antal).toBe(5)
     expect(mapped.brugtTilProjekt).toBe('Diamond Top')
     expect(mapped.brugtOpDato).toBe('2026-04-01')
     expect(mapped.status).toBe('Brugt op')
@@ -164,15 +166,16 @@ describe('markYarnAsBrugtOp', () => {
   }
 
   it('kalder .from("yarn_items").update().eq().select().single()', async () => {
-    const expectedRow = { id: 'yarn-99', status: 'Brugt op', quantity: 0 }
+    const expectedRow = { id: 'yarn-99', status: 'Brugt op', quantity: 5 }
     const { supabase, updateMock, eqMock, selectMock, singleMock } = buildMockSupabase(expectedRow)
 
     await markYarnAsBrugtOp(supabase, 'yarn-99', 'Sierraknit', '2026-04-27')
 
     expect(supabase.from).toHaveBeenCalledWith('yarn_items')
+    // Bug 5 (2026-05-05): markYarnAsBrugtOp rører IKKE quantity — den bevares
+    // som det rækken havde. Kun status + projekt-kobling + dato opdateres.
     expect(updateMock).toHaveBeenCalledWith({
       status:            'Brugt op',
-      quantity:          0,
       brugt_til_projekt: 'Sierraknit',
       brugt_op_dato:     '2026-04-27',
     })

@@ -14,6 +14,8 @@ export function toDb(yarn: Record<string, any>) {
   // Brugt op-felter persisteres kun når status faktisk er "Brugt op".
   // Skift FRA "Brugt op" til anden status nulstiller ikke felterne automatisk —
   // det er bevidst, så historik bevares.
+  // Bug 5 (2026-05-05): quantity bevares uanset status (også Brugt op) så Mit
+  // Garn kan vise faktisk forbrug pr. projekt.
   const isBrugtOp = yarn.status === 'Brugt op'
   return {
     name:            yarn.name          || null,
@@ -27,7 +29,7 @@ export function toDb(yarn: Record<string, any>) {
     meters:          yarn.metrage       ? Number(yarn.metrage) : null,
     barcode:         yarn.barcode       || null,
     image_url:       yarn.imageUrl      ?? null,
-    quantity:        isBrugtOp ? 0 : (yarn.antal ? parseFloat(yarn.antal) : 1),
+    quantity:        yarn.antal ? parseFloat(yarn.antal) : 1,
     status:          yarn.status        || 'På lager',
     hex_color:       yarn.hex           || null,
     hex_colors:      hexColors,
@@ -73,10 +75,11 @@ export function fromDb(row: Record<string, any>) {
 //
 // Helper der atomar markerer et garn som "Brugt op". Bruges af både F5's
 // folde-ud-flow og fremtidig F15 bidirektional kobling (hvor et projekt
-// markeres færdigt og garnet automatisk skal nedskrives til 0).
+// markeres færdigt og garnet automatisk skal nedskrives).
 //
-// Sætter status='Brugt op', quantity=0 og persisterer projekt-navn + dato.
-// Returnerer den opdaterede række eller kaster fejl.
+// Sætter status='Brugt op' og persisterer projekt-navn + dato. Bug 5
+// (2026-05-05): quantity bevares (rører den ikke) så det forbrugte antal er
+// synligt i Mit Garn. Returnerer den opdaterede række eller kaster fejl.
 //
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function markYarnAsBrugtOp(
@@ -90,7 +93,6 @@ export async function markYarnAsBrugtOp(
     .from('yarn_items')
     .update({
       status:            'Brugt op',
-      quantity:          0,
       brugt_til_projekt: brugtTilProjekt || null,
       brugt_op_dato:     brugtOpDato     || null,
     })

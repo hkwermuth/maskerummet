@@ -31,11 +31,13 @@ const buttonBase: React.CSSProperties = {
 export default function MarkYarnsBrugtOpModal({
   classification, projektTitel, onCancel, onConfirm,
 }: MarkYarnsBrugtOpModalProps) {
-  // AC-2: default 'behold' (ikke-destruktivt — bruger skal eksplicit vælge brugt-op)
+  // Default: behold ALT på lager (ikke-destruktivt — bruger skal eksplicit
+  // vælge at noget skal markeres brugt op).
   const [decisions, setDecisions] = useState<Map<string, FinalizeDecision>>(() => {
     const m = new Map<string, FinalizeDecision>()
     for (const e of classification.finalizable) {
-      m.set(e.source.yarnUsageId, 'behold')
+      const total = Math.max(0, Math.floor(Number(e.source.quantityUsed ?? 0)))
+      m.set(e.source.yarnUsageId, { kind: 'behold', keepOnStock: total })
     }
     return m
   })
@@ -54,9 +56,21 @@ export default function MarkYarnsBrugtOpModal({
   function applyFirstToAll() {
     const first = classification.finalizable[0]
     if (!first) return
-    const d = decisions.get(first.source.yarnUsageId) ?? 'behold'
+    const firstTotal = Math.max(0, Math.floor(Number(first.source.quantityUsed ?? 0)))
+    const firstDec = decisions.get(first.source.yarnUsageId)
+      ?? { kind: 'behold', keepOnStock: firstTotal }
     const next = new Map<string, FinalizeDecision>()
-    for (const e of classification.finalizable) next.set(e.source.yarnUsageId, d)
+    for (const e of classification.finalizable) {
+      const total = Math.max(0, Math.floor(Number(e.source.quantityUsed ?? 0)))
+      // Klamp keepOnStock til target-linjes total ved kopiering — målets total
+      // kan være mindre end source'ens.
+      next.set(
+        e.source.yarnUsageId,
+        firstDec.kind === 'brugt-op'
+          ? { kind: 'brugt-op' }
+          : { kind: 'behold', keepOnStock: Math.min(total, Math.max(0, firstDec.keepOnStock)) },
+      )
+    }
     setDecisions(next)
   }
 
@@ -79,7 +93,16 @@ export default function MarkYarnsBrugtOpModal({
   // i første omgang. Defensiv guard her hvis kalderen alligevel bruger den.
   if (totalShown === 0) return null
 
-  const brugtOpCount = Array.from(decisions.values()).filter(d => d === 'brugt-op').length
+  // Tæller hvor mange linjer der har NOGEN brugt op (helt eller delvist) for
+  // at differentiere knaptekst.
+  const brugtOpCount = classification.finalizable.reduce((n, e) => {
+    const d = decisions.get(e.source.yarnUsageId)
+    if (!d) return n
+    if (d.kind === 'brugt-op') return n + 1
+    const total = Math.max(0, Math.floor(Number(e.source.quantityUsed ?? 0)))
+    if (d.keepOnStock < total) return n + 1
+    return n
+  }, 0)
 
   return (
     <div
@@ -143,15 +166,21 @@ export default function MarkYarnsBrugtOpModal({
                 Default er at beholde — vi nulstiller intet uden dit valg.
               </div>
 
-              {classification.finalizable.map(entry => (
-                <FinalizableCard
-                  key={entry.source.yarnUsageId}
-                  entry={entry}
-                  decision={decisions.get(entry.source.yarnUsageId) ?? 'behold'}
-                  onChange={d => setDecision(entry.source.yarnUsageId, d)}
-                  disabled={busy}
-                />
-              ))}
+              {classification.finalizable.map(entry => {
+                const total = Math.max(0, Math.floor(Number(entry.source.quantityUsed ?? 0)))
+                return (
+                  <FinalizableCard
+                    key={entry.source.yarnUsageId}
+                    entry={entry}
+                    decision={
+                      decisions.get(entry.source.yarnUsageId)
+                        ?? { kind: 'behold', keepOnStock: total }
+                    }
+                    onChange={d => setDecision(entry.source.yarnUsageId, d)}
+                    disabled={busy}
+                  />
+                )
+              })}
 
               {classification.finalizable.length > 1 && (
                 <button
@@ -231,8 +260,12 @@ function FinalizableCard({
   onChange: (d: FinalizeDecision) => void
   disabled: boolean
 }) {
-  const { source, currentStockQuantity } = entry
-  const used = Number(source.quantityUsed ?? 0)
+  const { source } = entry
+  const used = Math.max(0, Math.floor(Number(source.quantityUsed ?? 0)))
+  const isBehold = decision.kind === 'behold'
+  const keepOnStock = isBehold ? Math.max(0, Math.min(used, Math.floor(decision.keepOnStock))) : 0
+  const usedUp = isBehold ? used - keepOnStock : used
+
   return (
     <div
       style={{
@@ -261,11 +294,7 @@ function FinalizableCard({
             {[source.yarnBrand, source.yarnName].filter(Boolean).join(' · ') || 'Garn'}
           </div>
           <div style={{ fontSize: 11, color: '#8B7D6B' }}>
-            {source.colorName ?? ''} · brugt {used} {used === 1 ? 'ngl' : 'ngl'}
-            {' · '}
-            <span style={{ fontWeight: 500 }}>
-              {currentStockQuantity} {currentStockQuantity === 1 ? 'nøgle' : 'nøgler'} på rækken
-            </span>
+            {source.colorName ?? ''} · brugt {used} ngl
           </div>
         </div>
       </div>
@@ -273,19 +302,64 @@ function FinalizableCard({
       <div role="radiogroup" aria-label={`Status for ${source.yarnBrand ?? ''} ${source.yarnName ?? ''}`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <Radio
           name={`d-${source.yarnUsageId}`}
-          checked={decision === 'behold'}
-          onChange={() => onChange('behold')}
+          checked={isBehold}
+          onChange={() => onChange({ kind: 'behold', keepOnStock: used })}
           disabled={disabled}
-          label="Behold på lager — der er nøgler tilbage"
+          label="Behold på lager (helt eller delvist)"
         />
         <Radio
           name={`d-${source.yarnUsageId}`}
-          checked={decision === 'brugt-op'}
-          onChange={() => onChange('brugt-op')}
+          checked={decision.kind === 'brugt-op'}
+          onChange={() => onChange({ kind: 'brugt-op' })}
           disabled={disabled}
           label="Brugt op — markér som forbrugt"
         />
       </div>
+
+      {/* Antal-split-input vises kun når 'behold' er valgt. Default = used (alt
+          tilbage på lager); brugeren kan reducere så resten markeres brugt op. */}
+      {isBehold && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 24 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#302218', fontFamily: "'DM Sans', sans-serif" }}>
+            <span>Antal til lager:</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              max={used}
+              step={1}
+              value={keepOnStock}
+              disabled={disabled}
+              onChange={e => {
+                const raw = Number(e.target.value)
+                const clamped = Number.isFinite(raw)
+                  ? Math.max(0, Math.min(used, Math.floor(raw)))
+                  : 0
+                onChange({ kind: 'behold', keepOnStock: clamped })
+              }}
+              style={{
+                width: 70,
+                padding: '6px 8px',
+                fontSize: 13,
+                border: '1px solid #D0C8BA',
+                borderRadius: 6,
+                background: '#FFFCF7',
+                fontFamily: "'DM Sans', sans-serif",
+                color: '#302218',
+                minHeight: 36,
+              }}
+            />
+            <span style={{ color: '#8B7D6B' }}>af {used}</span>
+          </label>
+          <div style={{ fontSize: 11, color: '#8B7D6B', lineHeight: 1.5 }}>
+            {keepOnStock === used
+              ? 'Alle nøgler flyttes tilbage til "På lager".'
+              : keepOnStock === 0
+                ? 'Alle nøgler markeres brugt op.'
+                : `${keepOnStock} ngl tilbage til lager · ${usedUp} ngl markeres brugt op.`}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

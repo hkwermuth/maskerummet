@@ -50,7 +50,12 @@ export type FinalizableClassification = {
   alreadyBrugtOp: FinalizableSource[]
 }
 
-export type FinalizeDecision = 'brugt-op' | 'behold'
+// Diskrimineret union så 'behold' kan bære et antal-felt (split mellem lager og
+// brugt op). Tidligere streng-form ('brugt-op' | 'behold') konverteres ikke
+// — call-sites skal opdateres direkte.
+export type FinalizeDecision =
+  | { kind: 'brugt-op' }
+  | { kind: 'behold'; keepOnStock: number }   // 0 ≤ keepOnStock ≤ quantityUsed
 
 const ACTIVE_PROJECT_STATUSES = ['i_gang', 'vil_gerne']
 
@@ -149,12 +154,19 @@ export async function classifyFinalizableLines(
 // ── finalizeYarnLines ────────────────────────────────────────────────────────
 
 /**
- * Markerer valgte garn som 'Brugt op'. Kun linjer hvor decisions[yarnUsageId]
- * === 'brugt-op' røres — 'behold' (default) skipper.
+ * Anvender brugerens decisions pr. linje. Garanterer at INGEN finalizable
+ * yarn_item bevarer status='I brug' for projektet — alt flyttes enten til
+ * 'På lager' (behold) eller 'Brugt op' (forbrugt).
  *
- * Sætter status='Brugt op', quantity=0, brugt_til_projekt + _id, brugt_op_dato.
- * Bruger UUID-FK i stedet for kun title så de-cascade kan finde rækken igen
- * uden title-fragility.
+ * Decision-paths:
+ *   - { kind: 'brugt-op' }                   → alt brugt op
+ *   - { kind: 'behold', keepOnStock: 0 }     → alt brugt op (samme som ovenfor)
+ *   - { kind: 'behold', keepOnStock: total } → alt tilbage til lager
+ *   - { kind: 'behold', keepOnStock: x }     → split: x på lager, (total-x) brugt op
+ *   - undefined / mangler                    → default: alt brugt op (defensiv)
+ *
+ * 'På lager'-rækker oprettet via behold markeres med brugt_til_projekt_id
+ * = projektId så revertCascadedYarns kan finde og merge dem tilbage.
  */
 export async function finalizeYarnLines(
   supabase:     SupabaseClient,
@@ -164,117 +176,180 @@ export async function finalizeYarnLines(
   projektTitel: string,
   projektId:    string,
   brugtOpDato:  string,
-): Promise<{ markedBrugtOp: string[] }> {
+): Promise<{ markedBrugtOp: string[]; keptOnStock: string[] }> {
   const markedBrugtOp: string[] = []
+  const keptOnStock:   string[] = []
 
   for (const entry of finalizable) {
-    const decision = decisions.get(entry.source.yarnUsageId) ?? 'behold'
-    if (decision !== 'brugt-op') continue
     const yarnItemId = entry.source.yarnItemId
     if (!yarnItemId) continue
 
     const qty = Number(entry.source.quantityUsed ?? 0)
     if (!Number.isFinite(qty) || qty <= 0) continue
 
-    // Brug splitYarnItemRow så kun denne yarn_usage's andel rammes — afgørende
-    // når flere yarn_usage-rækker peger på samme merged 'I brug'-yarn_item.
-    // Hvis qty === total quantity → split-helperen opdaterer source direkte
-    // (ingen ny række, ingen redirect nødvendig). Hvis qty < total → der
-    // oprettes en ny 'Brugt op'-række med quantity=0 (Brugt op-konvention),
-    // og vi redirect'er denne yarn_usage til den nye række så de-cascade
-    // (revertCascadedYarns) kan finde tilbage via brugt_til_projekt_id.
-    const splitResult = await splitYarnItemRow(
-      supabase,
-      userId,
-      yarnItemId,
-      qty,
-      'Brugt op',
-      {
-        quantity:             0,                     // Brugt op-konvention (consumed)
-        brugt_til_projekt:    projektTitel || null,
-        brugt_til_projekt_id: projektId,
-        brugt_op_dato:        brugtOpDato || null,
-      },
-    )
+    const decision = decisions.get(entry.source.yarnUsageId)
+    // Klamp keepOnStock til [0, qty] for at hedge mod UI-validering der
+    // måtte slippe igennem (fx negative tal eller tal > total).
+    const keepOnStock = decision?.kind === 'behold'
+      ? Math.max(0, Math.min(qty, Math.floor(decision.keepOnStock)))
+      : 0
+    const useUp = qty - keepOnStock
 
-    // Redirect kun hvis der blev oprettet en NY række (qty < total).
-    if (splitResult.newYarnItemId !== splitResult.sourceYarnItemId) {
-      const { error: redirErr } = await supabase
-        .from('yarn_usage')
-        .update({ yarn_item_id: splitResult.newYarnItemId })
-        .eq('id', entry.source.yarnUsageId)
-        .eq('user_id', userId)
-      if (redirErr) throw redirErr
+    // Step 1: hvis nogen del skal beholdes på lager, split den ud først.
+    // Splittet markeres med brugt_til_projekt_id som "tilhørs-marker" så
+    // revertCascadedYarns kan finde den (utraditionelt på en På lager-række,
+    // men nødvendigt uden ny kolonne — se kommentar dér).
+    if (keepOnStock > 0) {
+      const lagerSplit = await splitYarnItemRow(
+        supabase,
+        userId,
+        yarnItemId,
+        keepOnStock,
+        'På lager',
+        {
+          brugt_til_projekt:    null,
+          brugt_til_projekt_id: projektId,         // marker for revert-merge
+          brugt_op_dato:        null,
+        },
+      )
+      keptOnStock.push(lagerSplit.newYarnItemId)
     }
 
-    markedBrugtOp.push(splitResult.newYarnItemId)
+    // Step 2: resten markeres brugt op. Hvis useUp===0 (behold-full), skip.
+    // Bug 5 (2026-05-05): rækken bevarer `useUp` som quantity (ikke 0) så Mit
+    // Garn kan vise faktisk forbrug pr. projekt. splitYarnItemRow sætter
+    // automatisk quantity=useUp på den nye række (eller bevarer source.quantity
+    // når useUp===total og source flippes direkte).
+    if (useUp > 0) {
+      const brugtOpSplit = await splitYarnItemRow(
+        supabase,
+        userId,
+        yarnItemId,
+        useUp,
+        'Brugt op',
+        {
+          brugt_til_projekt:    projektTitel || null,
+          brugt_til_projekt_id: projektId,
+          brugt_op_dato:        brugtOpDato || null,
+        },
+      )
+
+      // Redirect yarn_usage til Brugt op-rækken så revert kan finde den via
+      // SUM(yarn_usage.quantity_used) → restored I brug-quantity.
+      if (brugtOpSplit.newYarnItemId !== brugtOpSplit.sourceYarnItemId) {
+        const { error: redirErr } = await supabase
+          .from('yarn_usage')
+          .update({ yarn_item_id: brugtOpSplit.newYarnItemId })
+          .eq('id', entry.source.yarnUsageId)
+          .eq('user_id', userId)
+        if (redirErr) throw redirErr
+      }
+
+      markedBrugtOp.push(brugtOpSplit.newYarnItemId)
+    }
   }
 
-  return { markedBrugtOp }
+  return { markedBrugtOp, keptOnStock }
 }
 
 // ── revertCascadedYarns ──────────────────────────────────────────────────────
 
 /**
- * Reverter cascadede 'Brugt op'-rækker tilbage til 'I brug' når projekt går
- * tilbage til i_gang/vil_gerne. Silent — ingen modal.
+ * Reverter cascade når projekt går tilbage til i_gang/vil_gerne. Silent —
+ * ingen modal.
  *
- * Match-strategi (begge køres, resultatet de-dupeses):
- *   1. brugt_til_projekt_id = projectId (UUID-FK, post-d3f26fe data)
+ * Behavior B (brugerens valg, 2026-05-05): MERGE ALT tilbage til 'I brug'.
+ * Det inkluderer både:
+ *   - 'Brugt op'-rækker (forbrugt-andelen) → status='I brug', quantity bevares
+ *     fra rækkens egen `quantity` (Bug 5 datamodel: useUp blev gemt på rækken).
+ *     Legacy-rækker hvor quantity=0 (pre-Bug-5 eller pre-backfill) bruger
+ *     SUM(yarn_usage.quantity_used) som fallback.
+ *   - 'På lager'-rækker oprettet via behold-split (markeret med
+ *     brugt_til_projekt_id) → enten merges eller status flyttes tilbage til
+ *     'I brug'
+ *
+ * Match-strategier:
+ *   1. brugt_til_projekt_id = projectId (UUID-FK, post-d3f26fe)
  *   2. brugt_til_projekt ILIKE projectTitle hvor _id IS NULL (legacy)
  *
- * Quantity restaureres til SUM(yarn_usage.quantity_used) for samme yarn_item_id
- * — det matcher hvad der oprindeligt var allokeret før cascade-quantity=0.
- * Hvis ingen yarn_usage findes (sjælden race), sætter vi quantity=0 (defensiv).
- *
- * brugt_til_projekt, _id og brugt_op_dato ryddes så historikken matcher den
- * nye virkelighed (garnet er ikke længere brugt op).
+ * For På lager-rækker:
+ *   - Hvis der findes en sibling Brugt op→I brug-restoreret række med samme
+ *     garn-identitet (catalog_color_id eller brand+color_name+color_code):
+ *     SLET På lager-rækken (dens kvantum er allerede med i sibling'ens
+ *     bevarede quantity — behold-split-tilfældet).
+ *   - Ellers: bare opdater status til 'I brug' og ryd marker (behold-full-
+ *     tilfældet).
  */
 export async function revertCascadedYarns(
   supabase:     SupabaseClient,
   userId:       string,
   projectId:    string,
   projectTitle: string | null,
-): Promise<{ reverted: string[] }> {
-  // Primary: UUID match
+): Promise<{ reverted: string[]; mergedFromStock: string[] }> {
+  // ── Find Brugt op-rækker: UUID match + legacy title fallback ───────────────
   const { data: byUuid, error: uuidErr } = await supabase
     .from('yarn_items')
-    .select('id')
+    .select('id, quantity, catalog_color_id, brand, color_name, color_code')
     .eq('user_id', userId)
     .eq('status', 'Brugt op')
     .eq('brugt_til_projekt_id', projectId)
   if (uuidErr) throw uuidErr
-  const uuidIds = (byUuid ?? []).map(r => (r as { id: string }).id)
+  const brugtOpRows = (byUuid ?? []) as BrugtOpRow[]
 
-  // Fallback: title match for legacy-rækker uden brugt_til_projekt_id
-  let titleIds: string[] = []
   if (projectTitle && projectTitle.trim() !== '') {
     const { data: byTitle, error: titleErr } = await supabase
       .from('yarn_items')
-      .select('id')
+      .select('id, quantity, catalog_color_id, brand, color_name, color_code')
       .eq('user_id', userId)
       .eq('status', 'Brugt op')
       .is('brugt_til_projekt_id', null)
       .ilike('brugt_til_projekt', projectTitle)
     if (titleErr) throw titleErr
-    titleIds = (byTitle ?? []).map(r => (r as { id: string }).id)
+    for (const r of (byTitle ?? []) as BrugtOpRow[]) {
+      if (!brugtOpRows.some(b => b.id === r.id)) brugtOpRows.push(r)
+    }
   }
 
-  const allIds = Array.from(new Set([...uuidIds, ...titleIds]))
-  const reverted: string[] = []
+  // ── Find På lager-rækker oprettet via behold-split ─────────────────────────
+  const { data: paaLagerData, error: lagerErr } = await supabase
+    .from('yarn_items')
+    .select('id, quantity, catalog_color_id, brand, color_name, color_code')
+    .eq('user_id', userId)
+    .eq('status', 'På lager')
+    .eq('brugt_til_projekt_id', projectId)
+  if (lagerErr) throw lagerErr
+  const paaLagerRows = (paaLagerData ?? []) as PaaLagerRow[]
 
-  for (const yarnItemId of allIds) {
-    // Restaurer quantity som sum af yarn_usage for samme yarn_item.
-    // (Brugerens v1-forventning: 5 ngl I brug → 5 ngl Brugt op → revert →
-    // 5 ngl I brug igen — ikke 0.)
-    const { data: usages, error: uErr } = await supabase
-      .from('yarn_usage')
-      .select('quantity_used')
-      .eq('yarn_item_id', yarnItemId)
-      .eq('user_id', userId)
-    if (uErr) throw uErr
-    const restoredQty = (usages ?? [])
-      .reduce((sum, u) => sum + Number((u as { quantity_used: number | null }).quantity_used ?? 0), 0)
+  const reverted: string[]        = []
+  const mergedFromStock: string[] = []
+
+  // ── Restaurer Brugt op → I brug.
+  //
+  // Total ngl-restoring afhænger af hvordan finalize blev kørt:
+  //   - brugt-op-only (ingen sibling): Brugt op-row har useUp=total → restore
+  //     direkte via row.quantity (Bug 5 fast-path).
+  //   - behold-split (sibling findes): Brugt op-row har useUp, sibling har
+  //     keepOnStock. restoredQty = row.quantity + sibling.quantity (begge
+  //     andele samles tilbage på den restorede I brug-række, sibling slettes
+  //     bagefter for at undgå duplikat).
+  //   - legacy (row.quantity=0, pre-Bug-5 eller pre-backfill): fallback til
+  //     SUM(yarn_usage.quantity_used) som dækker hele forbruget.
+  for (const row of brugtOpRows) {
+    const ownQty = Number(row.quantity ?? 0)
+    const sibling = paaLagerRows.find(p => sameYarnIdentity(p, row))
+    const siblingQty = sibling ? Number(sibling.quantity ?? 0) : 0
+
+    let restoredQty = ownQty + siblingQty
+    if (restoredQty <= 0) {
+      const { data: usages, error: uErr } = await supabase
+        .from('yarn_usage')
+        .select('quantity_used')
+        .eq('yarn_item_id', row.id)
+        .eq('user_id', userId)
+      if (uErr) throw uErr
+      restoredQty = (usages ?? [])
+        .reduce((sum, u) => sum + Number((u as { quantity_used: number | null }).quantity_used ?? 0), 0)
+    }
 
     const { error: updErr } = await supabase
       .from('yarn_items')
@@ -285,11 +360,75 @@ export async function revertCascadedYarns(
         brugt_til_projekt_id: null,
         brugt_op_dato:        null,
       })
-      .eq('id', yarnItemId)
+      .eq('id', row.id)
       .eq('user_id', userId)
     if (updErr) throw updErr
-    reverted.push(yarnItemId)
+    reverted.push(row.id)
   }
 
-  return { reverted }
+  // ── Håndter På lager-marker-rækker: slet sibling-rækker (behold-split) eller
+  //    flyt tilbage til I brug (behold-full) ───────────────────────────────────
+  for (const row of paaLagerRows) {
+    const sibling = brugtOpRows.find(b => sameYarnIdentity(row, b))
+    if (sibling) {
+      // behold-split: sibling-row's kvantum er allerede inkluderet i sibling
+      // Brugt op-row's restoredQty (sum oven for). Slet duplikatet for at undgå
+      // dobbelt-tælling i lageret.
+      const { error: delErr } = await supabase
+        .from('yarn_items')
+        .delete()
+        .eq('id', row.id)
+        .eq('user_id', userId)
+      if (delErr) throw delErr
+      mergedFromStock.push(row.id)
+    } else {
+      // behold-full: rækken er hele projektets allokering. Bare flyt tilbage
+      // til 'I brug' og ryd marker.
+      const { error: updErr } = await supabase
+        .from('yarn_items')
+        .update({
+          status:               'I brug',
+          brugt_til_projekt:    null,
+          brugt_til_projekt_id: null,
+          brugt_op_dato:        null,
+        })
+        .eq('id', row.id)
+        .eq('user_id', userId)
+      if (updErr) throw updErr
+      reverted.push(row.id)
+    }
+  }
+
+  return { reverted, mergedFromStock }
+}
+
+// ── Identity-match helper ────────────────────────────────────────────────────
+
+type IdentityRow = {
+  id:                string
+  catalog_color_id:  string | null
+  brand:             string | null
+  color_name:        string | null
+  color_code:        string | null
+}
+
+type BrugtOpRow = IdentityRow & {
+  quantity: number | null
+}
+
+type PaaLagerRow = IdentityRow & {
+  quantity: number | null
+}
+
+function sameYarnIdentity(a: IdentityRow, b: IdentityRow): boolean {
+  if (a.catalog_color_id && b.catalog_color_id && a.catalog_color_id === b.catalog_color_id) {
+    return true
+  }
+  const lower = (s: string | null) => (s ?? '').trim().toLowerCase()
+  if (!lower(a.brand) || !lower(a.color_name) || !lower(a.color_code)) return false
+  return (
+    lower(a.brand) === lower(b.brand) &&
+    lower(a.color_name) === lower(b.color_name) &&
+    lower(a.color_code) === lower(b.color_code)
+  )
 }

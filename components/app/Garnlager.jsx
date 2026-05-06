@@ -790,7 +790,12 @@ export default function Garnlager({ user, onRequestLogin }) {
       return (a.name || '').localeCompare(b.name || '', 'da')
     })
 
-  const totalNgl    = yarns.reduce((s, y) => s + Number(y.antal || 0), 0)
+  // Bug 5 (2026-05-05): Brugt op-rækker bevarer nu antal forbrugt, men de
+  // tæller IKKE som lagerbeholdning. Ekskluder fra totalsummen så
+  // "Nøgler i alt"-statbar viser reel disponibel mængde.
+  const totalNgl    = yarns
+    .filter(y => y.status !== 'Brugt op')
+    .reduce((s, y) => s + Number(y.antal || 0), 0)
   const brugtOpCount = yarns.filter(y => y.status === 'Brugt op').length
 
   if (!loaded) return (

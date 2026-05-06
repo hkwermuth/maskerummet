@@ -367,31 +367,29 @@ Foldet ud (klik):
 
 Ideer fra STRIQ_ideer.xlsx der ikke er startet. Grupperet efter prioritet.
 
-### Planlagt: Brugt op-rækker bevarer antal + per-projekt-rækker (Bug 5, 2026-05-05)
+### Delvist shippet: Brugt op-rækker bevarer antal + per-projekt-visning (Bug 5, 2026-05-05)
 
-Fra Hannahs feedback: Brugt op-rækker bør bevare antal ngl (i stedet for at dumpe til 0) og vises pr. projekt så samme garn kan figurere flere gange i Mit Garn — én række per projekt det blev brugt op til.
+Fra Hannahs feedback: Brugt op-rækker bør bevare antal ngl (i stedet for at dumpe til 0) og vises pr. projekt så samme garn kan figurere flere gange i Mit Garn.
 
-**Datamodel-skift**: stop med at sætte `quantity=0` på Brugt op-rækker. Bevar antallet brugt til det specifikke projekt.
+**Status 2026-05-05**: UI-delen (vis projekt + antal nøgler pr. projekt) er shippet via variant A (commit `ce3caee`) — ét kort pr. garn med kompakt projekt-liste indeni (cap 3 + "…og N flere"). Data-modellen var allerede på plads via F16 yarn_usage. Bruger valgte variant A frem for "separate rækker pr. projekt"-tilgangen.
 
-**Filer der skal røres:**
+**Stadig planlagt** (datamodel-skift uden for UI-display):
 - `lib/supabase/mappers.ts` — `toDb` (fjern `isBrugtOp ? 0` logikken) + `markYarnAsBrugtOp` (sæt ikke quantity=0)
-- `lib/yarn-finalize.ts` — `finalizeYarnLines`: fjern `quantity:0` override i extraOnNew til splitYarnItemRow så split-qty bevares
-- `lib/yarn-finalize.ts` — `revertCascadedYarns`: brug row's quantity i stedet for SUM yarn_usage (mere korrekt nu hvor quantity er bevaret)
-- `components/app/BrugtOpFoldeUd.tsx` — tilføj editerbar "Antal nøgler brugt"-felt (default = nuværende antal)
-- `components/app/Garnlager.jsx` — verificér at Brugt-op-rækker vises pr. projekt (cascade-split opretter allerede separate rækker)
-- Migration: backfill eksisterende Brugt op-rækker fra yarn_usage.quantity_used (matchet via brugt_til_projekt_id eller fri-tekst-match for legacy)
+- `lib/yarn-finalize.ts` — `finalizeYarnLines`: fjern `quantity:0` override i extraOnNew så split-qty bevares
+- `lib/yarn-finalize.ts` — `revertCascadedYarns`: brug row's quantity i stedet for SUM yarn_usage
+- `components/app/BrugtOpFoldeUd.tsx` — tilføj editerbar "Antal nøgler brugt"-felt
+- Migration: backfill eksisterende Brugt op-rækker fra yarn_usage.quantity_used (en sådan migration `20260505000001_brugt_op_quantity_backfill.sql` er allerede skrevet — ikke committeret endnu)
 - Eksisterende tests der asserter quantity=0 for Brugt op (~5-6 tests)
 
-**Acceptkriterier:**
+**Acceptkriterier (resterende):**
 - Marker garn med 5 ngl som Brugt op via BrugtOpFoldeUd → row har quantity=5 (ikke 0), brugt_til_projekt_id sat
 - Cascade fra projekt-færdig → split bevarer antallet (ikke quantity=0 længere)
-- Mit Garn-listen viser 2 separate Brugt-op-rækker når samme garn er brugt op i 2 forskellige projekter
 - Backfill-migration retter eksisterende Brugt op-rækker korrekt
 - De-cascade restaurerer korrekt antal (test mod begge stier — quantity bevaret OG legacy quantity=0-rækker)
 
-**Estimat**: middel — ca. 200 linjer kode + migration + 6-8 test-opdateringer.
+**Estimat**: middel — ca. 150 linjer kode + migration aktivering + 6-8 test-opdateringer.
 
-**Kør med**: `/ny-feature Brugt op-antal + per-projekt-rækker`
+**Kør med**: `/ny-feature Bevar quantity på Brugt op-rækker + editerbar antal-felt`
 
 
 

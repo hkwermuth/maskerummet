@@ -69,6 +69,9 @@ const defaultProps = {
 }
 
 beforeEach(() => {
+  // mockReset rydder også Once-køer (mockRejectedValueOnce), så en uudkonsumeret
+  // queue fra én test ikke lækker til næste.
+  vi.mocked(shareProject).mockReset()
   vi.mocked(useSupabase).mockReturnValue(mockSupabase as never)
   vi.mocked(createSupabaseBrowserClient).mockReturnValue(mockSupabaseForSection as never)
   vi.mocked(fetchOwnProfile).mockResolvedValue(null)
