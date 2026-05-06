@@ -396,25 +396,28 @@ async function createInUseRow(
   projectId:  string,
 ): Promise<string> {
   // Hent source-rækken så vi kan kopiere metadata (fiber, weight, hex_colors,
-  // notes, image_url, gauge, meters) som ikke er på AllocatableLine.
+  // notes, image_url, catalog_image_url, gauge, meters) som ikke er på
+  // AllocatableLine. Bug 6.5 (2026-05-06): catalog_image_url manglede og
+  // fik Bella Koral I-brug-kort til at vise farve i stedet for billede.
   let metadata: Record<string, unknown> = {}
   if (source.yarnItemId) {
     const { data: src } = await supabase
       .from('yarn_items')
-      .select('fiber, yarn_weight, hex_colors, notes, image_url, gauge, meters, color_category')
+      .select('fiber, yarn_weight, hex_colors, notes, image_url, catalog_image_url, gauge, meters, color_category')
       .eq('id', source.yarnItemId)
       .eq('user_id', userId)
       .maybeSingle()
     if (src) {
       metadata = {
-        fiber:          (src as { fiber: string | null }).fiber          ?? null,
-        yarn_weight:    (src as { yarn_weight: string | null }).yarn_weight ?? null,
-        hex_colors:     (src as { hex_colors: string[] | null }).hex_colors ?? null,
-        notes:          (src as { notes: string | null }).notes ?? null,
-        image_url:      (src as { image_url: string | null }).image_url ?? null,
-        gauge:          (src as { gauge: string | null }).gauge ?? null,
-        meters:         (src as { meters: number | null }).meters ?? null,
-        color_category: (src as { color_category: string | null }).color_category ?? null,
+        fiber:             (src as { fiber: string | null }).fiber          ?? null,
+        yarn_weight:       (src as { yarn_weight: string | null }).yarn_weight ?? null,
+        hex_colors:        (src as { hex_colors: string[] | null }).hex_colors ?? null,
+        notes:             (src as { notes: string | null }).notes ?? null,
+        image_url:         (src as { image_url: string | null }).image_url ?? null,
+        catalog_image_url: (src as { catalog_image_url: string | null }).catalog_image_url ?? null,
+        gauge:             (src as { gauge: string | null }).gauge ?? null,
+        meters:            (src as { meters: number | null }).meters ?? null,
+        color_category:    (src as { color_category: string | null }).color_category ?? null,
       }
     }
   }

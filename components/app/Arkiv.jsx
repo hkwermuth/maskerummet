@@ -978,6 +978,31 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
   async function handleSave() {
     setSaving(true); setSaveError(null)
     const newlyUploadedPaths = [] // til oprydning hvis DB-update fejler
+    // Tracker for vil_gerne→aktiv-allokeringer. Erklæres OUTSIDE try-blokken
+    // så outer catch kan rulle tilbage hvis fejl rammer mellem Phase 1.6 og
+    // projects.update (fx PDF-upload-fejl). Reviewer-fund 2026-05-06.
+    const vilGerneAllocations = []
+
+    // Helper: rul vil_gerne→aktiv-allokering tilbage hvis Phase 1.7 cancelles
+    // eller midt-fejl i Phase 1.6. Returner garn til lager via negativt delta
+    // og redirect yarn_usage tilbage til den oprindelige lager-id.
+    async function rollbackVilGerneAllocations(allocations) {
+      for (const a of allocations) {
+        try {
+          await applyAllocationDelta(supabase, user.id, a.source, -a.qty)
+        } catch {
+          // Best-effort: hvis rollback selv fejler, log via saveError.
+          // State kan være inkonsistent — bruger skal genindlæse.
+        }
+        await supabase
+          .from('yarn_usage')
+          .update({ yarn_item_id: a.oldYarnItemId })
+          .eq('id', a.lineId)
+          .eq('user_id', user.id)
+          .then(() => {}, () => {}) // ignore error — best-effort
+      }
+    }
+
     try {
       // ── Fase 1: Spørg om merge-decisions FØR vi mutater Storage eller DB ──
       // Hvis brugeren har markeret garn-linjer til retur (__pendingRemove +
@@ -1007,16 +1032,45 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
         }
       }
 
+      // ── Fase 1.4: vil_gerne → aktiv transition (NY 2026-05-06) ──
+      // Detektér om bruger skifter status FRA vil_gerne. Hvis ja, skal vi:
+      //   1) pre-flight-validere lager (kast tidligt, ingen partial-state)
+      //   2) allokere alle eksisterende lager-koblede linjer
+      //   3) hvis target-status er faerdigstrikket: kør cascade-classify EFTER
+      //      allokering (Phase 1.7), så modalen ser de nye I-brug-rækker.
+      // Hannah-bug 2026-05-06: vil_gerne-projekt → i_gang trak ikke garn fra
+      // lageret fordi per-line-loopet kun allokerer NYE linjer.
+      const transitionFromVilGerne =
+        entry.status === 'vil_gerne' && form.status !== 'vil_gerne'
+
+      if (transitionFromVilGerne) {
+        for (const l of keptForms) {
+          if (!l.id || !l.yarnItemId) continue
+          const qty = Number(l.quantityUsed ?? 0)
+          if (qty <= 0) continue
+          const v = validateLineStock(
+            { yarnItemId: l.yarnItemId, quantityUsed: qty },
+            userYarnItems,
+          )
+          if (!v.valid && v.reason === 'insufficient-stock') {
+            throw new Error(`Du har kun ${v.available} nøgler på lager af ${l.yarnBrand || ''} ${l.colorName || ''} — vælg færre end ${v.requested}.`)
+          }
+        }
+      }
+
       // ── Fase 1.5: Cascade-trigger ved status-skift til faerdigstrikket ──
       // Klassificér eksisterende linjer mod lageret og spørg brugeren pr. linje
       // om "Brugt op" eller "Behold på lager". Bruger keptForms (ikke entry.yarnLines)
       // så fjernede linjer ikke fejlagtigt cascades. Cancel her = ingen DB-mutationer.
+      //
+      // Skip når transitionFromVilGerne — i det flow kører classify EFTER allokering
+      // (Phase 1.7) fordi yarn_items først har 'I brug'-status efter allokeringen.
       const cascadeTriggered =
         entry.status !== 'faerdigstrikket' && form.status === 'faerdigstrikket'
       const deCascadeTriggered =
         entry.status === 'faerdigstrikket' && form.status !== 'faerdigstrikket'
       let cascadeDecisions = null
-      if (cascadeTriggered) {
+      if (cascadeTriggered && !transitionFromVilGerne) {
         const linesForCascade = keptForms
           .filter(l => l.id) // kun eksisterende yarn_usage-rækker
           .map(lineToFinalizableSource)
@@ -1032,6 +1086,90 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
             const result = await openFinalizeModal(classification)
             if (result === null) {
               // Brugeren annullerede cascade-bekræftelsen → afbryd hele save.
+              return
+            }
+            cascadeDecisions = { classification, decisions: result }
+          }
+        }
+      }
+
+      // ── Fase 1.6: Allokér vil_gerne-linjer (NY 2026-05-06) ──
+      // Mutater DB FØR projects.update så vi kan rulle tilbage hvis Phase 1.7
+      // (cascade-modal) cancelles. yarn_usage redirectes med det samme så per-
+      // line-loopet senere ser de nye I-brug-id'er. Hver linje markeres
+      // __justAllocated = true så per-line-loopet skipper identity/delta-tjek
+      // for den. (vilGerneAllocations erklæret outside try — se top.)
+      if (transitionFromVilGerne) {
+        for (const l of keptForms) {
+          if (!l.id || !l.yarnItemId) continue
+          const qty = Number(l.quantityUsed ?? 0)
+          if (qty <= 0) continue
+          const sourceItem = userYarnItems.find(y => y.id === l.yarnItemId)
+          if (sourceItem?.status !== 'På lager') continue
+
+          const allocSource = {
+            yarnItemId:     l.yarnItemId,
+            yarnName:       l.yarnName       ?? null,
+            yarnBrand:      l.yarnBrand      ?? null,
+            colorName:      l.colorName      ?? null,
+            colorCode:      l.colorCode      ?? null,
+            hex:            l.hex            ?? null,
+            catalogYarnId:  l.catalogYarnId  ?? null,
+            catalogColorId: l.catalogColorId ?? null,
+          }
+          try {
+            const result = await allocateYarnToProject(supabase, user.id, allocSource, entry.id, qty)
+            // Push allokeringen til tracker MED DET SAMME (før redirect)
+            // så rollback kan rydde den op hvis redirect fejler.
+            vilGerneAllocations.push({
+              lineId:        l.id,
+              oldYarnItemId: l.yarnItemId,
+              newYarnItemId: result.inUseYarnItemId,
+              qty,
+              source:        { ...allocSource, yarnItemId: result.inUseYarnItemId },
+            })
+            // Redirect yarn_usage straks så Phase 1.7 classify ser den nye
+            // I-brug-række (klassifikationen læser yarn_item_id via FK).
+            const { error: redirErr } = await supabase
+              .from('yarn_usage')
+              .update({ yarn_item_id: result.inUseYarnItemId })
+              .eq('id', l.id)
+              .eq('user_id', user.id)
+            if (redirErr) throw redirErr
+
+            // Mutér linjen så per-line-loop og resten af flowet ser den
+            // nye I-brug-id og skipper double-allokering.
+            l.yarnItemId      = result.inUseYarnItemId
+            l.__justAllocated = true
+          } catch (err) {
+            // Rul tilbage ALLE registrerede allokeringer (inkl. den just-
+            // failede hvis push-til-tracker var lykkedes før fejlen).
+            await rollbackVilGerneAllocations(vilGerneAllocations)
+            throw err
+          }
+        }
+      }
+
+      // ── Fase 1.7: Cascade-classify EFTER allokering ved vil_gerne → faerdig ──
+      // Skip hvis ikke transition-til-faerdig. Hvis modal cancelles: rul Phase 1.6
+      // tilbage så projektet bliver i vil_gerne-state med alle nøgler tilbage på lager.
+      if (transitionFromVilGerne && form.status === 'faerdigstrikket') {
+        const linesForCascade = keptForms
+          .filter(l => l.id)
+          .map(lineToFinalizableSource)
+        if (linesForCascade.length > 0) {
+          const classification = await classifyFinalizableLines(
+            supabase, user.id, entry.id, linesForCascade,
+          )
+          const showModal =
+            classification.finalizable.length > 0 ||
+            classification.multiProject.length > 0 ||
+            classification.noYarnItem.length > 0
+          if (showModal) {
+            const result = await openFinalizeModal(classification)
+            if (result === null) {
+              // Cancel → rul Phase 1.6 tilbage og afbryd save.
+              await rollbackVilGerneAllocations(vilGerneAllocations)
               return
             }
             cascadeDecisions = { classification, decisions: result }
@@ -1196,6 +1334,13 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
       //     full return af oldQty på gammel identitet + full allocate på ny.
       const allocatedLines = []
       for (const l of lines) {
+        // vil_gerne→aktiv-allokering håndteret i Phase 1.6 — skip per-line-tjek
+        // for at undgå dobbelt-allokering. Linjen har allerede l.yarnItemId =
+        // I-brug-id og yarn_usage er redirected.
+        if (l.__justAllocated) {
+          allocatedLines.push(l)
+          continue
+        }
         const qty = Number(l.quantityUsed ?? 0)
         if (l.id) {
           const oldLine = (entry.yarnLines ?? []).find(o => o.id === l.id)
@@ -1354,6 +1499,15 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
       onSaved({ ...data, yarnLines: (savedUsages ?? []).map(fromUsageDb) })
       setEditing(false)
     } catch (e) {
+      // Rul vil_gerne→aktiv-allokering tilbage hvis Phase 1.6 har kørt og
+      // efterfølgende fase fejler (PDF-upload, projects.update, mv.). Uden
+      // dette ville garn være væk fra lageret mens projektet stod tilbage på
+      // vil_gerne — direkte tillidsbrud. Reviewer-fund 2026-05-06.
+      if (vilGerneAllocations.length > 0) {
+        await rollbackVilGerneAllocations(vilGerneAllocations).catch(() => {
+          /* best-effort: rollback må ikke skygge for original-fejl */
+        })
+      }
       // Rul nyligt uploadede filer tilbage så vi ikke efterlader orphans.
       const byBucket = new Map()
       for (const { bucket, path } of newlyUploadedPaths) {

@@ -646,3 +646,185 @@ describe('validateLineStock – AC-3 picker-validering', () => {
     expect(r.valid).toBe(true)
   })
 })
+
+// ── KAT-AC-1: catalog_image_url kopieres ved createInUseRow ─────────────────
+//
+// Bug 6.5 (2026-05-06): createInUseRow manglede catalog_image_url i sin select
+// og insert, så den nye I-brug-rækkes yarn-kort viste farve i stedet for billede.
+// Testen verificerer at catalog_image_url fra source-rækken følger med til den
+// nye I-brug-række.
+
+describe('KAT-AC-1: createInUseRow kopierer catalog_image_url fra source', () => {
+  it('ny I-brug-række arverer catalog_image_url=cat.jpg fra source-rækken', async () => {
+    // allocateYarnToProject createInUseRow-gren (ingen eksisterende I-brug-match).
+    // Source har catalogColorId=null, men brand+colorName+colorCode er sat.
+    //
+    // Kald-rækkefølge (catalogColorId=null → ingen catalog-branch i findInUseRowMatch):
+    //   [1] decrement: fetch current qty (maybeSingle)
+    //   [2] decrement: update gte
+    //   [3] findInUseRowMatch name-color → [] (ingen match)
+    //   [4] createInUseRow: metadata fra source (maybeSingle) → catalog_image_url='cat.jpg'
+    //   [5] createInUseRow: INSERT → select → single
+    const insertCaptured = vi.fn()
+
+    let callCount = 0
+    const supabase = {
+      from: vi.fn(() => {
+        callCount++
+        if (callCount === 1) {
+          // decrement: fetch current qty
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: { quantity: 10 }, error: null }),
+          }
+        }
+        if (callCount === 2) {
+          // decrement: update gte
+          return {
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                eq: vi.fn(() => ({
+                  gte: vi.fn(() => ({
+                    select: vi.fn().mockResolvedValue({ data: [{ id: 'src-1', quantity: 4 }], error: null }),
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        if (callCount === 3) {
+          // findInUseRowMatch: name-color → ingen match
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            ilike: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }
+        }
+        if (callCount === 4) {
+          // createInUseRow: metadata fra source (catalog_image_url='cat.jpg')
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: {
+                fiber: 'bomuld',
+                yarn_weight: 'DK',
+                hex_colors: null,
+                notes: null,
+                image_url: null,
+                catalog_image_url: 'cat.jpg',
+                gauge: null,
+                meters: 110,
+                color_category: 'rød',
+              },
+              error: null,
+            }),
+          }
+        }
+        // callCount === 5: createInUseRow INSERT
+        return {
+          insert: (payload: unknown) => {
+            insertCaptured(payload)
+            return {
+              select: vi.fn(() => ({
+                single: vi.fn().mockResolvedValue({ data: { id: 'in-use-new' }, error: null }),
+              })),
+            }
+          },
+        }
+      }),
+    } as never
+
+    const source = {
+      ...makeLine({ catalogColorId: null }),
+      yarnItemId: 'src-1',
+    }
+    const result = await allocateYarnToProject(supabase, 'user-1', source, 'proj-1', 6)
+
+    expect(result.inUseYarnItemId).toBe('in-use-new')
+    expect(result.merged).toBe(false)
+
+    // KERNE: catalog_image_url skal være 'cat.jpg' i INSERT-payloaden
+    expect(insertCaptured).toHaveBeenCalledWith([expect.objectContaining({
+      catalog_image_url: 'cat.jpg',
+    })])
+  })
+
+  it('createInUseRow bevarer catalog_image_url=null når source ikke har det', async () => {
+    // Verificerer at null-værdien propageres korrekt (ingen undefined-fejl).
+    // Kald-rækkefølge identisk med ovenstående, blot catalog_image_url=null.
+    const insertCaptured = vi.fn()
+
+    let callCount = 0
+    const supabase = {
+      from: vi.fn(() => {
+        callCount++
+        if (callCount === 1) {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: { quantity: 8 }, error: null }),
+          }
+        }
+        if (callCount === 2) {
+          return {
+            update: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                eq: vi.fn(() => ({
+                  gte: vi.fn(() => ({
+                    select: vi.fn().mockResolvedValue({ data: [{ id: 'src-1', quantity: 2 }], error: null }),
+                  })),
+                })),
+              })),
+            })),
+          }
+        }
+        if (callCount === 3) {
+          // findInUseRowMatch: name-color → ingen match
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            ilike: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }
+        }
+        if (callCount === 4) {
+          // createInUseRow: metadata fra source (ingen catalog_image_url)
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({
+              data: {
+                fiber: null, yarn_weight: null, hex_colors: null,
+                notes: null, image_url: null, catalog_image_url: null,
+                gauge: null, meters: null, color_category: null,
+              },
+              error: null,
+            }),
+          }
+        }
+        // callCount === 5: createInUseRow INSERT
+        return {
+          insert: (payload: unknown) => {
+            insertCaptured(payload)
+            return {
+              select: vi.fn(() => ({
+                single: vi.fn().mockResolvedValue({ data: { id: 'in-use-2' }, error: null }),
+              })),
+            }
+          },
+        }
+      }),
+    } as never
+
+    const source = { ...makeLine({ catalogColorId: null }), yarnItemId: 'src-1' }
+    const result = await allocateYarnToProject(supabase, 'user-1', source, 'proj-1', 6)
+
+    expect(result.inUseYarnItemId).toBe('in-use-2')
+    expect(insertCaptured).toHaveBeenCalledWith([expect.objectContaining({
+      catalog_image_url: null,
+    })])
+  })
+})
