@@ -2,13 +2,13 @@
 
 Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
-**Sidst synkroniseret:** 2026-05-06 (Bug 7 vil_gerne→aktiv allokering + katalog-billede)
+**Sidst synkroniseret:** 2026-05-07 (launch-dato rykket til 2026-05-12)
 
 ---
 
 ## Nuværende milepæl
 
-**Testbruger-launch** — mål-dato: 2026-05-09 (3 uger fra 2026-04-18).
+**Testbruger-launch** — mål-dato: 2026-05-12 (tirsdag, rykket fra 2026-05-09 den 2026-05-07 for at give luft til fold-ud-redesign + substitutions-flow).
 
 ### Launch-krav (MÅ-HAVE)
 - Fungerende auth: login, logout, glemt-password, email-verifikation, signup
@@ -206,8 +206,92 @@ Bemærk: `ScanFraKatalogButton` på den offentlige `/garn`-katalog-side er IKKE 
 ### Dark mode (LAV PRIORITET)
 Ingen `dark:`-klasser i kodebasen. Dark mode er ikke startet. Sørg for at OS dark mode ikke utilsigtet bryder layoutet. Kan vente til efter testbruger-launch.
 
-### Forhandlersøgning — data mangler sandsynligvis
-Siden er implementeret teknisk, men `find_stores_near` RPC'en forudsætter at butiks-data er indlæst i databasen. Verificer at der faktisk er data.
+### Forhandlersøgning — kandidatliste over manglende butikker (2026-05-06)
+
+**Baggrund.** Vores `stores`-tabel (228 butikker) er aggregeret fra kun to kilder: Permins forhandlerkort + Filcolanas forhandler-API. Det betyder at butikker der ikke fører Permin- eller Filcolana-garn formentlig mangler. Brugeren rejste det konkret med fire eksempler: Ulrikka Garn, By Bek (Faaborg), Wadils, Sart Strik — ingen af dem er i DB.
+
+**Hvad jeg har lavet 2026-05-06.** Spawnede general-purpose-agent der scraped forhandler-sider hos CaMaRose, Krea Deluxe, BC Garn, Hjertegarn (delvist), DROPS Superstore + verificerede de fire bruger-nævnte butikker. Resultat: ~56 unikke kandidater der ikke findes i DB. Önling, Sandnes Garn, Isager og halvdelen af Hjertegarn kunne ikke parses (JS-renderet, kræver headless browser).
+
+**Kandidatliste — sorteret efter postnummer:**
+
+| Butik | Postnr. | By | Website | Fundet via |
+|---|---|---|---|---|
+| The Fiddlery | 2100 | København Ø | thefiddlery.dk | BC Garn |
+| Sart Strik | 2300 | København S | sartstrik.dk | Bruger-input |
+| Wadils | 2690 | Karlslunde | wadils.dk | Bruger-input |
+| Amager Strik ? | 2770 | Kastrup | — | Hjertegarn |
+| STRIKbart | 2791 | Dragør | strikbart.dk | CaMaRose |
+| Strikkeboden | 2800 | Lyngby | — | Hjertegarn |
+| Gentofte Modestoffer | 2820 | Gentofte | gentoftemodestoffer.dk | CaMaRose |
+| Mormorfabrikken | 2860 | Søborg | mormorfabrikken.dk | CaMaRose, Hjertegarn |
+| Van Hauen Design | 2900 | Hellerup | — | Hjertegarn |
+| Bymarianne | 3050 | Humlebæk | — | Hjertegarn, Krea Deluxe |
+| Smykkesten og Fritid | 3300 | Frederiksværk | — | DROPS |
+| Lille my strik og sy | 3460 | Birkerød | — | Hjertegarn |
+| Strikkeriet Bornholm ? | 3700 | Rønne | facebook | CaMaRose |
+| Ghitas Garn | 4070 | Kr. Hyllinge | — | CaMaRose |
+| Masker Med Mere | 4180 | Sorø | maskermedmere.dk | CaMaRose |
+| Frk Sibbes Garn | 4230 | Skælskør | frksibbes.dk | CaMaRose |
+| MaskeradeGarn | 4250 | Fuglebjerg | maskeradegarn.dk | Krea Deluxe |
+| Hønses Garn | 4270 | Høng | — | Hjertegarn |
+| Knit by Flintholm | 4295 | Stenlille | knitbyflintholm.dk | CaMaRose |
+| Knitgarden | 4330 | Hvalsø | knitgarden.dk | CaMaRose |
+| Salkavalka | 4500 | Nykøbing Sj | salkavalka.dk | CaMaRose |
+| Hjertestrik | 4571 | Grevinge | — | Hjertegarn |
+| Ernas | 4591 | Føllenslev | — | Hjertegarn |
+| YarnStudio | 4600 | Køge | yarnstudio.dk | CaMaRose |
+| Violykke | 4632 | Bjæverskov | — | Hjertegarn |
+| Mosters Hylde | 4660 | St. Heddinge | — | Hjertegarn |
+| Krea Deluxe (flagship) | 4690 | Haslev | kreadeluxe.com | Krea Deluxe |
+| JM-Shop | 4690 | Haslev | — | Hjertegarn |
+| Min Lille Strikkebutik | 4760 | Vordingborg | facebook | CaMaRose |
+| Bettygarn | 4800 | Nykøbing F | — | Hjertegarn |
+| Sokkegarn | 4862 | Guldborg | — | Hjertegarn |
+| Garnnøglen | 4900 | Nakskov | — | Hjertegarn |
+| Hemsø Broderi | 4930 | Maribo | hemsoebroderi.dk | Krea Deluxe |
+| Tante Grøn (Odense) | 5000 | Odense C | tantegroen.dk | CaMaRose |
+| Wonder Wool | 5000 | Odense | — | Krea Deluxe |
+| Bemipa | 5210 | Odense NV | — | Hjertegarn |
+| By Bek ? | 5600 | Faaborg | instagram | Bruger-input, CaMaRose |
+| Ulrikka Garn | 5700 | Svendborg | ulrikkagarn.dk | Bruger-input |
+| Little Village People | 5900 | Rudkøbing | littlevillagepeople.dk | CaMaRose |
+| Island Living | 5970 | Ærøskøbing | — | Krea Deluxe |
+| Garn og Craft | 6000 | Kolding | garnogcraft.dk | CaMaRose |
+| Mikkla | 6818 | Årre | mikkla.dk | Krea Deluxe |
+| MARISTA Garn | 6800 | Varde | — | DROPS |
+| Handmade by Hjort | 6933 | Kibæk | handmadebyhjort.dk | Krea Deluxe |
+| Garniture Give | 7320 | Give | garnituregive.dk | CaMaRose |
+| Design Agger | 7770 | Vestervig | designagger.dk | CaMaRose |
+| WeLoveWool | 8240 | Risskov | welovewool.dk | BC Garn |
+| IdeGarn | 8500 | Grenaa | idegarn.dk | CaMaRose |
+| Ønskegarn | 8600 | Silkeborg | onskegarn.dk | CaMaRose |
+| MADE by___ | 8660 | Skanderborg | madebyshop.dk | CaMaRose |
+| YarnForward | 8762 | Flemming | yarnforward.dk | BC Garn |
+| Knudegarn | 9480 | Løkken | knudegarn.dk | CaMaRose |
+| Garnværk Hadsund | 9560 | Hadsund | — | CaMaRose |
+| Garnglæde | 9600 | Aars | — | CaMaRose |
+| Kronborg Uld | 9690 | Fjerritslev | kronborg-uld.dk | CaMaRose |
+| Lamashop | 9800 | Hjørring | lamashop.dk | CaMaRose |
+
+**Forbehold der skal verificeres før import:**
+- **By Bek (5600 Faaborg)** — ifølge nyheder solgte hun garnet ud i 2021 og fortsætter som livsstilsbutik *uden* garn. Står stadig på CaMaRose-listen, men kan være forældet.
+- **Wadils (2690 Karlslunde)** — primært webshop med lagerudsalg. Gråzone om det tæller som "fysisk butik".
+- **Tre rækker markeret med `?`** — samme postnummer som en eksisterende butik men forskelligt navn. Kan være ny butik eller stavevariant.
+
+**Ikke parseable kilder (kræver headless browser, fx Playwright):**
+- **Önling** (oenling.dk) — JS-loaded forhandlerkort, tom HTML. Estimeret 20-50 butikker.
+- **Sandnes Garn (DK)** — `/dealers` map er JS-app. Estimeret 30-80 butikker.
+- **Isager** (knitisager.com / isagerstrik.dk) — search-baseret, ingen fuld liste i HTML.
+- **Hjertegarn** — kun postnumre op til 5210 kom igennem; resten af tabellen returnerede tegn på modellens-konfabulering. Halvdelen af Jylland mangler.
+
+**Forslag til næste skridt (vælg én):**
+1. **Godkend listen som den er** → migration der tilføjer alle ~56 (med geokodning af adresser via fx Dataforsyningen). Marker `By Bek` og `Wadils` til manuel review.
+2. **Hannah redigerer først** → markér hvilke der skal med, kun de markerede importeres.
+3. **Headless-scrape først** → kør Playwright mod Önling/Sandnes/Isager/resten af Hjertegarn så vi får hele billedet før import. Mest komplet, mest arbejde.
+
+Relateret: "Forhandler-foreslå"-knap i `/find-forhandler` så testbrugere kan supplere efter launch (kræver moderation, ikke launch-blokerende).
+
+Ikke launch-blokerende — kan tages efter testbruger-launch. Beslutning om hvilken vej der vælges skal tages før migration laves (orkester: arkitekt → tester → reviewer).
 
 ### "Min placering" — IP-fallback fejler ved gentagne radius-skift
 Når brugeren klikker "📍 Min placering" og derefter skifter radius (10/25/50 km) flere gange, fejler IP-lookupet (`ipapi.co/json/` rate-limit eller intermittent fejl). Brugerens oprindelige IP-lokation bliver tabt, og søgningen stopper med "Kunne ikke finde din placering"-fejl.
@@ -363,6 +447,44 @@ Foldet ud (klik):
 
 **Kør med**: `/ny-feature Fold-ud-redesign af Tilføj garn-modal + valgfrit pris-felt`
 
+### 7. Feedback + adfærds-tracking inden testbruger-launch (2026-05-07, fra Hannah)
+
+Vi sender testbrugere ind uden at kunne se hvad de gør eller høre hvad de tænker. Det skal fixes inden launch — ellers smider vi mest værdifulde signal ud i 1. uge.
+
+**Tre dele, samme launch-blokker:**
+
+**(A) Nem feedback-knap** — synlig CTA i app'en hvor testbrugere kan sende kort tilbagemelding uden at forlade flowet. Forslag: floating "💬 Feedback"-knap nederst-højre, åbner modal med ét fritekst-felt + valgfri stjerne-rating + auto-vedhæftet kontekst (hvilken side, browser, user_id). Skriver til ny `feedback`-tabel i Supabase + sender Resend-mail til kontakt@striq.dk så vi reagerer hurtigt. Alternativt simpelt: redirect-link til Tally/Google-form (færrest linjer kode, ingen DB-vedligehold). ⚠️ **Spørg Hannah ved opstart**: in-app-modal eller ekstern formular? Skal feedback være anonym mulig, eller altid knyttet til user_id?
+
+**(B) Klik-/adfærds-tracking — hvor går de i stå?** — heatmap + session-recording så vi kan se hvilke knapper der bliver klikket, hvilke der ignoreres, og hvor folk forlader et flow midt i. To realistiske paths:
+  - **PostHog** (gratis op til 1M events/md, EU-hosting i Frankfurt, GDPR-venlig, har heatmaps + session replay + funnels) — dansk-relevant fordi det undgår US-data-transfer-spørgsmålet vi ellers skal opdatere privatlivspolitikken med
+  - **Microsoft Clarity** (helt gratis, ubegrænset, men US/Microsoft → kræver privatlivspolitik-opdatering + cookie-consent-banner)
+  - **Vercel Analytics + custom events** (allerede i stack hvis vi kører Vercel Pro, men ingen heatmap/replay — kun aggregater)
+
+  Skal kunne slås fra pr. bruger (consent), kun aktivt for opt-in testbrugere første uge. ⚠️ **Spørg Hannah ved opstart**: PostHog (EU-hosting, mest funktionalitet) eller Clarity (gratis, men kræver privatliv-opdatering)? Skal session-replay være tændt fra start eller kun heatmap?
+
+**(C) Domæne-metrics: garn + projekter pr. bruger** — simpel dashboard-visning der svarer på "har testbrugerne faktisk brugt det?". Tre tal pr. bruger:
+  - Antal `yarn_items` oprettet (groupby user_id)
+  - Antal `projects` oprettet (groupby user_id, evt. fordelt på status)
+  - Sidste aktivitets-tidspunkt (max created_at/updated_at på tværs)
+
+  Implementering: SQL-view `user_activity_summary` + en intern `/admin/metrics`-side beskyttet af `EDITOR_EMAILS` (samme mønster som `/garn/admin`). Ingen ekstra tracking-værktøj nødvendigt — alt ligger allerede i DB. **Lille men kritisk** for at svare på "virker det?" efter 1. uge.
+
+**Privatlivspolitik-opdatering** påkrævet uanset valg af tracking-værktøj — skal inkludere navn på tredjepart, retsgrundlag (samtykke for testbrugere), og hvor data bor (EU vs. US). Allerede etableret skabelon i `app/privatlivspolitik/page.tsx`.
+
+**Filer berørt (estimat):**
+- Migration: `supabase/migrations/<dato>_feedback_and_metrics.sql` — `feedback`-tabel + `user_activity_summary`-view
+- `components/layout/FeedbackButton.tsx` — ny floating knap (eller redirect-link)
+- `app/admin/metrics/page.tsx` — ny intern dashboard-side
+- Tracking-script i `app/layout.tsx` (PostHog/Clarity SDK init med consent-gate)
+- `app/privatlivspolitik/page.tsx` — opdater med valgte tredjepart
+- `lib/consent.ts` — ny opt-in/opt-out helper hvis tracking medtages
+
+**Estimat**: 0,5 dag for (A) hvis ekstern formular vælges, 1 dag hvis in-app-modal. 0,5-1 dag for (B) afhængigt af værktøj. 0,5 dag for (C). Samlet: 1,5-2,5 dage.
+
+**Hvorfor launch-blokerende**: uden (A) ved vi ikke om noget er i stykker indtil testbrugere mailer eller giver op. Uden (B) gætter vi på hvor de går i stå. Uden (C) ved vi ikke om de har brugt produktet overhovedet. Alle tre er små tiltag der mangedobler signal-værdien fra første uge.
+
+**Kør med**: `/ny-feature Feedback-knap + adfærds-tracking + admin-metrics-dashboard`
+
 ---
 
 ## Ønsker / overvejelser
@@ -414,7 +536,7 @@ F6 manuel + bidragsflow ──→ F7 AI-opslag (post-launch)
 - **F7 (L)** AI-opslag med caching: knap "Slå op med AI" → Claude API → udfylder fiber/vægt/metrage med confidence-score. Cache i ny `yarn_ai_cache`-tabel (30 dage). AI-felter vises med lilla accent. Kræver `ANTHROPIC_API_KEY` i prod. **Post-launch.**
 - **F8 (M)** Review-flow + admin-notifikationer: fix `user_profiles`-bug (tom i prod → `is_editor()` returnerer false), Supabase Database Webhook → Resend ved nye forslag, batch-godkendelse i `ModerationClient.tsx`. **Detaljeret plan**: `~/.claude/plans/der-er-mange-ting-splendid-kernighan.md` (F8-sektion). **Beslutninger truffet (2026-04-27)**: KUN in-app-notifikation til at starte (Resend udskydes til efter testbruger-launch). Ny `<TopAfMitGarnBanner>`-komponent på Mit Garn der viser "Dit forslag er godkendt"-besked + "Se garnet"-knap. "Nu i kataloget"-pille på det relevante kort i 7 dage efter godkendelse. Datalag: udvid `yarn_catalog_suggestions` med `seen_at` ELLER ny `notifications`-tabel — afgøres i F8-arkitekt-fase. Bug-fix `user_profiles` tom i prod inkluderet. Resend (email) udsættes som senere udvidelse.
 
-**Launch-vurdering:** Ingen af de 8 er launch-blokerende. F1–F6 + F8 er realistiske inden/kort efter testbruger-launch (2026-05-09). F7 er eksplicit post-launch.
+**Launch-vurdering:** Ingen af de 8 er launch-blokerende. F1–F6 + F8 er realistiske inden/kort efter testbruger-launch (2026-05-12). F7 er eksplicit post-launch.
 
 **Dedupe-noter:**
 - QW1/QW2/QW3 fra "UX-review af Mit Garn-input" nedenfor absorberes i F2+F3 — undgå dobbeltarbejde.
@@ -593,6 +715,85 @@ Anden fokusgruppe-runde med samme 8 profiler, denne gang med pris som indgang. A
 - **Visualizer: se dig selv i en trøje** — avanceret AI-feature
 - **Hækling** — udvide scope til hækling (fra Excel)
 - **Offentlig forhandler-søgning med mere data** — udvide brands og butiks-database
+
+**Fra Hannah (research-spike 2026-05-06): Daglig pris-scraping med "billigste pris" på katalog-kort + detalje-side**
+
+Mål: vis aktuel billigste pris (DKK) på YarnCard og garn-detaljesiden, med direkte link til den retailer der lige nu er billigst. Opdateres automatisk hver nat.
+
+**Faldgruber (vigtigst først):**
+1. **Mapping-problemet** — 99 garner × ~15 retailers = ~1500 mulige produktside-URL'er. Ingen central database mapper "Drops Karisma" til specifikke produktsider hos hver retailer. Skal bootstrappes manuelt (eller delvist via søg-API'er) første gang. Uden mapping ingen priser.
+2. **Hver retailer har sin egen DOM** — ingen ensartet schema; hver redesign bryder parseren.
+3. **JS-rendret pris** — moderne webshops rendrer pris via JS; native `fetch()` ser kun tom skal. Løsning: Playwright/Puppeteer (tungt, virker dårligt på Vercel serverless). **Lyspunkt**: mange sider eksponerer JSON-LD `Product` schema for SEO — skal undersøges retailer-for-retailer.
+4. **Juridisk/ToS** — scraping uden tilladelse er gråzone; risiko for IP-ban eller cease-and-desist. Bedre vej: **affiliate-aftaler** (Adtraction, Partner-Ads) med struktureret pris-feed mod provision på salg.
+5. **Sammenligningsproblemer** — 50g vs 100g nøgler kræver pris pr. 100g (eller pr. 100m). Tilbudspriser, mængde-rabatter, udsolgt, udenlandsk fragt forvrænger "billigste".
+6. **Cron-infrastruktur findes ikke** — kun `.github/workflows/backup-db.yml` (daglig DB-dump). Vercel Hobby = max 2 crons/dag; alternativ er GitHub Actions schedule (gratis) eller Supabase Edge Function + pg_cron.
+7. **Vedligeholdelse** — 5-10 parsers × kontinuerlige redesigns ≈ ~½ dag/måned vedligehold. Stale priser er værre end ingen priser.
+8. **Skæve outliers** — sanity-check (pris pr. 100g i [50; 1500] kr) påkrævet, ellers vis ikke.
+
+**Anbefalet etape-tilgang (stop og evaluer efter etape 1):**
+
+Etape 1 — MVP (4-7 dages arbejde): manuel mapping af 20 mest populære garner × 3 store retailers. Brug native `fetch` + JSON-LD-parsing.
+
+Schema-skitse:
+```sql
+create table public.yarn_retailer_offers (
+  id uuid primary key default gen_random_uuid(),
+  yarn_id uuid not null references public.yarns(id) on delete cascade,
+  retailer_id uuid not null references public.online_retailers(id) on delete cascade,
+  product_url text not null,
+  ball_weight_g_at_retailer integer,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (yarn_id, retailer_id)
+);
+create table public.yarn_price_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  offer_id uuid not null references public.yarn_retailer_offers(id) on delete cascade,
+  price_dkk numeric(10,2) not null,
+  price_per_100g_dkk numeric(10,2),
+  in_stock boolean,
+  scraped_at timestamptz not null default now(),
+  raw_html_snippet text
+);
+create index on public.yarn_price_snapshots (offer_id, scraped_at desc);
+create table public.yarn_cheapest_offer (
+  yarn_id uuid primary key references public.yarns(id) on delete cascade,
+  offer_id uuid references public.yarn_retailer_offers(id) on delete set null,
+  price_dkk numeric(10,2),
+  price_per_100g_dkk numeric(10,2),
+  retailer_navn text,
+  product_url text,
+  updated_at timestamptz not null default now()
+);
+```
+
+Etape 2 — cron via **GitHub Actions** (anbefales): tilføj `.github/workflows/scrape-prices.yml` der kører `node scripts/scrape-prices.mjs` hver nat 03:00 UTC. Service-role key som GitHub secret. Gratis, ubegrænset, samme mønster som backup-db.yml.
+
+Etape 3 (valgfri) — custom parsers per retailer der ikke har JSON-LD. Én ad gangen i `scripts/scrapers/<slug>.mjs`. For JS-tunge sites: spring og overvej affiliate-feed.
+
+**Genbrug fra eksisterende kodebase:**
+- `scripts/check-retailer-links.mjs` — mønster: native `fetch` + AbortController + concurrency-batch
+- `scripts/_yarns-xlsx.mjs:loadEnv` + `makeAdminClient` — service-role Supabase-klient
+- `online_retailers`, `brands`, `retailer_brands` — eksisterer; pegs til af `yarn_retailer_offers.retailer_id`
+- `lib/data/retailers.ts` — typed Supabase-query mønster
+- `app/api/revalidate/route.ts` — kald efter scrape så ISR (`revalidate=3600`) invalideres
+
+**Filer der skal ændres/oprettes** (ved senere implementering):
+- `lib/types.ts` — tilføj `cheapest_price_dkk`, `cheapest_price_url`, `cheapest_retailer_navn`, `price_updated_at` på `Yarn`
+- `yarns_full`-view (defineret i `supabase/migrations/20260427000003_yarn_weight_enum.sql:98-139`) skal genoprettes med `LEFT JOIN public.yarn_cheapest_offer`
+- `components/catalog/YarnCard.tsx` — pris-linje under fiber-teksten
+- `app/garn/[slug]/page.tsx` — "Billigste pris"-boks i hero med "Se hos {retailer}"-knap
+- Nye: `supabase/migrations/<dato>_yarn_pricing.sql`, `scripts/scrape-prices.mjs`, `scripts/scrapers/json-ld.mjs`, `scripts/seed-yarn-offers.mjs`, `.github/workflows/scrape-prices.yml`
+
+**Estimat**: Etape 1 ≈ 4-7 dage. Etape 2 ≈ 0,5 dag. Etape 3 ≈ 1-2 dage pr. yderligere retailer. Vedligehold ≈ ½ dag/måned.
+
+**Beslutninger der bør tages før implementering**:
+1. Vedligeholde scrapers løbende, eller foretrække affiliate-feeds (færre retailers, men stabilt)?
+2. Skal vi tale med 1-2 store retailers om produkt-feed eller affiliate-aftale før vi bygger scraping?
+3. Er det vigtigere at vise *billigste pris* eller bare *en pris med direkte køb-link*? Det første er meget sværere.
+
+Synergi med eksisterende KAN-VENTE-emner: "Køb garn til opskriften"-flow (2026-04-30), Tilbud-notifikationer på yndlingsgarn, Affiliate-model med garnbutikker, Søgning på konkrete garntyper pr. garnbutik.
 
 ---
 
