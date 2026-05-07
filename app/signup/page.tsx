@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { useSupabase } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { buildLoginHref } from '@/lib/auth/buildLoginHref'
+import GoogleLoginButton from '@/components/app/GoogleLoginButton'
 
 export default function SignupPage() {
   return (
@@ -94,6 +95,14 @@ function SignupPageInner() {
           <div style={{ fontSize: 32, marginBottom: 8 }}>🧶</div>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 600, color: '#61846D', marginBottom: 6 }}>Opret konto</div>
           <div style={{ fontSize: 13, color: '#8C7E74' }}>Kom i gang med dit personlige garnlager</div>
+        </div>
+
+        <GoogleLoginButton nextPath={postAuthNext} mode="signup" />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }} aria-hidden="true">
+          <div style={{ flex: 1, height: 1, background: '#D0C8BA' }} />
+          <span style={{ fontSize: 11, color: '#8C7E74', textTransform: 'uppercase', letterSpacing: '.1em' }}>eller</span>
+          <div style={{ flex: 1, height: 1, background: '#D0C8BA' }} />
         </div>
 
         <form onSubmit={handleSignup}>

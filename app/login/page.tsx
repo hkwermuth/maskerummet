@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useSupabase } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { resolveNext } from '@/lib/auth/resolveNext'
+import GoogleLoginButton from '@/components/app/GoogleLoginButton'
 
 const REMEMBERED_EMAIL_KEY = 'striq-email'
 
@@ -29,6 +30,11 @@ function LoginPageInner() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showForgot, setShowForgot] = useState(false)
+  const errorParam = searchParams.get('error')
+  const oauthError =
+    errorParam === 'oauth_account_exists'
+      ? 'Denne e-mail er allerede oprettet med adgangskode. Log ind med adgangskode for at fortsætte.'
+      : null
 
   useEffect(() => {
     const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY)
@@ -66,6 +72,20 @@ function LoginPageInner() {
           <div style={{ fontSize: 32, marginBottom: 8 }}>🧶</div>
           <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 600, color: '#61846D', marginBottom: 6 }}>STRIQ</div>
           <div style={{ fontSize: 13, color: '#8C7E74' }}>Log ind for at åbne dit garnlager</div>
+        </div>
+
+        {oauthError && (
+          <div role="alert" style={{ fontSize: 12, color: '#8B3A2A', background: '#F5E8E0', borderRadius: 6, padding: '8px 12px', marginBottom: 16 }}>
+            {oauthError}
+          </div>
+        )}
+
+        <GoogleLoginButton nextPath={nextPath} mode="login" />
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }} aria-hidden="true">
+          <div style={{ flex: 1, height: 1, background: '#D0C8BA' }} />
+          <span style={{ fontSize: 11, color: '#8C7E74', textTransform: 'uppercase', letterSpacing: '.1em' }}>eller</span>
+          <div style={{ flex: 1, height: 1, background: '#D0C8BA' }} />
         </div>
 
         <form onSubmit={signIn}>
