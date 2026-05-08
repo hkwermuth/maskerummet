@@ -16,6 +16,10 @@ export type StoreBase = {
   lat: number
   lng: number
   brands: StoreBrandTag[]
+  is_strikkecafe: boolean
+  // Note vises KUN på café-listningen — ikke på almindelig storefinder.
+  // Hannahs krav: "Det skal lige nu kun vises når strikkebutikken har en garncafe."
+  note: string | null
 }
 
 export type StoreResult = Omit<StoreBase, 'brands'> & {
@@ -34,29 +38,21 @@ type StoreRow = {
   website: string | null
   lat: number
   lng: number
+  is_strikkecafe: boolean | null
+  note: string | null
   store_brands: {
     brands: StoreBrandTag | null
   }[] | null
 }
 
-// Henter alle butikker med lat/lng + tilknyttede mærker — bruges til kortet
-// ved side-load. Brand-liste er joinet ind så klient kan filtrere uden RPC.
-export async function fetchAllStores(supabase: SupabaseClient): Promise<StoreBase[]> {
-  const { data, error } = await supabase
-    .from('stores')
-    .select(`
-      id, name, address, postcode, city, phone, website, lat, lng,
-      store_brands ( brands ( slug, name ) )
-    `)
-    .not('lat', 'is', null)
-    .not('lng', 'is', null)
-    .order('name', { ascending: true })
-  if (error) {
-    console.error('fetchAllStores', error)
-    return []
-  }
-  const rows = (data ?? []) as unknown as StoreRow[]
-  return rows.map(r => ({
+const STORE_SELECT = `
+  id, name, address, postcode, city, phone, website, lat, lng,
+  is_strikkecafe, note,
+  store_brands ( brands ( slug, name ) )
+`
+
+function mapRow(r: StoreRow): StoreBase {
+  return {
     id: r.id,
     name: r.name,
     address: r.address,
@@ -66,11 +62,50 @@ export async function fetchAllStores(supabase: SupabaseClient): Promise<StoreBas
     website: r.website,
     lat: r.lat,
     lng: r.lng,
+    is_strikkecafe: r.is_strikkecafe ?? false,
+    note: r.note,
     brands: (r.store_brands ?? [])
       .map(sb => sb.brands)
       .filter((b): b is StoreBrandTag => b !== null)
       .sort((a, b) => a.name.localeCompare(b.name, 'da')),
-  }))
+  }
+}
+
+// Henter alle butikker med lat/lng + tilknyttede mærker — bruges til kortet
+// ved side-load. Brand-liste er joinet ind så klient kan filtrere uden RPC.
+export async function fetchAllStores(supabase: SupabaseClient): Promise<StoreBase[]> {
+  const { data, error } = await supabase
+    .from('stores')
+    .select(STORE_SELECT)
+    .not('lat', 'is', null)
+    .not('lng', 'is', null)
+    .order('name', { ascending: true })
+  if (error) {
+    console.error('fetchAllStores', error)
+    return []
+  }
+  const rows = (data ?? []) as unknown as StoreRow[]
+  return rows.map(mapRow)
+}
+
+// Henter kun butikker hvor is_strikkecafe=true. Bruges af /strikkecafeer-siden.
+// Kører server-side så data ikke eksponeres som klient-feed (light beskyttelse
+// mod scraping — ingen JSON-response-serialisering på klient-sigt).
+export async function fetchStrikkecafeer(supabase: SupabaseClient): Promise<StoreBase[]> {
+  const { data, error } = await supabase
+    .from('stores')
+    .select(STORE_SELECT)
+    .eq('is_strikkecafe', true)
+    .not('lat', 'is', null)
+    .not('lng', 'is', null)
+    .order('postcode', { ascending: true })
+    .order('name', { ascending: true })
+  if (error) {
+    console.error('fetchStrikkecafeer', error)
+    return []
+  }
+  const rows = (data ?? []) as unknown as StoreRow[]
+  return rows.map(mapRow)
 }
 
 export type SearchStoresArgs = {

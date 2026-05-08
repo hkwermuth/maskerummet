@@ -6,7 +6,7 @@ import { useSupabase } from '@/lib/supabase/client'
 import { HeroIllustration } from '@/components/layout/HeroIllustration'
 import { searchStoresNear, type StoreBase, type StoreResult } from '@/lib/data/stores'
 import type { Brand, OnlineRetailer } from '@/lib/data/retailers'
-import type { DanmarksKortHandle } from './DanmarksKortClient'
+import type { DanmarksKortHandle, UserLocation } from './DanmarksKortClient'
 import { FilterChip, HIDDEN_BRAND_SLUGS, OnlineRetailersSection, orderBrands } from './OnlineRetailersSection'
 
 const DanmarksKort = dynamic(() => import('./DanmarksKortClient'), {
@@ -15,6 +15,19 @@ const DanmarksKort = dynamic(() => import('./DanmarksKortClient'), {
 })
 
 const RADII = [10, 25, 50]
+const LOCATION_STORAGE_KEY = 'striq-find-forhandler-location'
+// IP-fallback har ingen accuracy fra ipapi.co; 3000m matcher copy ("1-5 km forkert") konservativt.
+const IP_ACCURACY_FALLBACK_M = 3000
+
+type LocationSource = 'gps' | 'ip' | 'manual'
+
+type LocationMeta = {
+  source: LocationSource
+  accuracyM?: number
+  label: string
+  lat: number
+  lng: number
+}
 
 type SearchResults = {
   stores: StoreResult[]
@@ -50,6 +63,7 @@ export function FindForhandlerClient({
   const [error, setError] = useState<string | null>(null)
   const [geoLoading, setGeoLoading] = useState(false)
   const [activeBrand, setActiveBrand] = useState<string | null>(null)
+  const [locationMeta, setLocationMeta] = useState<LocationMeta | null>(null)
 
   // Kun mærker med mindst én fysisk butik vises i chip-listen (mærker uden
   // fysiske butikker kan stadig have online-forhandlere — de vises bare ikke
@@ -72,6 +86,18 @@ export function FindForhandlerClient({
   const activeBrandName = activeBrand
     ? brands.find(b => b.slug === activeBrand)?.name ?? null
     : null
+
+  function persistLocation(meta: LocationMeta) {
+    setLocationMeta(meta)
+    if (typeof window === 'undefined') return
+    try { sessionStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(meta)) } catch {}
+  }
+
+  function clearLocation() {
+    setLocationMeta(null)
+    if (typeof window === 'undefined') return
+    try { sessionStorage.removeItem(LOCATION_STORAGE_KEY) } catch {}
+  }
 
   async function geocodeCity(name: string) {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&countrycodes=dk&limit=1`
@@ -98,9 +124,10 @@ export function FindForhandlerClient({
   async function tryIpFallback() {
     try {
       const { lat, lng, city: ipCity } = await geolocateByIP()
-      const label = `Omkring ${ipCity} (via IP)`
+      const label = `Omkring ${ipCity}`
       setCity(label)
       setGeoLoading(false)
+      persistLocation({ source: 'ip', accuracyM: IP_ACCURACY_FALLBACK_M, label, lat, lng })
       await runSearch(lat, lng, label)
     } catch {
       setGeoLoading(false)
@@ -141,9 +168,13 @@ export function FindForhandlerClient({
     setGeoLoading(true)
     navigator.geolocation.getCurrentPosition(
       async pos => {
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        const accuracyM = Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : undefined
         setCity('Min placering')
         setGeoLoading(false)
-        await runSearch(pos.coords.latitude, pos.coords.longitude, 'Min placering')
+        persistLocation({ source: 'gps', accuracyM, label: 'Min placering', lat, lng })
+        await runSearch(lat, lng, 'Min placering')
       },
       async (e: GeoError) => {
         if (e.code === 2 || e.code === 3) {
@@ -154,7 +185,7 @@ export function FindForhandlerClient({
         if (e.code === 1) setError('Du har afvist adgang til din placering. Tryk på låsikonet i adresselinjen for at tillade det.')
         else setError('Kunne ikke hente din placering. Prøv at skrive en by i stedet.')
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     )
   }
 
@@ -165,12 +196,21 @@ export function FindForhandlerClient({
     setLoading(true)
     try {
       const { lat, lng } = await geocodeCity(city)
+      persistLocation({ source: 'manual', label: city, lat, lng })
       await runSearch(lat, lng, city)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Ukendt fejl'
       setError(msg)
     }
     setLoading(false)
+  }
+
+  async function handleMapClick(lat: number, lng: number) {
+    const label = 'Valgt på kortet'
+    setCity(label)
+    setError(null)
+    persistLocation({ source: 'manual', label, lat, lng })
+    await runSearch(lat, lng, label)
   }
 
   async function runSearch(lat: number, lng: number, label: string, brandOverride?: string | null) {
@@ -202,6 +242,25 @@ export function FindForhandlerClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBrand])
 
+  // Genskab sidste placering fra sessionStorage så brugeren ikke mister "min placering"
+  // ved navigation tilbage til siden eller ved gentagne radius-skift (ipapi.co rate-limit).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    let raw: string | null = null
+    try { raw = sessionStorage.getItem(LOCATION_STORAGE_KEY) } catch { return }
+    if (!raw) return
+    try {
+      const meta = JSON.parse(raw) as LocationMeta
+      if (typeof meta?.lat !== 'number' || typeof meta?.lng !== 'number' || !meta?.label) return
+      setLocationMeta(meta)
+      setCity(meta.label)
+      void runSearch(meta.lat, meta.lng, meta.label)
+    } catch {
+      // Korrupt JSON — bare ignorér
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", minHeight: 'calc(100vh - 58px - 57px)' }}>
       {/* Hero */}
@@ -228,8 +287,33 @@ export function FindForhandlerClient({
               <a href="#online-forhandlere" style={{ color: '#61846D', fontWeight: 500 }}>
                 gå direkte til online-oversigten
               </a>{' '}
-              og se hvem der forhandler dit yndlingsmærke.
+              og se hvem der forhandler dit yndlingsmærke. Du kan også finde{' '}
+              <a href="/strikkecafeer" style={{ color: '#61846D', fontWeight: 500 }}>
+                butikker med strikkecafé
+              </a>
+              .
             </p>
+            <div style={{ marginTop: 14 }}>
+              <a
+                href="/strikkecafeer"
+                aria-label="Se butikker med strikkecafé"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: '#EAF3DE',
+                  color: '#173404',
+                  borderRadius: 999,
+                  padding: '7px 14px',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  border: '1px solid #C9DDB1',
+                }}
+              >
+                <span aria-hidden>☕</span> Vis butikker med strikkecafé →
+              </a>
+            </div>
           </div>
           <div className="forhandler-hero-art" style={{ flexShrink: 0, width: 220, maxWidth: '100%' }}>
             <HeroIllustration variant="forhandler-butik-facade" />
@@ -257,7 +341,12 @@ export function FindForhandlerClient({
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <input
               value={city}
-              onChange={e => setCity(e.target.value)}
+              onChange={e => {
+                setCity(e.target.value)
+                // Bryd binding til sidst gemte placering hvis brugeren skriver manuelt —
+                // ellers vil locationMeta forblive 'gps'/'ip' selvom city ikke længere stemmer.
+                if (locationMeta && e.target.value !== locationMeta.label) clearLocation()
+              }}
               placeholder="By eller postnummer — fx Hillerød eller 3400"
               aria-label="By eller postnummer"
               style={{
@@ -332,6 +421,23 @@ export function FindForhandlerClient({
           {error && (
             <div role="alert" style={{ padding: '10px 14px', background: '#F5E8E0', borderRadius: 8, fontSize: 12.5, color: '#8B3A2A' }}>
               {error}
+            </div>
+          )}
+
+          {locationMeta && !error && (
+            <div
+              role="status"
+              aria-live="polite"
+              style={{
+                fontSize: 12.5,
+                color: '#6B5D4F',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                lineHeight: 1.5,
+              }}
+            >
+              {renderLocationStatus(locationMeta)}
             </div>
           )}
         </form>
@@ -412,7 +518,21 @@ export function FindForhandlerClient({
             </button>.
           </div>
         ) : (
-          <DanmarksKort ref={kortRef} stores={filteredStores} />
+          <DanmarksKort
+            ref={kortRef}
+            stores={filteredStores}
+            userLocation={
+              locationMeta
+                ? {
+                    lat: locationMeta.lat,
+                    lng: locationMeta.lng,
+                    accuracyM: locationMeta.accuracyM,
+                    source: locationMeta.source,
+                  }
+                : null
+            }
+            onMapClick={handleMapClick}
+          />
         )}
       </div>
 
@@ -459,6 +579,40 @@ export function FindForhandlerClient({
       <OnlineRetailersSection retailers={retailers} brands={brands} activeBrand={activeBrand} />
     </div>
   )
+}
+
+function renderLocationStatus(meta: LocationMeta) {
+  if (meta.source === 'gps') {
+    const a = meta.accuracyM
+    if (typeof a !== 'number') {
+      return <span>📍 Min placering brugt</span>
+    }
+    if (a <= 100) {
+      return <span>📍 Min placering — præcis (±{Math.round(a)} m)</span>
+    }
+    if (a <= 1000) {
+      // Rund til nærmeste 50 m for at undgå falsk præcision (fx "417 m")
+      const rounded = Math.round(a / 50) * 50
+      return (
+        <span>
+          📍 Min placering — omtrentlig (±{rounded} m). Klik på kortet hvis det ikke passer.
+        </span>
+      )
+    }
+    const km = (a / 1000).toFixed(1)
+    return (
+      <span style={{ color: '#8B3A2A' }}>
+        ⚠️ Placeringen er upræcis (±{km} km). Skriv din by eller klik på kortet.
+      </span>
+    )
+  }
+  if (meta.source === 'ip') {
+    return (
+      <span>🌐 Placering gættet ud fra netværk — ofte 1-5 km forkert. Skriv dit bynavn eller klik på kortet for at rette.</span>
+    )
+  }
+  // manual
+  return <span>✓ Søger fra {meta.label}</span>
 }
 
 function StoreCard({ store }: { store: StoreResult }) {
