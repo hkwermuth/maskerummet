@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import type { Yarn, FiberComponent, YarnWeight } from '@/lib/types'
@@ -44,6 +44,8 @@ export function YarnForm({ initial }: Props) {
   const [needleMin, setNeedleMin] = useState(initial?.needle_min_mm?.toString() ?? '')
   const [needleMax, setNeedleMax] = useState(initial?.needle_max_mm?.toString() ?? '')
   const [gaugeSt, setGaugeSt] = useState(initial?.gauge_stitches_10cm?.toString() ?? '')
+  const [gaugeRows, setGaugeRows] = useState(initial?.gauge_rows_10cm?.toString() ?? '')
+  const [gaugeNeedle, setGaugeNeedle] = useState(initial?.gauge_needle_mm?.toString() ?? '')
   const [description, setDescription] = useState(initial?.description ?? '')
   const [heroImageUrl, setHeroImageUrl] = useState(initial?.hero_image_url ?? '')
   const [fibers, setFibers] = useState<FiberComponent[]>(initial?.fibers ?? [])
@@ -58,6 +60,29 @@ export function YarnForm({ initial }: Props) {
   }
   function addFiber() { setFibers((arr) => [...arr, { fiber: 'uld', percentage: 0 }]) }
   function removeFiber(i: number) { setFibers((arr) => arr.filter((_, idx) => idx !== i)) }
+
+  // Ikke-blokerende advarsler om gauge-data. Vises under felterne, men forhindrer ikke gem —
+  // brugeren kender ofte sit garn bedre end vores heuristik.
+  const gaugeWarnings = useMemo<string[]>(() => {
+    const warns: string[] = []
+    const pind = gaugeNeedle ? parseFloat(gaugeNeedle) : null
+    const nMin = needleMin ? parseFloat(needleMin) : null
+    const nMax = needleMax ? parseFloat(needleMax) : null
+    const st = gaugeSt ? parseFloat(gaugeSt) : null
+
+    if (
+      pind != null && Number.isFinite(pind) &&
+      nMin != null && Number.isFinite(nMin) &&
+      nMax != null && Number.isFinite(nMax) &&
+      (pind < nMin || pind > nMax)
+    ) {
+      warns.push('Pinden ligger uden for det angivne pind-interval. Justér enten pinden eller udvid intervallet.')
+    }
+    if (st != null && Number.isFinite(st) && (st > 40 || st < 8)) {
+      warns.push('Strikkefastheden ser usædvanlig ud — er det masker pr. 10 cm (ikke pr. cm)?')
+    }
+    return warns
+  }, [gaugeNeedle, needleMin, needleMax, gaugeSt])
 
   async function save(e: React.FormEvent) {
     e.preventDefault()
@@ -76,6 +101,8 @@ export function YarnForm({ initial }: Props) {
       needle_min_mm: needleMin ? parseFloat(needleMin) : null,
       needle_max_mm: needleMax ? parseFloat(needleMax) : null,
       gauge_stitches_10cm: gaugeSt ? parseFloat(gaugeSt) : null,
+      gauge_rows_10cm: gaugeRows ? parseFloat(gaugeRows) : null,
+      gauge_needle_mm: gaugeNeedle ? parseFloat(gaugeNeedle) : null,
       description: description || null,
       hero_image_url: heroImageUrl.trim() || null,
     }
@@ -141,7 +168,15 @@ export function YarnForm({ initial }: Props) {
         <Field label="Pind min (mm)"><input value={needleMin} onChange={(e) => setNeedleMin(e.target.value)} className={inputCls} /></Field>
         <Field label="Pind max (mm)"><input value={needleMax} onChange={(e) => setNeedleMax(e.target.value)} className={inputCls} /></Field>
         <Field label="Strikkefasthed (m/10cm)"><input value={gaugeSt} onChange={(e) => setGaugeSt(e.target.value)} className={inputCls} /></Field>
+        <Field label="Strikkefasthed (omg./10cm)"><input value={gaugeRows} onChange={(e) => setGaugeRows(e.target.value)} className={inputCls} /></Field>
+        <Field label="Anbefalet pind for strikkefasthed (mm)"><input value={gaugeNeedle} onChange={(e) => setGaugeNeedle(e.target.value)} className={inputCls} /></Field>
       </div>
+
+      {gaugeWarnings.length > 0 && (
+        <ul className="text-xs text-amber-700 space-y-1 -mt-2" role="status">
+          {gaugeWarnings.map((w, i) => <li key={i}>⚠ {w}</li>)}
+        </ul>
+      )}
 
       <Field label="Beskrivelse">
         <textarea value={description ?? ''} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputCls} />
