@@ -30,3 +30,7 @@ garn-billeder-staging/
 # Lokale script-artefakter (sample-data, dev-logs, downloadede swatches)
 .cache/
 
+# Review-roundtrip output (genereres lokalt af npm run review:export/import)
+content/yarns_review.xlsx
+content/yarns_review_report.csv
+
