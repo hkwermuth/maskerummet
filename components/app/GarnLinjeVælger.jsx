@@ -63,6 +63,21 @@ function Label({ children }) {
   )
 }
 
+/**
+ * @param {{
+ *   line: any,
+ *   onChange: any,
+ *   onRemove: any,
+ *   canRemove?: boolean,
+ *   initialTab?: any,
+ *   status: any,
+ *   userYarnItems?: any[],
+ *   catalogSearch: any,
+ *   catalogColors?: any[],
+ *   onSelectCatalogColor: any,
+ *   onlyOnStock?: boolean,
+ * }} props
+ */
 export default function GarnLinjeVælger({
   line,
   onChange,

@@ -651,7 +651,8 @@ describe('B-AC-1 ekstra: yarn_usage redirect efter Phase 1.6', () => {
     )
 
     // Simuler Phase 1.6 redirect-kald
-    await fullSupabase.from('yarn_usage')
+    await (fullSupabase as unknown as { from: (t: string) => { update: (p: unknown) => unknown } })
+      .from('yarn_usage')
       .update({ yarn_item_id: allocResult.inUseYarnItemId })
 
     expect(allocResult.inUseYarnItemId).toBe('in-use-B')

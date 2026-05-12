@@ -11,7 +11,7 @@ import React from 'react'
 
 // Mock supabase hook — vi styrer hvad delete() returnerer per test
 const mockDelete = vi.fn()
-const mockFrom = vi.fn(() => ({
+const mockFrom = vi.fn((_table: string) => ({
   select: vi.fn().mockReturnThis(),
   order: vi.fn().mockResolvedValue({ data: [], error: null }),
   delete: vi.fn(() => ({
@@ -102,7 +102,7 @@ beforeEach(async () => {
 
   // Reset from mock: yarn_items returnerer vores fake garn (afsluttes med .order()).
   // projects-chain (loadProjects: .eq().in().order().limit()) afsluttes med .limit().
-  mockFrom.mockImplementation((table: string) => {
+  mockFrom.mockImplementation(((table: string) => {
     if (table === 'projects') {
       return {
         select: vi.fn().mockReturnThis(),
@@ -121,7 +121,7 @@ beforeEach(async () => {
       eq: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue({ data: FAKE_YARN, error: null }),
     }
-  })
+  }) as never)
 
   // Dynamisk import så mocks er aktive inden modulet evalueres
   const mod = await import('@/components/app/Garnlager.jsx')

@@ -12,9 +12,8 @@ import userEvent from '@testing-library/user-event'
 // Vi behøver kun at mocke moduler komponenten importerer men vi ikke har tilgängelige
 vi.mock('@/lib/types', () => ({
   PROJECT_STATUS_LABELS: {
-    igangvaerende: 'Igangværende',
+    i_gang: 'Igangværende',
     faerdigstrikket: 'Færdigstrikket',
-    på_hold: 'På hold',
     vil_gerne: 'Vil gerne strikke',
   },
 }))
@@ -24,7 +23,7 @@ import ConfirmDeleteProjectModal from '@/components/app/ConfirmDeleteProjectModa
 const project = {
   id: 'p1',
   title: 'Min Sweater',
-  status: 'igangvaerende' as const,
+  status: 'i_gang' as const,
 }
 
 const yarnLines = [

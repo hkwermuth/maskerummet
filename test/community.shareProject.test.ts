@@ -50,7 +50,7 @@ describe('AC17 shareProject — community_size_shown i update-kald', () => {
   }
 
   it('sender community_size_shown: null i update', async () => {
-    const updateSpy = vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
+    const updateSpy = vi.fn((_payload: Record<string, unknown>) => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
     const supabase = makeSupabase(updateSpy)
 
     await shareProject(supabase as never, 'proj-1', 'user-1', {
@@ -62,12 +62,12 @@ describe('AC17 shareProject — community_size_shown i update-kald', () => {
       pattern_designer: 'Lene',
     })
 
-    const updateArg = updateSpy.mock.calls[0][0]
+    const updateArg = updateSpy.mock.calls[0]![0]
     expect(updateArg).toHaveProperty('community_size_shown', null)
   })
 
   it('sender community_size_shown: "M" i update', async () => {
-    const updateSpy = vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
+    const updateSpy = vi.fn((_payload: Record<string, unknown>) => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
     const supabase = makeSupabase(updateSpy)
 
     await shareProject(supabase as never, 'proj-1', 'user-1', {
@@ -79,12 +79,12 @@ describe('AC17 shareProject — community_size_shown i update-kald', () => {
       pattern_designer: 'Lene',
     })
 
-    const updateArg = updateSpy.mock.calls[0][0]
+    const updateArg = updateSpy.mock.calls[0]![0]
     expect(updateArg).toHaveProperty('community_size_shown', 'M')
   })
 
   it('sender community_size_shown: "98 cm bryst" i update', async () => {
-    const updateSpy = vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
+    const updateSpy = vi.fn((_payload: Record<string, unknown>) => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
     const supabase = makeSupabase(updateSpy)
 
     await shareProject(supabase as never, 'proj-1', 'user-1', {
@@ -96,7 +96,7 @@ describe('AC17 shareProject — community_size_shown i update-kald', () => {
       pattern_designer: 'Arne & Carlos',
     })
 
-    const updateArg = updateSpy.mock.calls[0][0]
+    const updateArg = updateSpy.mock.calls[0]![0]
     expect(updateArg).toHaveProperty('community_size_shown', '98 cm bryst')
   })
 })
@@ -105,7 +105,7 @@ describe('AC17 shareProject — community_size_shown i update-kald', () => {
 
 describe('AC18 fetchSharedProjects — community_size_shown i select', () => {
   it('select-strengen på public_shared_projects inkluderer community_size_shown', async () => {
-    const projectSelectSpy = vi.fn(() => ({
+    const projectSelectSpy = vi.fn((_cols: string) => ({
       order: vi.fn(() => Promise.resolve({ data: [], error: null })),
     }))
 
@@ -122,7 +122,7 @@ describe('AC18 fetchSharedProjects — community_size_shown i select', () => {
 
     await fetchSharedProjects(supabase as never)
 
-    const selectArg: string = projectSelectSpy.mock.calls[0][0]
+    const selectArg: string = projectSelectSpy.mock.calls[0]![0]
     expect(selectArg).toContain('community_size_shown')
   })
 })
@@ -131,7 +131,7 @@ describe('AC18 fetchSharedProjects — community_size_shown i select', () => {
 
 describe('E32 fetchSharedProjects — nye Runde-3-felter i select', () => {
   it('select-strengen inkluderer community_primary_image_index', async () => {
-    const selectSpy = vi.fn(() => ({
+    const selectSpy = vi.fn((_cols: string) => ({
       order: vi.fn(() => Promise.resolve({ data: [], error: null })),
     }))
     const supabase = {
@@ -141,12 +141,12 @@ describe('E32 fetchSharedProjects — nye Runde-3-felter i select', () => {
       }),
     }
     await fetchSharedProjects(supabase as never)
-    const arg: string = selectSpy.mock.calls[0][0]
+    const arg: string = selectSpy.mock.calls[0]![0]
     expect(arg).toContain('community_primary_image_index')
   })
 
   it('select-strengen inkluderer pattern_pdf_thumbnail_url', async () => {
-    const selectSpy = vi.fn(() => ({
+    const selectSpy = vi.fn((_cols: string) => ({
       order: vi.fn(() => Promise.resolve({ data: [], error: null })),
     }))
     const supabase = {
@@ -156,12 +156,12 @@ describe('E32 fetchSharedProjects — nye Runde-3-felter i select', () => {
       }),
     }
     await fetchSharedProjects(supabase as never)
-    const arg: string = selectSpy.mock.calls[0][0]
+    const arg: string = selectSpy.mock.calls[0]![0]
     expect(arg).toContain('pattern_pdf_thumbnail_url')
   })
 
   it('select-strengen inkluderer pattern_cover_url', async () => {
-    const selectSpy = vi.fn(() => ({
+    const selectSpy = vi.fn((_cols: string) => ({
       order: vi.fn(() => Promise.resolve({ data: [], error: null })),
     }))
     const supabase = {
@@ -171,7 +171,7 @@ describe('E32 fetchSharedProjects — nye Runde-3-felter i select', () => {
       }),
     }
     await fetchSharedProjects(supabase as never)
-    const arg: string = selectSpy.mock.calls[0][0]
+    const arg: string = selectSpy.mock.calls[0]![0]
     expect(arg).toContain('pattern_cover_url')
   })
 })
@@ -217,7 +217,7 @@ describe('E34 shareProject — community_primary_image_index i update-kald', () 
   }
 
   it('sender community_primary_image_index: null i update', async () => {
-    const updateSpy = vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
+    const updateSpy = vi.fn((_payload: Record<string, unknown>) => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
     const supabase = makeSupabase(updateSpy)
 
     await shareProject(supabase as never, 'proj-1', 'user-1', {
@@ -229,12 +229,12 @@ describe('E34 shareProject — community_primary_image_index i update-kald', () 
       pattern_designer: 'Lene',
     })
 
-    const updateArg = updateSpy.mock.calls[0][0]
+    const updateArg = updateSpy.mock.calls[0]![0]
     expect(updateArg).toHaveProperty('community_primary_image_index', null)
   })
 
   it('sender community_primary_image_index: 1 i update', async () => {
-    const updateSpy = vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
+    const updateSpy = vi.fn((_payload: Record<string, unknown>) => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
     const supabase = makeSupabase(updateSpy)
 
     await shareProject(supabase as never, 'proj-1', 'user-1', {
@@ -246,7 +246,7 @@ describe('E34 shareProject — community_primary_image_index i update-kald', () 
       pattern_designer: 'Arne & Carlos',
     })
 
-    const updateArg = updateSpy.mock.calls[0][0]
+    const updateArg = updateSpy.mock.calls[0]![0]
     expect(updateArg).toHaveProperty('community_primary_image_index', 1)
   })
 })

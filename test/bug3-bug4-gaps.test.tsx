@@ -76,7 +76,6 @@ function renderVælger(props: Partial<React.ComponentProps<typeof GarnLinjeVælg
       status="i_gang"
       userYarnItems={mixedItems}
       catalogSearch={<div data-testid="catalog-search" />}
-      onSelectCatalogYarn={vi.fn()}
       catalogColors={[]}
       onSelectCatalogColor={vi.fn()}
       {...props}

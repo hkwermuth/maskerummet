@@ -17,7 +17,7 @@ import {
 } from '@/lib/yarn-allocate'
 import type { AllocatableLine } from '@/lib/yarn-allocate'
 
-function makeLine(overrides: Partial<AllocatableLine> = {}): AllocatableLine {
+function makeLine<O extends Partial<AllocatableLine>>(overrides: O = {} as O): AllocatableLine & O {
   return {
     yarnItemId:     'inuse-1',
     yarnName:       'Bella',

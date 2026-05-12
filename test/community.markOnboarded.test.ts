@@ -7,7 +7,7 @@ import { markOnboarded, fetchOwnProfile } from '@/lib/community'
 
 describe('D1 markOnboarded — upsert med onboarded_at', () => {
   it('kalder upsert på profiles-tabellen', async () => {
-    const upsertSpy = vi.fn(() => Promise.resolve({ error: null }))
+    const upsertSpy = vi.fn((_payload: Record<string, unknown>, _opts?: Record<string, unknown>) => Promise.resolve({ error: null }))
     const supabase = {
       from: vi.fn((table: string) => {
         expect(table).toBe('profiles')
@@ -21,7 +21,7 @@ describe('D1 markOnboarded — upsert med onboarded_at', () => {
   })
 
   it('sender id og onboarded_at i upsert-payload', async () => {
-    const upsertSpy = vi.fn(() => Promise.resolve({ error: null }))
+    const upsertSpy = vi.fn((_payload: Record<string, unknown>, _opts?: Record<string, unknown>) => Promise.resolve({ error: null }))
     const supabase = {
       from: vi.fn(() => ({ upsert: upsertSpy })),
     }
@@ -30,12 +30,12 @@ describe('D1 markOnboarded — upsert med onboarded_at', () => {
     await markOnboarded(supabase as never, 'user-456')
     const after = Date.now()
 
-    const [payload, options] = upsertSpy.mock.calls[0]
+    const [payload, options] = upsertSpy.mock.calls[0]!
     expect(payload).toMatchObject({ id: 'user-456' })
     expect(payload).toHaveProperty('onboarded_at')
 
     // Sikr at onboarded_at er en ISO-streng med korrekt dato
-    const ts = new Date(payload.onboarded_at).getTime()
+    const ts = new Date(payload.onboarded_at as string).getTime()
     expect(ts).toBeGreaterThanOrEqual(before)
     expect(ts).toBeLessThanOrEqual(after)
 
@@ -43,14 +43,14 @@ describe('D1 markOnboarded — upsert med onboarded_at', () => {
   })
 
   it('sender ikke private data (f.eks. display_name) i upsert', async () => {
-    const upsertSpy = vi.fn(() => Promise.resolve({ error: null }))
+    const upsertSpy = vi.fn((_payload: Record<string, unknown>, _opts?: Record<string, unknown>) => Promise.resolve({ error: null }))
     const supabase = {
       from: vi.fn(() => ({ upsert: upsertSpy })),
     }
 
     await markOnboarded(supabase as never, 'user-789')
 
-    const [payload] = upsertSpy.mock.calls[0]
+    const [payload] = upsertSpy.mock.calls[0]!
     expect(Object.keys(payload)).toEqual(['id', 'onboarded_at'])
   })
 
@@ -75,8 +75,8 @@ describe('D1 markOnboarded — upsert med onboarded_at', () => {
 describe('D2 fetchOwnProfile — inkluderer onboarded_at i select', () => {
   function makeProfileSupabase(resolveWith: { data: unknown; error: unknown }) {
     const maybeSingleSpy = vi.fn(() => Promise.resolve(resolveWith))
-    const eqSpy = vi.fn(() => ({ maybeSingle: maybeSingleSpy }))
-    const selectSpy = vi.fn(() => ({ eq: eqSpy }))
+    const eqSpy = vi.fn((_col: string, _val: unknown) => ({ maybeSingle: maybeSingleSpy }))
+    const selectSpy = vi.fn((_cols: string) => ({ eq: eqSpy }))
     return {
       supabase: {
         from: vi.fn(() => ({ select: selectSpy })),
@@ -92,7 +92,7 @@ describe('D2 fetchOwnProfile — inkluderer onboarded_at i select', () => {
 
     await fetchOwnProfile(supabase as never, 'user-123')
 
-    const selectArg: string = selectSpy.mock.calls[0][0]
+    const selectArg: string = selectSpy.mock.calls[0]![0]
     expect(selectArg).toContain('onboarded_at')
   })
 

@@ -79,7 +79,6 @@ function renderVælger(props: Partial<React.ComponentProps<typeof GarnLinjeVælg
       status="faerdigstrikket"
       userYarnItems={[]}
       catalogSearch={<div data-testid="catalog-search" />}
-      onSelectCatalogYarn={vi.fn()}
       catalogColors={[]}
       onSelectCatalogColor={vi.fn()}
       {...props}
@@ -163,7 +162,6 @@ describe('AC7 – Default-tab efter status', () => {
         status="faerdigstrikket"
         userYarnItems={[]}
         catalogSearch={<div data-testid="catalog-search" />}
-        onSelectCatalogYarn={vi.fn()}
         catalogColors={[]}
         onSelectCatalogColor={vi.fn()}
       />
@@ -330,7 +328,6 @@ describe('ManueltTab – garnvægt-select med alle typer', () => {
         status="faerdigstrikket"
         userYarnItems={[]}
         catalogSearch={<div />}
-        onSelectCatalogYarn={vi.fn()}
         catalogColors={[]}
         onSelectCatalogColor={vi.fn()}
       />

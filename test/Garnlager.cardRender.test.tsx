@@ -71,7 +71,30 @@ vi.mock('@/components/app/BrugNoeglerModal', () => ({ default: () => null }))
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
-const BASE_YARN = {
+type YarnFixture = {
+  id: string
+  name: string
+  brand: string
+  colorName: string
+  colorCode: string
+  colorCategory: string
+  fiber: string
+  weight: string
+  pindstr: string
+  metrage: number
+  antal: number
+  status: string
+  hex: string
+  hexColors: string[]
+  noter: string
+  barcode: string | null
+  imageUrl: string | null
+  catalogYarnId: string | null
+  catalogColorId: string | null
+  catalogImageUrl: string | null
+}
+
+const BASE_YARN: YarnFixture = {
   id: 'yarn-1',
   name: 'TestGarn',
   brand: 'TestBrand',

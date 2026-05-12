@@ -12,7 +12,7 @@ function makeChain(resolveWith: { data: unknown; error: unknown }) {
     chain[m] = vi.fn(() => chain)
   })
   // The last awaited call resolves with data/error
-  ;(chain as unknown as Promise<unknown>)[Symbol.iterator] = undefined
+  ;(chain as unknown as Record<symbol, unknown>)[Symbol.iterator] = undefined
   Object.defineProperty(chain, 'then', {
     get() {
       return (resolve: (v: unknown) => unknown) => Promise.resolve(resolveWith).then(resolve)
@@ -27,7 +27,7 @@ function makeChain(resolveWith: { data: unknown; error: unknown }) {
 
 describe('A1 fetchSharedProjects — field whitelist', () => {
   it('queries only whitelisted fields on public_shared_projects', async () => {
-    const projectSelectSpy = vi.fn(() => ({
+    const projectSelectSpy = vi.fn((_cols: string) => ({
       order: vi.fn(() =>
         Promise.resolve({
           data: [],
@@ -48,7 +48,7 @@ describe('A1 fetchSharedProjects — field whitelist', () => {
     expect(projectSelectSpy).toHaveBeenCalledWith(
       'id,title,project_image_urls,community_primary_image_index,project_type,community_description,community_size_shown,pattern_name,pattern_designer,pattern_pdf_thumbnail_url,pattern_cover_url,shared_at,display_name',
     )
-    const selectArg: string = projectSelectSpy.mock.calls[0][0]
+    const selectArg: string = projectSelectSpy.mock.calls[0]![0]
     expect(selectArg).toContain('community_size_shown')
     expect(selectArg).toContain('community_primary_image_index')
     expect(selectArg).toContain('pattern_pdf_thumbnail_url')
@@ -60,7 +60,7 @@ describe('A1 fetchSharedProjects — field whitelist', () => {
   })
 
   it('queries only whitelisted yarn fields on public_shared_project_yarns', async () => {
-    const yarnSelectSpy = vi.fn(() => ({
+    const yarnSelectSpy = vi.fn((_cols: string) => ({
       in: vi.fn(() => Promise.resolve({ data: [], error: null })),
     }))
 
@@ -99,7 +99,7 @@ describe('A1 fetchSharedProjects — field whitelist', () => {
     expect(yarnSelectSpy).toHaveBeenCalledWith(
       'id,project_id,yarn_name,yarn_brand,color_name,color_code,hex_color,catalog_yarn_id,catalog_color_id',
     )
-    const yarnSelectArg: string = yarnSelectSpy.mock.calls[0][0]
+    const yarnSelectArg: string = yarnSelectSpy.mock.calls[0]![0]
     expect(yarnSelectArg).not.toContain('notes')
   })
 
@@ -173,7 +173,7 @@ describe('A1 fetchSharedProjects — field whitelist', () => {
 
 describe('A2 shareProject — correct fields sent, no private data', () => {
   it('calls update with is_shared, shared_at, project_type, community_description, pattern_name, pattern_designer', async () => {
-    const updateSpy = vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
+    const updateSpy = vi.fn((_payload: Record<string, unknown>) => ({ eq: vi.fn(() => Promise.resolve({ error: null })) }))
     const supabase = {
       from: vi.fn((table: string) => {
         if (table === 'projects') return { update: updateSpy }
@@ -191,7 +191,7 @@ describe('A2 shareProject — correct fields sent, no private data', () => {
     })
 
     expect(updateSpy).toHaveBeenCalledOnce()
-    const updateArg = updateSpy.mock.calls[0][0]
+    const updateArg = updateSpy.mock.calls[0]![0]
     expect(updateArg).toMatchObject({
       is_shared: true,
       project_type: 'sweater',
@@ -264,7 +264,7 @@ describe('A2 shareProject — correct fields sent, no private data', () => {
 describe('A3 unshareProject — only sets is_shared=false', () => {
   it('updates only is_shared: false for the given project id', async () => {
     const eqSpy = vi.fn(() => Promise.resolve({ error: null }))
-    const updateSpy = vi.fn(() => ({ eq: eqSpy }))
+    const updateSpy = vi.fn((_payload: Record<string, unknown>) => ({ eq: eqSpy }))
     const supabase = {
       from: vi.fn(() => ({ update: updateSpy })),
     }
@@ -274,7 +274,7 @@ describe('A3 unshareProject — only sets is_shared=false', () => {
     expect(updateSpy).toHaveBeenCalledWith({ is_shared: false })
     expect(eqSpy).toHaveBeenCalledWith('id', 'proj-999')
     // Only one key in the update object
-    const updateArg = updateSpy.mock.calls[0][0]
+    const updateArg = updateSpy.mock.calls[0]![0]
     expect(Object.keys(updateArg)).toEqual(['is_shared'])
   })
 })

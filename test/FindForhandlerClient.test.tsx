@@ -70,11 +70,14 @@ const makeStore = (overrides: Partial<StoreBase> = {}): StoreBase => ({
   lat: 55.7,
   lng: 12.6,
   brands: [],
+  is_strikkecafe: false,
+  note: null,
   ...overrides,
 })
 
 const makeStoreResult = (overrides: Partial<StoreResult> = {}): StoreResult => ({
   ...makeStore(),
+  brands: [],
   distance_km: 3.2,
   ...overrides,
 })
@@ -162,7 +165,7 @@ describe('B4 no geolocation support falls back to IP lookup', () => {
     const user = userEvent.setup()
 
     const descriptor = Object.getOwnPropertyDescriptor(navigator, 'geolocation')
-    delete (navigator as Record<string, unknown>).geolocation
+    delete (navigator as unknown as Record<string, unknown>).geolocation
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,

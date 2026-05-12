@@ -3,13 +3,9 @@ import {
   mapColorSeedToColorRows,
   normalizeHex,
   summarizeDiff,
-  // @ts-expect-error — .mjs uden .d.ts; kører fint i Vitest.
 } from '../lib/catalog/colorSeed.mjs'
-// @ts-expect-error — .mjs registry uden .d.ts.
 import { ALL_COLOR_SEEDS } from '../lib/data/colorSeeds/index.mjs'
-// @ts-expect-error — .mjs.
 import { PERMIN_BELLA_SEED } from '../lib/data/colorSeeds/permin-bella.mjs'
-// @ts-expect-error — .mjs.
 import { PERMIN_BELLA_COLOR_SEED } from '../lib/data/colorSeeds/permin-bella-color.mjs'
 
 describe('normalizeHex', () => {
@@ -35,7 +31,7 @@ describe('mapColorSeedToColorRows — basal mapping', () => {
     producer: 'Test',
     yarnName: 'Demo',
     series: null,
-    matchKey: 'color_number',
+    matchKey: 'color_number' as const,
     entries: [
       { key: '01', hex: '#FFFFFF' },
       { key: '02', hex: '#000000' },
@@ -81,7 +77,7 @@ describe('mapColorSeedToColorRows — manuel-vinder + force', () => {
   const seed = {
     producer: 'Test',
     yarnName: 'Demo',
-    matchKey: 'color_number',
+    matchKey: 'color_number' as const,
     entries: [{ key: '01', hex: '#FFFFFF' }],
   }
   const dbWithManualHex = [
@@ -106,7 +102,7 @@ describe('mapColorSeedToColorRows — manuel-vinder + force', () => {
 describe('mapColorSeedToColorRows — manglende data', () => {
   it('seed-entry med hex=null tæller som missing, opdaterer ikke', () => {
     const seed = {
-      producer: 'T', yarnName: 'D', matchKey: 'color_number',
+      producer: 'T', yarnName: 'D', matchKey: 'color_number' as const,
       entries: [{ key: '01', hex: null }],
     }
     const db = [{ id: 'a', color_number: '01', hex_code: null, yarn_id: 'y' }]
@@ -117,7 +113,7 @@ describe('mapColorSeedToColorRows — manglende data', () => {
 
   it('seed-entry uden DB-match tæller som unmatched', () => {
     const seed = {
-      producer: 'T', yarnName: 'D', matchKey: 'color_number',
+      producer: 'T', yarnName: 'D', matchKey: 'color_number' as const,
       entries: [{ key: '99', hex: '#FFFFFF' }],
     }
     const db = [{ id: 'a', color_number: '01', hex_code: null, yarn_id: 'y' }]
@@ -128,7 +124,7 @@ describe('mapColorSeedToColorRows — manglende data', () => {
 
   it('DB-række uden seed-match tæller som uncovered (kun hvis hex mangler)', () => {
     const seed = {
-      producer: 'T', yarnName: 'D', matchKey: 'color_number',
+      producer: 'T', yarnName: 'D', matchKey: 'color_number' as const,
       entries: [{ key: '01', hex: '#FFFFFF' }],
     }
     const db = [
@@ -144,7 +140,7 @@ describe('mapColorSeedToColorRows — manglende data', () => {
 describe('mapColorSeedToColorRows — keyTransform', () => {
   it('anvender keyTransform inden match', () => {
     const seed = {
-      producer: 'Permin', yarnName: 'Bella', matchKey: 'color_number',
+      producer: 'Permin', yarnName: 'Bella', matchKey: 'color_number' as const,
       keyTransform: (k: string) => k.replace(/^8832/, ''),
       entries: [
         { key: '883247', hex: '#F0A0B0' },
@@ -164,7 +160,7 @@ describe('mapColorSeedToColorRows — keyTransform', () => {
 
   it('kaster ved seed-key-kollision efter transform', () => {
     const seed = {
-      producer: 'T', yarnName: 'D', matchKey: 'color_number',
+      producer: 'T', yarnName: 'D', matchKey: 'color_number' as const,
       keyTransform: () => '47',
       entries: [
         { key: '883247', hex: '#FFFFFF' },
@@ -180,6 +176,7 @@ describe('Permin-seeds matcher faktisk DB-format', () => {
   // (snapshot fra MCP-query mod prod 2026-04-28).
   it('Bella articleNumber → 2/3-cifret color_number (drop 8832-prefix)', () => {
     const transform = PERMIN_BELLA_SEED.keyTransform
+    if (!transform) throw new Error('PERMIN_BELLA_SEED.keyTransform mangler')
     expect(transform('883201')).toBe('01')
     expect(transform('883247')).toBe('47')
     expect(transform('8832100')).toBe('100')
@@ -196,8 +193,10 @@ describe('Permin-seeds matcher faktisk DB-format', () => {
   })
 
   it('Bella seed har Pink (47) → #F0A0B0', () => {
+    const transform = PERMIN_BELLA_SEED.keyTransform
+    if (!transform) throw new Error('PERMIN_BELLA_SEED.keyTransform mangler')
     const pink = PERMIN_BELLA_SEED.entries.find(
-      (e: { key: string }) => PERMIN_BELLA_SEED.keyTransform(e.key) === '47',
+      (e: { key: string }) => transform(e.key) === '47',
     )
     expect(pink).toBeDefined()
     expect(normalizeHex(pink!.hex)).toBe('#F0A0B0')
@@ -220,7 +219,7 @@ describe('summarizeDiff', () => {
   it('producerer label + tællinger', () => {
     const seed = {
       producer: 'Permin', yarnName: 'Bella', series: null,
-      matchKey: 'color_number',
+      matchKey: 'color_number' as const,
       entries: [{ key: '01', hex: '#FFFFFF' }],
     }
     const diff = mapColorSeedToColorRows(seed, [
@@ -235,7 +234,7 @@ describe('summarizeDiff', () => {
   it('label uden series (series=null/undefined)', () => {
     const seed = {
       producer: 'Test', yarnName: 'Garn', series: null,
-      matchKey: 'color_number',
+      matchKey: 'color_number' as const,
       entries: [],
     }
     const diff = mapColorSeedToColorRows(seed, [])
@@ -247,7 +246,7 @@ describe('summarizeDiff', () => {
 describe('mapColorSeedToColorRows — idempotens round-trip', () => {
   it('2. kørsel efter at updates er applied giver 0 updates og N unchanged', () => {
     const seed = {
-      producer: 'T', yarnName: 'D', matchKey: 'color_number',
+      producer: 'T', yarnName: 'D', matchKey: 'color_number' as const,
       entries: [
         { key: '01', hex: '#FFFFFF' },
         { key: '02', hex: '#000000' },
@@ -278,7 +277,7 @@ describe('mapColorSeedToColorRows — idempotens round-trip', () => {
 describe('mapColorSeedToColorRows — kant-tilfælde', () => {
   it('tom dbColors: alle seed-entries er unmatched', () => {
     const seed = {
-      producer: 'T', yarnName: 'D', matchKey: 'color_number',
+      producer: 'T', yarnName: 'D', matchKey: 'color_number' as const,
       entries: [
         { key: '01', hex: '#FFFFFF' },
         { key: '02', hex: '#000000' },
@@ -293,7 +292,7 @@ describe('mapColorSeedToColorRows — kant-tilfælde', () => {
 
   it('seed med 0 entries: alle DB-rækker uden hex er uncovered', () => {
     const seed = {
-      producer: 'T', yarnName: 'D', matchKey: 'color_number',
+      producer: 'T', yarnName: 'D', matchKey: 'color_number' as const,
       entries: [],
     }
     const db = [
@@ -307,7 +306,7 @@ describe('mapColorSeedToColorRows — kant-tilfælde', () => {
 
   it('DB-række med color_number=null krasjer ikke og tæller som uncovered hvis hex mangler', () => {
     const seed = {
-      producer: 'T', yarnName: 'D', matchKey: 'color_number',
+      producer: 'T', yarnName: 'D', matchKey: 'color_number' as const,
       entries: [{ key: '01', hex: '#FFFFFF' }],
     }
     const db = [
@@ -321,7 +320,7 @@ describe('mapColorSeedToColorRows — kant-tilfælde', () => {
 
   it('seed-entry med ugyldig (men non-null) hex tæller som missing', () => {
     const seed = {
-      producer: 'T', yarnName: 'D', matchKey: 'color_number',
+      producer: 'T', yarnName: 'D', matchKey: 'color_number' as const,
       entries: [{ key: '01', hex: 'not-a-hex' }],
     }
     const db = [{ id: 'a', color_number: '01', hex_code: null, yarn_id: 'y' }]

@@ -205,6 +205,8 @@ describe('Filterbar — AC22: resultat-tæller ARIA', () => {
         total={total}
         visible={visible}
         onChange={vi.fn()}
+        favoritesCount={0}
+        onFavoritesRequireLogin={vi.fn()}
       />,
     )
   }
@@ -283,6 +285,8 @@ describe('Filterbar — Nulstil filtre-knap', () => {
         total={53}
         visible={53}
         onChange={vi.fn()}
+        favoritesCount={0}
+        onFavoritesRequireLogin={vi.fn()}
       />,
     )
     expect(screen.queryByRole('button', { name: /nulstil filtre/i })).not.toBeInTheDocument()
@@ -297,6 +301,8 @@ describe('Filterbar — Nulstil filtre-knap', () => {
         total={53}
         visible={14}
         onChange={vi.fn()}
+        favoritesCount={0}
+        onFavoritesRequireLogin={vi.fn()}
       />,
     )
     expect(screen.getByRole('button', { name: /nulstil filtre/i })).toBeInTheDocument()
@@ -312,6 +318,8 @@ describe('Filterbar — Nulstil filtre-knap', () => {
         options={SAMPLE_OPTIONS}
         total={53}
         visible={2}
+        favoritesCount={0}
+        onFavoritesRequireLogin={vi.fn()}
         onChange={onChange}
       />,
     )

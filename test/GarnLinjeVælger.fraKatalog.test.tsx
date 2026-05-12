@@ -106,7 +106,6 @@ function renderKatalogTab(
       initialTab="katalog"
       userYarnItems={[]}
       catalogSearch={<div data-testid="catalog-search" />}
-      onSelectCatalogYarn={vi.fn()}
       catalogColors={catalogColors}
       onSelectCatalogColor={onSelectCatalogColor}
       {...extraProps}

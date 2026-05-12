@@ -18,6 +18,20 @@ const MODE_LABELS = {
   new:      'Nyt projekt',
 }
 
+/**
+ * @param {{
+ *   mode: 'none' | 'existing' | 'new',
+ *   onChangeMode: any,
+ *   selectedProjectId: string,
+ *   onChangeProjectId: any,
+ *   newProjectTitle: string,
+ *   onChangeNewProjectTitle: any,
+ *   brugtOpDato: string,
+ *   onChangeDato: any,
+ *   existingProjects?: Array<{ id: string, title: string }>,
+ *   errors?: Record<string, string>,
+ * }} props
+ */
 export default function BrugtOpFoldeUd({
   mode,
   onChangeMode,

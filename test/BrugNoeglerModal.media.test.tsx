@@ -44,7 +44,7 @@ function buildSupabaseMock(opts: {
   existingPatternImages?: string[]
   existingPdfUrl?: string | null
 } = {}) {
-  const projectsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
+  const projectsUpdate = vi.fn((_payload: Record<string, unknown>) => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
   const projectsLoadSingle = vi.fn().mockResolvedValue({
     data: {
       project_image_urls: opts.existingImages ?? [],
@@ -57,7 +57,7 @@ function buildSupabaseMock(opts: {
   const projectsInsertSingle = vi.fn().mockResolvedValue({ data: { id: 'p-new' }, error: null })
 
   const usageInsertSingle = vi.fn().mockResolvedValue({ data: { id: 'usage-new' }, error: null })
-  const usageInsert = vi.fn(() => ({ select: vi.fn(() => ({ single: usageInsertSingle })) }))
+  const usageInsert = vi.fn((_rows: Record<string, unknown>[]) => ({ select: vi.fn(() => ({ single: usageInsertSingle })) }))
 
   // yarn_items mock dækker hele allocate-flow (Bug 2 fix 2026-05-05):
   // 1: decrementYarnItemQuantity fetch (select.eq.eq.maybeSingle)
@@ -162,7 +162,7 @@ describe('BrugNoeglerModal — note appendes til projects.notes med dato-stamp',
       },
       error: null,
     })
-    const projectsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
+    const projectsUpdate = vi.fn((_payload: Record<string, unknown>) => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
 
     const supabaseMock = {
       from: vi.fn((table: string) => {
@@ -218,7 +218,7 @@ describe('BrugNoeglerModal — note appendes til projects.notes med dato-stamp',
     await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
 
     await waitFor(() => expect(projectsUpdate).toHaveBeenCalled())
-    const updatePayload = projectsUpdate.mock.calls[0][0]
+    const updatePayload = projectsUpdate.mock.calls[0]![0]
     expect(updatePayload).toHaveProperty('notes')
     const savedNotes = updatePayload.notes as string
     expect(savedNotes.startsWith('Eksisterende noter her.')).toBe(true)
@@ -232,7 +232,7 @@ describe('BrugNoeglerModal — note appendes til projects.notes med dato-stamp',
       data: { project_image_urls: [], pattern_image_urls: [], pattern_pdf_url: null, notes: null },
       error: null,
     })
-    const projectsUpdate = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
+    const projectsUpdate = vi.fn((_payload: Record<string, unknown>) => ({ eq: vi.fn().mockResolvedValue({ data: null, error: null }) }))
     const supabaseMock = {
       from: vi.fn((table: string) => {
         if (table === 'projects') {
@@ -273,7 +273,7 @@ describe('BrugNoeglerModal — note appendes til projects.notes med dato-stamp',
     await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
 
     await waitFor(() => expect(projectsUpdate).toHaveBeenCalled())
-    const savedNotes = projectsUpdate.mock.calls[0][0].notes as string
+    const savedNotes = projectsUpdate.mock.calls[0]![0].notes as string
     expect(savedNotes).toMatch(/^—\s*\d{4}-\d{2}-\d{2}:\s*kort note$/)
   })
 
@@ -328,7 +328,7 @@ describe('BrugNoeglerModal — yarn_items status-opdatering ved forbrug (POST-FI
 
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
     // onSaved tilbagerapporterer source-status (skal være 'På lager', ikke 'I brug')
-    const [, , reportedStatus] = onSaved.mock.calls[0]
+    const [, , reportedStatus] = onSaved.mock.calls[0]!
     expect(reportedStatus).toBe('På lager')
   })
 })
@@ -381,7 +381,7 @@ describe('BrugNoeglerModal — projekt-liste-filtrering (sikkerhed + UX)', () =>
   })
 
   it('liste-load filtrerer status til kun vil_gerne + i_gang', async () => {
-    const inSpy = vi.fn(() => ({
+    const inSpy = vi.fn((_col: string, _statuses: string[]) => ({
       order: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue({ data: [existingProject], error: null }),
     }))
@@ -420,7 +420,7 @@ describe('BrugNoeglerModal — projekt-liste-filtrering (sikkerhed + UX)', () =>
     )
 
     await waitFor(() => expect(inSpy).toHaveBeenCalled())
-    const [col, statuses] = inSpy.mock.calls[0]
+    const [col, statuses] = inSpy.mock.calls[0]!
     expect(col).toBe('status')
     expect(statuses).toEqual(['vil_gerne', 'i_gang'])
     expect(statuses).not.toContain('faerdigstrikket')
@@ -487,11 +487,12 @@ describe('BrugNoeglerModal — media gemmes på projects-tabellen', () => {
     await waitFor(() => {
       expect(mock._projectsUpdate).toHaveBeenCalled()
     })
-    const updatePayload = mock._projectsUpdate.mock.calls[0][0]
+    const updatePayload = mock._projectsUpdate.mock.calls[0]![0]
     expect(updatePayload).toHaveProperty('project_image_urls')
-    expect(updatePayload.project_image_urls).toHaveLength(2)
-    expect(updatePayload.project_image_urls[0]).toBe('https://example.com/old.jpg')
-    expect(updatePayload.project_image_urls[1]).toMatch(/yarn-images/)
+    const imageUrls = updatePayload.project_image_urls as string[]
+    expect(imageUrls).toHaveLength(2)
+    expect(imageUrls[0]).toBe('https://example.com/old.jpg')
+    expect(imageUrls[1]).toMatch(/yarn-images/)
   })
 
   it('eksisterende projekt: PDF gemmes på projects.pattern_pdf_url med thumbnail', async () => {
@@ -519,7 +520,7 @@ describe('BrugNoeglerModal — media gemmes på projects-tabellen', () => {
     await waitFor(() => {
       expect(mock._projectsUpdate).toHaveBeenCalled()
     })
-    const updatePayload = mock._projectsUpdate.mock.calls[0][0]
+    const updatePayload = mock._projectsUpdate.mock.calls[0]![0]
     expect(updatePayload).toHaveProperty('pattern_pdf_url')
     expect(updatePayload.pattern_pdf_url).toMatch(/patterns/)
     expect(updatePayload).toHaveProperty('pattern_pdf_thumbnail_url')
@@ -548,7 +549,7 @@ describe('BrugNoeglerModal — media gemmes på projects-tabellen', () => {
     await user.click(screen.getByRole('button', { name: /arkivér nøgler/i }))
 
     await waitFor(() => expect(mock._usageInsert).toHaveBeenCalled())
-    const insertPayload = mock._usageInsert.mock.calls[0][0][0]
+    const insertPayload = mock._usageInsert.mock.calls[0]![0][0]
     expect(insertPayload).not.toHaveProperty('project_image_url')
     expect(insertPayload).not.toHaveProperty('pattern_pdf_url')
   })
