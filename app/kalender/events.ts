@@ -378,3 +378,23 @@ export const MAANED_RAEKKEFOLGE = ['Maj 2026', 'Juni 2026', 'Juli 2026', 'August
 export function naestkommendeEvents(n: number): Event[] {
   return EVENTS.slice(0, n)
 }
+
+/**
+ * Finder events der sandsynligvis foregår på/i nærheden af en given lokation.
+ *
+ * Matching er heuristisk (case-insensitive substring) på event.sted og event.titel.
+ * Bruges af strikkecafé-kort til "Næste arrangementer her"-sektion.
+ *
+ * @param needle  fx caféens navn eller by ("Saltum", "Nordatlantens Brygge")
+ * @param limit   maks antal events at returnere (default 2)
+ */
+export function eventsAtLokation(needle: string | null, limit = 2): Event[] {
+  if (!needle) return []
+  const q = needle.trim().toLowerCase()
+  if (q.length < 3) return [] // undgå falske positiver på fx "By"
+
+  return EVENTS.filter(ev => {
+    const hay = `${ev.sted} ${ev.titel}`.toLowerCase()
+    return hay.includes(q)
+  }).slice(0, limit)
+}
