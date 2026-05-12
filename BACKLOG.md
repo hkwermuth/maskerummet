@@ -2,13 +2,13 @@
 
 Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
-**Sidst synkroniseret:** 2026-05-07 (launch-dato rykket til 2026-05-12)
+**Sidst synkroniseret:** 2026-05-12 (launch-dato fastsat til 2026-05-19 + kvalitetsreview-fund tilføjet som sektion 8)
 
 ---
 
 ## Nuværende milepæl
 
-**Testbruger-launch** — mål-dato: 2026-05-12 (tirsdag, rykket fra 2026-05-09 den 2026-05-07 for at give luft til fold-ud-redesign + substitutions-flow).
+**Testbruger-launch** — mål-dato: 2026-05-19 (tirsdag, 7 dage fra nu). Tidligere mål-dato 2026-05-12 brugt på kvalitetsgennemgang (`docs/kvalitetsreview/00-rapport.md`) der afdækkede 8 blokerende fund — alle skal lukkes inden 19. maj. Komprimeret launch-plan i sektion 8 nedenfor.
 
 ### Launch-krav (MÅ-HAVE)
 - Fungerende auth: login, logout, glemt-password, email-verifikation, signup
@@ -142,7 +142,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 **Tests**: 92 nye tests på tværs af de tre runder (964 grønne i alt mod 781 før). Migrationer kørt mod prod-DB.
 
 ### Indhold
-- Kalender med strikke-events april–oktober 2026 (`app/kalender/page.tsx`)
+- Kalender med strikke-events april–oktober 2026 (`app/kalender/page.tsx`) — **2026-05-07**: tilføjet International Strikkedag (WWKIP) lørdag 13. juni 2026 kl. 10–16 som Internationalt-event med globus-ikon. Sidst opdateret-mærkat opdateret.
 - FAQ-side (`app/faq/page.tsx`)
 - **Opskrifter — DROPS-katalog (2026-04-29)** (`app/opskrifter/page.tsx` + `DropsKatalog.tsx`/`DropsKort.tsx`/`Filterbar.tsx`/`MultiSelect.tsx`) — 53 kuraterede DROPS-mønstre fra `content/striq-drops-sample.json`. Søgning på navn + DROPS-nummer, multi-filter (målgruppe, type, sæson, garn, fiber, pind), AND mellem felter / OR inden for. URL-state med pipe-separator (`?fiber=mohair|uld`) — delbar, reload-stabil. Hjerte gemmer i `saved_recipes`-tabel (RLS+GRANT, kun authenticated, anon har INGEN rettigheder). Ikke-logget hjerte-klik → login-redirect via `buildLoginHref`, filtre bevares i `?next=`. Lager-badge "Garn på lager ✓" / "Mangler 1 garn" mod brugerens `yarn_items` (whole-string match efter brand-stripping; fanger ikke false-positive fragmenter som "ALPACA"→"Brushed Alpaca Silk"). DROPS-licens: native `<img>` (ikke `next/image`), original ratio bevaret, "DROPS DESIGN"-badge synligt, klik åbner garnstudio.com i ny fane. Tilgængelighed: ARIA combobox-pattern på MultiSelect, `role="status"` på resultat-tæller, `aria-pressed` på hjerte, touch ≥ 44px. Erstatter den gamle `EksempelGrid`-demo. Kilde-uafhængigt design — flere designere kan plugges ind senere uden refactor. **Tests**: 77 nye (52 pure data + 22 UI + 3 regression for stricter lager-match), 1096 grønne i alt.
 - **Strikkeskolen** (`app/strikkeskolen/page.tsx`) — "kommer snart"-side med planlagte guides, FAQ-link
@@ -485,6 +485,89 @@ Vi sender testbrugere ind uden at kunne se hvad de gør eller høre hvad de tæn
 
 **Kør med**: `/ny-feature Feedback-knap + adfærds-tracking + admin-metrics-dashboard`
 
+### 8. Kvalitetsreview-fund (2026-05-12) — blokerende før 19. maj-launch
+
+Fuld rapport: `docs/kvalitetsreview/00-rapport.md` (+ 5 delrapporter). 8 blokerende fund. Rækkefølgen nedenfor er kritisk path mod 19. maj.
+
+**8.1 Bump Next.js til 15.5.18 — 7 åbne CVE'er** *(KRITISK, ~1t)*
+- 2 high CVSS 7.5 DoS, 2 moderate XSS, 1 low cache poisoning, 1 image DoS
+- Fix: `npm install next@15.5.18` (patch-bump, ingen breaking)
+- Verificér: `npm audit` skal vise 0 next-advisories bagefter
+
+**8.2 Fjern admin-e-mails fra klient-bundle — phishing-vektor** *(KRITISK, ~4t)*
+- `app/ideer/page.tsx:7` lækker 3 reelle admin-e-mails i klient-bundle
+- `app/kontakt-status/page.tsx:16` lækker 2 e-mails
+- Fix: konvertér til server component med `isEditorEmail()` fra `lib/editors.ts`, ELLER flyt begge sider under `app/admin/` (server-side guard)
+- Begge sider er reelt admin-dashboards der ikke hører til i prod-flow
+
+**8.3 Ret GDPR-konflikt i privatlivspolitik** *(KRITISK, ~1t)*
+- `app/privatlivspolitik/page.tsx:44-46` påstår "kun en session-cookie fra Supabase Auth"
+- Faktisk localStorage-brug: `app/login/page.tsx:40,57` (husket e-mail), `components/app/Garnlager.jsx:387,405` (filtre)
+- Fix: tilføj "Vi gemmer også enkelte præferencer (din e-mail og dine filtre) i din browsers localStorage. Disse forlader ikke din enhed."
+- Opdatér "Senest opdateret"-dato samtidig
+
+**8.4 Tilføj in-app data-eksport-knap** *(KRITISK, 1 dag)*
+- Privatlivspolitikken lover GDPR-dataportabilitet, men kun via manuel email pt
+- Vi har allerede `lib/export/exportGarnlager.ts` + `lib/export/exportProjekter.ts` (CSV) — skal bare eksponeres som "Download mine data"-knap i indstillinger/profil
+- Bonus-opgave: kombinér til én ZIP eller dump alt til JSON for fuld dataportabilitet
+
+**8.5 Tilføj in-app slet-konto-knap** *(KRITISK, ~4t)*
+- Samme GDPR-rettighed, samme situation som 8.4
+- Server-action der kalder `supabase.auth.admin.deleteUser()` via service_role + cascade-sletning af yarn_items/projects/yarn_usage
+- Skal kræve typing af "SLET" som bekræftelse for at undgå utilsigtet tab
+
+**8.6 Migrér ESLint config — linter virker ikke i CI** *(SKAL, ~2t)*
+- `npm run lint` venter på interaktiv prompt fra deprecated `next lint`
+- Fix: `npx @next/codemod@canary next-lint-to-eslint-cli .`
+- Verificér: CI fanger nye lint-issues efter migration
+
+**8.7 Fix 12 fejlende tests + 6 worker-crashes** *(SKAL, 1-2 dage)*
+- 1304/1412 tests passerer (92%); 12 ægte fejl, alle pga. test-fixtures drifted fra typer
+- Berørte filer: `test/ConfirmDeleteProjectModal.test.tsx`, `test/colorSeed.test.ts`, `test/community.markOnboarded.test.ts`, `test/community.shareProject.test.ts`, `test/community.test.ts`, `test/recipe-ui.test.tsx`, `test/yarn-allocate.delta.test.ts`, `test/FindForhandlerClient.test.tsx`, `test/Garnlager.cardRender.test.tsx`, `test/Garnlager.confirmDel.test.tsx`, `test/GarnLinjeVælger.fraKatalog.test.tsx`, `test/GarnLinjeVælger.test.tsx`
+- Eksempel-fix: `status: "igangvaerende"` → `"i_gang"` (matcher type-enum)
+
+**8.8 Type-coverage på kerne-flow JSX** *(SKAL minimum, 2-3 dage)*
+- `components/app/Arkiv.jsx` (3013 linjer) + `Garnlager.jsx` (1615 linjer) = 4628 linjer datakritisk utyped JSX
+- Type-drift fra disse er årsagen til 8.7's test-fejl — symptom, ikke kun test-issue
+- **Minimum før launch**: skriv vitest-tests for `allocateYarnToProject`, `finalizeYarnLines`, `revertCascadedYarns`, `applyAllocationDelta` (Arkiv.jsx) + DB-mappers `toDb`/`fromDb` (Garnlager.jsx)
+- **Ideal post-launch**: konvertér begge til `.tsx`
+
+### 8.9 BØR-FIXES inden launch (bonus hvis tid tillader)
+- **user_profiles mangler create-migration** — DB kan ikke recreates from-scratch; tilføj `supabase/migrations/2026….sql` med tabel-definition + RLS (~30 min)
+- **Password-min 6 tegn → 8-10** — `app/signup/page.tsx:38`, `app/auth/reset-password/page.tsx:53` (~15 min)
+- **Reset-password forenkles til PKCE-only** — `app/auth/reset-password/page.tsx:23-36` fjern hash-token-parsing (~2t)
+- **Edge function logger brugerprompts** — `supabase/functions/visualize/index.ts:97` fjern eller redaktér (~15 min)
+- **`app/Logoer/Creme_logo_med_hvid_tråd_files/` slettes** — fremmed Vite-template-fil i source (~5 min)
+- **`app/find-forhandler/varianter/page.tsx` slettes** — design-eksplorations-side; allerede flagget i Fase 5 (~5 min)
+- **9 `any` i source → konkrete typer** — `app/kontakt-status/page.tsx`, `app/ideer/page.tsx`, `components/app/BrugNoeglerModal.tsx` (~3t)
+- **Nominatim User-Agent + kontakt-email** — `app/find-forhandler/FindForhandlerClient.tsx:103` (~15 min)
+- **`npm audit fix`** — fixer PostCSS XSS (~5 min)
+- **A11y stikprøve**: `aria-label` på ikon-knapper i `Garnlager.jsx`/`Arkiv.jsx`/`BarcodeScanner.jsx`; tomme tilstande på `/garnlager`/`/projekter`/`/ideer`/`/opskrifter`/`/faellesskabet` (~1 dag)
+
+### Komprimeret 7-dages launch-plan (mål: 2026-05-19)
+
+| Dag | Fokus |
+|---|---|
+| **Tirs 13/5** | 8.1 Next bump (1t) + 8.3 GDPR-tekst (1t) + 8.6 ESLint-migration (2t) + 8.9 npm audit fix + Logoer-slet + varianter-slet (1t) |
+| **Ons 14/5** | 8.2 Admin-email-flytning (4t) + 8.9 password-min + edge function log + Nominatim-fix (1t) |
+| **Tors 15/5** | 8.7 Tests grøn (1-2 dage start) |
+| **Fre 16/5** | 8.7 Tests grøn slut + 8.8 Vitest-tests for allocate/finalize/mappers (start) |
+| **Lør-søn 17-18/5** | 8.8 Tests slut + 8.4 Data-eksport + 8.5 Slet-konto |
+| **Man 18/5** | Verifikation: spot-check mobil (<640px) + tastatur-nav + alle empty-states + `supabase db reset` recovery-test |
+| **Tirs 19/5** | **LAUNCH** — first 3-5 testbrugere får adgang |
+
+**Risici**:
+- Ramt forsinkelse hvis tests viser flere skjulte drifter end ventet (8.7+8.8 er længste vej)
+- 8.5 (slet-konto) kan glide til efter launch hvis presset; rationale: 30-dages email-flow opfylder lovkrav indtil knappen er der
+- Hvis 8.8 ikke når 100%: launch på minimum kerne-test-coverage (4 funktioner) og lov sig selv at konvertere `.jsx`→`.tsx` i uge 1 efter launch
+
+**Kør med (anbefalet)**:
+- 8.1, 8.3, 8.6, 8.9 npm/audit/slet: direkte (trivielle)
+- 8.2 admin-email: `/ny-feature Flyt admin-gating til server-side`
+- 8.4 + 8.5: `/ny-feature In-app data-eksport og slet-konto`
+- 8.7: `/backlog status` + direkte test-fix
+- 8.8: `/ny-feature Vitest-tests for yarn-allocate og DB-mappers`
+
 ---
 
 ## Ønsker / overvejelser
@@ -610,6 +693,13 @@ Tilføjet efter at vote-override-systemet og held-together-combos shippede. Hann
 - **Designer-database (top 100)** — opbyg database over de 100 største danske strikdesignere + designere som danske strikkere bruger (også udenlandske). Skal afløse den nuværende `content/designere.md` (top 20). Ny tabel `designers` i Supabase (navn, evt. alias/hjemmeside/instagram, nationalitet, status), seed-script + admin-UI til kuratering. Driver auto-suggest på designer-feltet (forrige bullet) og lægger fundament for fremtidig opskrifts-katalog (`patterns.designer_id`-FK). ⚠️ **Spørg Hannah ved opstart**: hvilke datapunkter skal vi have ud over navn (hjemmeside? signatur-stil?)? Er der en kilde-liste at starte fra (Ravelry, Instagram, dansk strikkesammenslutning)? Skal udenlandske designere markeres separat, eller bare være med i samme tabel? Skal der være et offentligt designer-katalog ligesom garn-kataloget, eller er det kun intern reference til auto-suggest + opskrifts-FK?
 
 ~~**Fællesskabet — tilretninger Runde 2 + 3**~~ — **implementeret 2026-04-28** (commits `2a70cf3` + `b30cd31`). Se "Fællesskabet — tilretninger Runde 1-3" i Implementeret-sektionen ovenfor.
+
+**Arrangementkalender — udvidelser (2026-05-07, fra Hannah):**
+
+- **VIGTIGT: Tilføj spindekursus til arrangementkalenderen** — `app/kalender/page.tsx` rummer i dag strikke-events april–oktober 2026 men mangler spindekurser. Tilføj spindekursus(er) som event-type i kalenderen så brugere der vil lære at spinde kan finde og tilmelde sig. ⚠️ **Spørg Hannah ved opstart**: hvilke konkrete spindekurser skal med (én bestemt eller flere udbydere)? Skal "spindekursus" være en separat event-kategori med eget filter/tag, eller bare en event-type på linje med strikke-events? Skal vi have datoer/lokation/pris/tilmeldings-link fra Hannah, eller skal det hentes fra en ekstern kilde?
+- **Strikkecafé-arrangementer fra garnbutikker** — brugere skal kunne se strikkecafé-arrangementer fra de forskellige garnbutikker i kalenderen. Mange fysiske garnbutikker (de 228 i `stores`-tabellen) holder regelmæssige strikkecaféer som er værdifulde mødesteder. Forudsætninger: (1) datakilde — manuelt indtastet via admin, scrapet fra butikkernes hjemmesider/Facebook-events, eller crowd-sourcet via butikkerne selv? (2) Schema — sandsynligvis ny tabel `store_events` med `store_id`-FK, dato/tid (evt. tilbagevendende), beskrivelse, evt. tilmelding/pris. (3) UI — filter i kalenderen til at vise/skjule strikkecaféer, evt. kobling fra `find-forhandler`-siden så hver butik viser sine kommende caféer. ⚠️ **Spørg Hannah ved opstart**: hvilken datakilde er realistisk på kort sigt (manuel indtastning af top-X butikker, eller bredere crawl)? Skal kalenderen have geografisk filter ("strikkecaféer nær mig")? Skal vi kontakte garnbutikker og bede dem indberette deres caféer (overlap med eksisterende `content/fabrikanter.md`-kontaktproces)?
+
+Kør med: `/ny-feature Arrangementkalender: spindekursus + strikkecafé-arrangementer fra garnbutikker` (eller del op i to features hvis omfanget bliver for stort).
 
 **Bæredygtighed — efter strikkeprofil-fokusgruppe (2026-05-04, snart prioriteres):**
 

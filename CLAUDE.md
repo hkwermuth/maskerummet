@@ -66,4 +66,4 @@ Se `BACKLOG.md` for status over implementeret / i gang / ønsker. Opdateres via 
 
 ## Nuværende milepæl
 
-**Testbruger-launch** — inden 3 uger. Krav: fungerende auth, RLS på plads, kerne-flows stabile på mobil, data-eksport, privatlivspolitik, tomme tilstande og fejlbeskeder overalt, ingen synlige halv-implementeringer.
+**Testbruger-launch** — mål-dato 2026-05-19 (7 dage fra 2026-05-12). Kvalitetsreview 2026-05-12 afdækkede 8 blokerende fund — se `BACKLOG.md` sektion 8 og `docs/kvalitetsreview/00-rapport.md`. Krav: fungerende auth, RLS på plads, kerne-flows stabile på mobil, data-eksport (in-app), privatlivspolitik (rettet for localStorage-konflikt), slet-konto, tomme tilstande og fejlbeskeder overalt, ingen synlige halv-implementeringer, next@15.5.18+, ingen admin-e-mails i klient-bundle.
