@@ -66,7 +66,7 @@ function Hero() {
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/brand/striq-logo-hvid-creme-traad-transparent.png"
+        src="/brand/striq-logo-creme-rosa-traad-3d-transparent.png"
         alt="STRIQ"
         style={{
           height: 'clamp(110px, 24vw, 190px)',

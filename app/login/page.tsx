@@ -69,8 +69,12 @@ function LoginPageInner() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'DM Sans', sans-serif", padding: 20 }}>
       <div style={{ background: '#FFFCF7', borderRadius: 16, padding: '48px 40px', width: 380, maxWidth: '100%', boxShadow: '0 8px 40px rgba(48,34,24,.12)' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🧶</div>
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 600, color: '#61846D', marginBottom: 6 }}>STRIQ</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/striq-logo-sort-rosa-beskaaret.png"
+            alt="STRIQ"
+            style={{ height: 40, width: 'auto', display: 'inline-block', marginBottom: 12 }}
+          />
           <div style={{ fontSize: 13, color: '#8C7E74' }}>Log ind for at åbne dit garnlager</div>
         </div>
 
