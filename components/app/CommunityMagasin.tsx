@@ -58,9 +58,29 @@ export async function CommunityMagasin() {
         </Link>
       </div>
 
+      {/* <style> ligger UDEN for grid'en — ellers bliver den selv 1. grid-child
+          og fanger :first-child-reglerne i stedet for hero-kortet. */}
+      <style>{`
+        /* Mobil (<760px): hero spænder begge kolonner, små i 2x2 nedenunder */
+        .magasin-grid > .magasin-hero {
+          grid-column: 1 / -1;
+        }
+        @media (min-width: 760px) {
+          .magasin-grid {
+            /* Stort kort dominerer 55% af bredden (var 44% med 1.6fr) */
+            grid-template-columns: 2.2fr 1fr 1fr !important;
+            grid-template-rows: repeat(${small.length <= 2 ? 1 : 2}, 1fr) !important;
+          }
+          .magasin-grid > .magasin-hero {
+            grid-row: 1 / span ${small.length <= 2 ? 1 : 2};
+            grid-column: 1 !important;
+          }
+        }
+      `}</style>
+
       {/* 1 stort + 4 små i 2x2-grid på desktop. Stort spænder venstre kolonne
           (begge rækker), de små i 2x2 til højre. Færre end 4 små → grid
-          tilpasser sig dynamisk (1 lille = 1 række, 2 små = 1 række × 2 kolonner). */}
+          tilpasser sig dynamisk. */}
       <div className="magasin-grid" style={{
         display: 'grid',
         gap: 20,
@@ -68,26 +88,8 @@ export async function CommunityMagasin() {
         // desktop-rytmen og halvere scroll-højden.
         gridTemplateColumns: '1fr 1fr',
       }}>
-        <style>{`
-          /* Mobil: hero fylder begge mobile-kolonner */
-          .magasin-grid > :first-child {
-            grid-column: 1 / -1;
-          }
-          @media (min-width: 760px) {
-            .magasin-grid {
-              /* Stort kort dominerer 55% af bredden (var 44% med 1.6fr) */
-              grid-template-columns: 2.2fr 1fr 1fr !important;
-              grid-template-rows: repeat(${small.length <= 2 ? 1 : 2}, 1fr) !important;
-            }
-            .magasin-grid > :first-child {
-              grid-row: 1 / span ${small.length <= 2 ? 1 : 2};
-              grid-column: 1 !important;
-            }
-          }
-        `}</style>
-
-        {/* Stort kort */}
-        <ProjektKort project={hero} cover={heroCover} variant="lg" />
+        {/* Stort kort — får class 'magasin-hero' så grid-placering rammer rigtigt */}
+        <ProjektKort project={hero} cover={heroCover} variant="lg" className="magasin-hero" />
 
         {/* Små kort — auto-placeres i de resterende cells (række 1 først, så række 2) */}
         {small.map(p => (
@@ -107,7 +109,7 @@ export async function CommunityMagasin() {
 
 type Project = Awaited<ReturnType<typeof fetchSharedProjects>>[number]
 
-function ProjektKort({ project, cover, variant }: { project: Project; cover: string | null; variant: 'sm' | 'lg' }) {
+function ProjektKort({ project, cover, variant, className }: { project: Project; cover: string | null; variant: 'sm' | 'lg'; className?: string }) {
   const isLg = variant === 'lg'
   // Stort: 380px = 2 rækker små (178px) + gap (20px). Roligere proportioner
   // end før — stort er mere portrait-magasin, små er mere kvadratiske.
@@ -116,6 +118,7 @@ function ProjektKort({ project, cover, variant }: { project: Project; cover: str
   return (
     <Link
       href="/faellesskabet"
+      className={className}
       style={{
         position: 'relative',
         display: 'block',
