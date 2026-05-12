@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { FeatureCard } from '@/components/app/FeatureCards'
+import { CommunityMagasin } from '@/components/app/CommunityMagasin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
@@ -315,43 +316,7 @@ export default async function HomePage() {
       <div style={{ background: '#F8F3EE', flex: 1, padding: '40px 0 56px' }}>
         {isLoggedIn ? <ForDigSektion /> : <KomIGangSektion />}
 
-        {/* Fald-tilbage til de eksisterende feature-kort indtil Fase 4-6 er bygget */}
-        <SektionWrapper title="Udforsk STRIQ" subtitle="Alle vores værktøjer og sektioner.">
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
-            gap: 18,
-          }}>
-            <FeatureCard
-              href="/opskrifter-og-garn"
-              title="Opskrifter & garn"
-              desc="Opskrifter, garnkatalog og AI-værktøjer."
-              accent="#61846D"
-              icon={IconOpdage(22)}
-            />
-            <FeatureCard
-              href="/striqipedia"
-              title="Striqipedia"
-              desc="Viden om strik, fibre og certificeringer."
-              accent="#D9BFC3"
-              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>}
-            />
-            <FeatureCard
-              href="/faellesskab"
-              title="Fællesskab"
-              desc="Delte projekter, kalender og strikke-events."
-              accent="#D4ADB6"
-              icon={IconFaellesskab(22)}
-            />
-            <FeatureCard
-              href="/garnbutikker"
-              title="Garnbutikker & caféer"
-              desc="Find butikker og strikkecaféer i Danmark."
-              accent="#D4ADB6"
-              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>}
-            />
-          </div>
-        </SektionWrapper>
+        <CommunityMagasin />
       </div>
     </div>
   )
