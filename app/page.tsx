@@ -1,183 +1,358 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { FeatureCard } from '@/components/app/FeatureCards'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
   title: 'STRIQ — Dit personlige garnunivers',
 }
 
-const FEATURES = [
-  {
-    href: '/garnlager',
-    title: 'Mit garnlager',
-    desc: 'Hold styr på hele dit garnlager — søg på farve, fiber og se hvad du har på lager.',
-    accent: '#61846D',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#61846D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <ellipse cx="12" cy="15" rx="9" ry="5"/>
-        <path d="M3 10c0-2.8 4-5 9-5s9 2.2 9 5"/>
-        <path d="M3 10v5M21 10v5"/>
-        <circle cx="12" cy="10" r="1.2" fill="#61846D" stroke="none"/>
-      </svg>
-    ),
-  },
-  {
-    href: '/projekter',
-    title: 'Mine projekter',
-    desc: 'Gem dine strikkeprojekter med billeder, noter og opskrifter — dit personlige arkiv.',
-    accent: '#D4ADB6',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-        <line x1="12" y1="11" x2="12" y2="17"/>
-        <line x1="9" y1="14" x2="15" y2="14"/>
-      </svg>
-    ),
-  },
-  {
-    href: '/kalender',
-    title: 'Kalender',
-    desc: 'Find kommende strikke-events, workshops og meetups i dit område.',
-    accent: '#D9BFC3',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2"/>
-        <line x1="16" y1="2" x2="16" y2="6"/>
-        <line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-        <circle cx="8" cy="15" r="0.8" fill="#9B6272"/>
-        <circle cx="12" cy="15" r="0.8" fill="#9B6272"/>
-        <circle cx="16" cy="15" r="0.8" fill="#9B6272"/>
-      </svg>
-    ),
-  },
-  {
-    href: '/garn',
-    title: 'Find garn',
-    desc: 'Udforsk vores garnkatalog — søg på fiber, tykkelse, farve og mærke.',
-    accent: '#61846D',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#61846D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="11" cy="11" r="8"/>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        <line x1="8" y1="11" x2="14" y2="11"/>
-        <line x1="11" y1="8" x2="11" y2="14"/>
-      </svg>
-    ),
-  },
-  {
-    href: '/visualizer',
-    title: 'Prøv farven med AI',
-    desc: 'Upload et foto og se hvordan dit projekt ser ud i nye farver — AI-drevet visualisering.',
-    accent: '#D4ADB6',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>
-        <path d="M19 3v4M17 5h4"/>
-      </svg>
-    ),
-  },
-  {
-    href: '/faellesskabet',
-    title: 'Fællesskabet',
-    desc: 'Se andre strikkeres færdige projekter — hent inspiration til dit næste projekt.',
-    accent: '#D9BFC3',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3.5" y="3.5" width="17" height="17" rx="2"/>
-        <line x1="12" y1="3.5" x2="12" y2="20.5"/>
-        <line x1="8.5" y1="11.5" x2="8.5" y2="13.5"/>
-        <line x1="15.5" y1="11.5" x2="15.5" y2="13.5"/>
-      </svg>
-    ),
-  },
-  {
-    href: '/opskrifter',
-    title: 'Opskrifter',
-    desc: 'Browse vores samling af strikkeopskrifter — fra begynder til avanceret.',
-    accent: '#61846D',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#61846D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-        <line x1="9" y1="7" x2="15" y2="7"/>
-        <line x1="9" y1="11" x2="15" y2="11"/>
-        <line x1="9" y1="15" x2="12" y2="15"/>
-      </svg>
-    ),
-  },
-  {
-    href: '/find-forhandler',
-    title: 'Find forhandler',
-    desc: 'Find butikker i nærheden der sælger dit yndlingsgarn — se dem på et kort.',
-    accent: '#D4ADB6',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
-        <circle cx="12" cy="10" r="3"/>
-      </svg>
-    ),
-  },
-]
+// ── Icons ─────────────────────────────────────────────────────────────────────
 
-export default function HomePage() {
+const IconGarn = (size = 32) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#61846D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="15" rx="9" ry="5"/>
+    <path d="M3 10c0-2.8 4-5 9-5s9 2.2 9 5"/>
+    <path d="M3 10v5M21 10v5"/>
+    <circle cx="12" cy="10" r="1.2" fill="#61846D" stroke="none"/>
+  </svg>
+)
+
+const IconProjekt = (size = 32) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+    <line x1="12" y1="11" x2="12" y2="17"/>
+    <line x1="9" y1="14" x2="15" y2="14"/>
+  </svg>
+)
+
+const IconFavoritter = (size = 32) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+  </svg>
+)
+
+const IconOpdage = (size = 32) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#61846D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/>
+    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </svg>
+)
+
+const IconFaellesskab = (size = 32) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+)
+
+// ── Forsidens hero (uændret fra Fase 2) ────────────────────────────────────────
+
+function Hero() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 58px - 57px)' }}>
-
-      {/* Hero */}
-      <div style={{
-        textAlign: 'center',
-        padding: '64px 20px 56px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 18,
+    <div style={{
+      textAlign: 'center',
+      padding: '64px 20px 56px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 18,
+    }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brand/striq-logo-creme-rosa-traad-3d-transparent.png"
+        alt="STRIQ"
+        style={{
+          height: 'clamp(110px, 24vw, 190px)',
+          width: 'auto',
+          maxWidth: '92vw',
+          filter: 'drop-shadow(0 3px 18px rgba(0,0,0,0.28))',
+        }}
+      />
+      <h1 style={{
+        fontFamily: "'Cormorant Garamond', serif",
+        fontSize: 'clamp(34px, 5.5vw, 56px)',
+        fontWeight: 600,
+        color: '#FFFCF7',
+        margin: 0,
+        letterSpacing: '.02em',
+        textShadow: '0 2px 16px rgba(0,0,0,0.30)',
       }}>
-        <img
-          src="/brand/striq-logo-creme-rosa-traad-3d-transparent.png"
-          alt="STRIQ"
-          style={{
-            height: 'clamp(110px, 24vw, 190px)',
-            width: 'auto',
-            maxWidth: '92vw',
-            filter: 'drop-shadow(0 3px 18px rgba(0,0,0,0.28))',
-          }}
-        />
-        <h1 style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 'clamp(34px, 5.5vw, 56px)',
-          fontWeight: 600,
-          color: '#FFFCF7',
-          margin: 0,
-          letterSpacing: '.02em',
-          textShadow: '0 2px 16px rgba(0,0,0,0.30)',
-        }}>
-          Dit strikke-univers
-        </h1>
-      </div>
-
-      {/* Feature-kort */}
-      <div style={{ background: '#F8F3EE', flex: 1, padding: '40px 24px 64px' }}>
-        <div style={{
-          maxWidth: 1080,
-          margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
-          gap: 18,
-        }}>
-          {FEATURES.map(f => (
-            <FeatureCard
-              key={f.href}
-              href={f.href}
-              title={f.title}
-              desc={f.desc}
-              accent={f.accent}
-              icon={f.icon}
-            />
-          ))}
-        </div>
-      </div>
-
+        Dit strikke-univers
+      </h1>
     </div>
   )
 }
 
+// ── Asymmetrisk kort (1 stort + 2 små) ────────────────────────────────────────
+
+type AsymKort = {
+  href: string
+  title: string
+  desc: string
+  accent: string
+  icon: React.ReactNode
+}
+
+/**
+ * 1 stort kort til venstre, 2 små kort i en kolonne til højre.
+ * Desktop (≥720px): 2fr | 1fr (stort spænder begge rækker)
+ * Mobil: stacked.
+ */
+function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, AsymKort] }) {
+  return (
+    <div className="asym-grid" style={{
+      display: 'grid',
+      gap: 18,
+      gridTemplateColumns: '1fr',
+    }}>
+      <style>{`
+        @media (min-width: 720px) {
+          .asym-grid {
+            grid-template-columns: 2fr 1fr !important;
+            grid-template-rows: 1fr 1fr !important;
+          }
+          .asym-grid > :first-child {
+            grid-row: 1 / span 2;
+          }
+        }
+      `}</style>
+
+      {/* Stort kort */}
+      <Link
+        href={stort.href}
+        style={{
+          background: '#FFFFFF',
+          border: '1px solid #E5DDD9',
+          borderLeft: `4px solid ${stort.accent}`,
+          borderRadius: 16,
+          padding: '36px 32px 32px',
+          textDecoration: 'none',
+          color: 'inherit',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          boxShadow: '0 1px 4px rgba(48,34,24,.06)',
+          minHeight: 240,
+          fontFamily: "'DM Sans', sans-serif",
+        }}
+      >
+        <div style={{
+          width: 64, height: 64, borderRadius: 14,
+          background: '#F8F3EE',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {stort.icon}
+        </div>
+        <h3 style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: 'clamp(24px, 3vw, 30px)',
+          fontWeight: 600, color: '#302218', margin: 0,
+        }}>
+          {stort.title}
+        </h3>
+        <p style={{ fontSize: 15, color: '#5C5048', margin: 0, lineHeight: 1.6, maxWidth: 460 }}>
+          {stort.desc}
+        </p>
+        <span style={{ fontSize: 13.5, color: '#9B6272', fontWeight: 500, marginTop: 'auto' }}>
+          Åbn →
+        </span>
+      </Link>
+
+      {/* Små kort */}
+      {smaa.map(k => (
+        <Link
+          key={k.href}
+          href={k.href}
+          style={{
+            background: '#FFFFFF',
+            border: '1px solid #E5DDD9',
+            borderLeft: `4px solid ${k.accent}`,
+            borderRadius: 12,
+            padding: '22px 22px 20px',
+            textDecoration: 'none',
+            color: 'inherit',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+            boxShadow: '0 1px 4px rgba(48,34,24,.06)',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          <div style={{
+            width: 42, height: 42, borderRadius: 10,
+            background: '#F8F3EE',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {k.icon}
+          </div>
+          <h3 style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: 18, fontWeight: 600, color: '#302218', margin: 0,
+          }}>
+            {k.title}
+          </h3>
+          <p style={{ fontSize: 13, color: '#8C7E74', margin: 0, lineHeight: 1.55 }}>
+            {k.desc}
+          </p>
+          <span style={{ fontSize: 12.5, color: '#9B6272', fontWeight: 500, marginTop: 'auto', paddingTop: 4 }}>
+            Åbn →
+          </span>
+        </Link>
+      ))}
+    </div>
+  )
+}
+
+// ── Sektion: For dig (indlogget) ─────────────────────────────────────────────
+
+function ForDigSektion() {
+  return (
+    <SektionWrapper title="For dig" subtitle="Spring direkte til dine egne data.">
+      <AsymmetricGrid
+        stort={{
+          href: '/projekter',
+          title: 'Mine projekter',
+          desc: 'Dit personlige arkiv med billeder, noter og garn-allokering. Hold styr på hvad du strikker lige nu og hvad du har færdiggjort.',
+          accent: '#D4ADB6',
+          icon: IconProjekt(38),
+        }}
+        smaa={[
+          {
+            href: '/garnlager',
+            title: 'Mit garn',
+            desc: 'Søg, filtrér og hold styr på dit lager.',
+            accent: '#61846D',
+            icon: IconGarn(),
+          },
+          {
+            href: '/mine-favoritter',
+            title: 'Mine favoritter',
+            desc: 'Opskrifter du har gemt med hjerte.',
+            accent: '#D9BFC3',
+            icon: IconFavoritter(),
+          },
+        ]}
+      />
+    </SektionWrapper>
+  )
+}
+
+// ── Sektion: Kom i gang (ikke logget ind) ────────────────────────────────────
+
+function KomIGangSektion() {
+  return (
+    <SektionWrapper title="Kom i gang" subtitle="Opret en konto og få styr på dit garnlager og dine projekter.">
+      <AsymmetricGrid
+        stort={{
+          href: '/signup',
+          title: 'Opret konto',
+          desc: 'Få adgang til dit personlige garnlager, projekter og favoritter. Det er gratis at oprette en konto.',
+          accent: '#D4ADB6',
+          icon: IconProjekt(38),
+        }}
+        smaa={[
+          {
+            href: '/opskrifter-og-garn',
+            title: 'Udforsk opskrifter',
+            desc: 'Browse opskrifter og garn — kræver ingen konto.',
+            accent: '#61846D',
+            icon: IconOpdage(),
+          },
+          {
+            href: '/faellesskab',
+            title: 'Se fællesskabet',
+            desc: 'Bliv inspireret af andres projekter.',
+            accent: '#D9BFC3',
+            icon: IconFaellesskab(),
+          },
+        ]}
+      />
+    </SektionWrapper>
+  )
+}
+
+// ── Delt sektion-wrapper ──────────────────────────────────────────────────────
+
+function SektionWrapper({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <section style={{ maxWidth: 1080, margin: '0 auto', padding: '0 24px 48px' }}>
+      <div style={{ marginBottom: 24 }}>
+        <h2 style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: 'clamp(24px, 3.2vw, 32px)',
+          fontWeight: 600,
+          color: '#302218',
+          margin: '0 0 6px',
+        }}>
+          {title}
+        </h2>
+        {subtitle && (
+          <p style={{ fontSize: 14.5, color: '#8C7E74', margin: 0, fontFamily: "'DM Sans', sans-serif" }}>
+            {subtitle}
+          </p>
+        )}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+// ── Forsiden ──────────────────────────────────────────────────────────────────
+
+export default async function HomePage() {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const isLoggedIn = Boolean(user)
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 58px - 57px)' }}>
+      <Hero />
+
+      {/* Cream-baggrund for resten af forsiden */}
+      <div style={{ background: '#F8F3EE', flex: 1, padding: '40px 0 56px' }}>
+        {isLoggedIn ? <ForDigSektion /> : <KomIGangSektion />}
+
+        {/* Fald-tilbage til de eksisterende feature-kort indtil Fase 4-6 er bygget */}
+        <SektionWrapper title="Udforsk STRIQ" subtitle="Alle vores værktøjer og sektioner.">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
+            gap: 18,
+          }}>
+            <FeatureCard
+              href="/opskrifter-og-garn"
+              title="Opskrifter & garn"
+              desc="Opskrifter, garnkatalog og AI-værktøjer."
+              accent="#61846D"
+              icon={IconOpdage(22)}
+            />
+            <FeatureCard
+              href="/striqipedia"
+              title="Striqipedia"
+              desc="Viden om strik, fibre og certificeringer."
+              accent="#D9BFC3"
+              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>}
+            />
+            <FeatureCard
+              href="/faellesskab"
+              title="Fællesskab"
+              desc="Delte projekter, kalender og strikke-events."
+              accent="#D4ADB6"
+              icon={IconFaellesskab(22)}
+            />
+            <FeatureCard
+              href="/garnbutikker"
+              title="Garnbutikker & caféer"
+              desc="Find butikker og strikkecaféer i Danmark."
+              accent="#D4ADB6"
+              icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>}
+            />
+          </div>
+        </SektionWrapper>
+      </div>
+    </div>
+  )
+}
