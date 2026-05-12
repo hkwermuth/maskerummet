@@ -301,6 +301,65 @@ function SektionWrapper({ title, subtitle, children }: { title: string; subtitle
   )
 }
 
+// ── Sektion: Står du fast? ───────────────────────────────────────────────────
+
+const IconErstatning = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#61846D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 1l4 4-4 4"/>
+    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+    <path d="M7 23l-4-4 4-4"/>
+    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+  </svg>
+)
+
+const IconOpskriftMatch = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M12 6v6l4 2"/>
+  </svg>
+)
+
+const IconAI = (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#9B6272" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>
+    <path d="M19 3v4M17 5h4"/>
+  </svg>
+)
+
+function StaarDuFastSektion() {
+  return (
+    <SektionWrapper title="Står du fast?" subtitle="Tre hurtige veje når et projekt har brug for hjælp.">
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+        gap: 18,
+      }}>
+        <FeatureCard
+          href="/opskrifter-og-garn"
+          title="Find erstatning for et garn"
+          desc="Foreslå alternativer baseret på fiber, vægt og strikkefasthed."
+          accent="#61846D"
+          icon={IconErstatning}
+        />
+        <FeatureCard
+          href="/opskrifter-og-garn"
+          title="Find opskrift til dit garn"
+          desc="Match dit garnlager med opskrifter der passer."
+          accent="#D4ADB6"
+          icon={IconOpskriftMatch}
+        />
+        <FeatureCard
+          href="/visualizer"
+          title="Prøv farven med AI"
+          desc="Upload et foto og se dit projekt i nye farver."
+          accent="#D9BFC3"
+          icon={IconAI}
+        />
+      </div>
+    </SektionWrapper>
+  )
+}
+
 // ── Forsiden ──────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
@@ -317,6 +376,8 @@ export default async function HomePage() {
         {isLoggedIn ? <ForDigSektion /> : <KomIGangSektion />}
 
         <CommunityMagasin />
+
+        <StaarDuFastSektion />
       </div>
     </div>
   )
