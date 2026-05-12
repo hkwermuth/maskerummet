@@ -63,21 +63,25 @@ export async function CommunityMagasin() {
           tilpasser sig dynamisk (1 lille = 1 række, 2 små = 1 række × 2 kolonner). */}
       <div className="magasin-grid" style={{
         display: 'grid',
-        gap: 16,
-        gridTemplateColumns: '1fr',
+        gap: 20,
+        // Mobil: 4 små i 2x2 under hero (i stedet for 5 stacked) for at matche
+        // desktop-rytmen og halvere scroll-højden.
+        gridTemplateColumns: '1fr 1fr',
       }}>
         <style>{`
+          /* Mobil: hero fylder begge mobile-kolonner */
+          .magasin-grid > :first-child {
+            grid-column: 1 / -1;
+          }
           @media (min-width: 760px) {
             .magasin-grid {
-              /* Stort kort + 2 højre-kolonner */
-              grid-template-columns: 1.6fr 1fr 1fr !important;
-              /* Antal rækker bestemmes af antal små: 1-2 små → 1 række, 3-4 små → 2 rækker */
+              /* Stort kort dominerer 55% af bredden (var 44% med 1.6fr) */
+              grid-template-columns: 2.2fr 1fr 1fr !important;
               grid-template-rows: repeat(${small.length <= 2 ? 1 : 2}, 1fr) !important;
             }
             .magasin-grid > :first-child {
-              /* Stort kort: venstre kolonne, alle rækker */
               grid-row: 1 / span ${small.length <= 2 ? 1 : 2};
-              grid-column: 1;
+              grid-column: 1 !important;
             }
           }
         `}</style>
@@ -105,9 +109,9 @@ type Project = Awaited<ReturnType<typeof fetchSharedProjects>>[number]
 
 function ProjektKort({ project, cover, variant }: { project: Project; cover: string | null; variant: 'sm' | 'lg' }) {
   const isLg = variant === 'lg'
-  // Stort kort: 320px svarer ca. til 2 rækker små (140px) + gap (16px) på desktop.
-  // Grid-stretch sikrer at det altid matcher de små kortes faktiske højde.
-  const minHeight = isLg ? 320 : 140
+  // Stort: 380px = 2 rækker små (178px) + gap (20px). Roligere proportioner
+  // end før — stort er mere portrait-magasin, små er mere kvadratiske.
+  const minHeight = isLg ? 380 : 178
 
   return (
     <Link
@@ -150,11 +154,11 @@ function ProjektKort({ project, cover, variant }: { project: Project; cover: str
       {/* Info nederst */}
       <div style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        padding: isLg ? '24px 26px' : '14px 16px',
+        padding: isLg ? '24px 26px' : '16px 18px',
       }}>
         <h3 style={{
           fontFamily: "'Cormorant Garamond', serif",
-          fontSize: isLg ? 'clamp(22px, 2.6vw, 28px)' : 16,
+          fontSize: isLg ? 'clamp(22px, 2.6vw, 28px)' : 17,
           fontWeight: 600,
           color: '#FFFCF7',
           margin: '0 0 4px',
@@ -164,7 +168,7 @@ function ProjektKort({ project, cover, variant }: { project: Project; cover: str
           {project.title ?? 'Uden titel'}
         </h3>
         <p style={{
-          fontSize: isLg ? 13 : 11.5,
+          fontSize: isLg ? 13 : 12,
           color: 'rgba(255,252,247,0.85)',
           margin: 0,
           textShadow: '0 1px 4px rgba(0,0,0,0.30)',
