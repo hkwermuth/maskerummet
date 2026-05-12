@@ -108,58 +108,72 @@ type AsymKort = {
  * Mobil: stacked.
  */
 function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, AsymKort] }) {
+  // sage-soft venstre-kant på alle kort så de matcher i serie og ikke
+  // konkurrerer om farve-opmærksomhed (brugerens spec).
+  const SAGE_SOFT = '#7DA088'
   return (
     <div className="asym-grid" style={{
       display: 'grid',
-      gap: 18,
+      gap: 24,
       gridTemplateColumns: '1fr',
     }}>
       <style>{`
-        @media (min-width: 720px) {
+        @media (min-width: 900px) {
           .asym-grid {
-            grid-template-columns: 2fr 1fr !important;
+            grid-template-columns: 1.4fr 1fr !important;
             grid-template-rows: 1fr 1fr !important;
+            gap: 24px !important;
           }
           .asym-grid > :first-child {
             grid-row: 1 / span 2;
           }
+        }
+        .asym-card {
+          transition: transform .18s ease, box-shadow .18s ease;
+        }
+        .asym-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 18px rgba(48,34,24,.10);
         }
       `}</style>
 
       {/* Stort kort */}
       <Link
         href={stort.href}
+        className="asym-card"
         style={{
-          background: '#FFFFFF',
-          border: '1px solid #E5DDD9',
-          borderLeft: `4px solid ${stort.accent}`,
+          background: '#FBF7F1',
+          border: '1px solid #EAE2D6',
+          borderLeft: `4px solid ${SAGE_SOFT}`,
           borderRadius: 16,
-          padding: '36px 32px 32px',
+          padding: '44px 40px 40px',
           textDecoration: 'none',
           color: 'inherit',
           display: 'flex',
           flexDirection: 'column',
-          gap: 16,
+          gap: 18,
           boxShadow: '0 1px 4px rgba(48,34,24,.06)',
-          minHeight: 240,
+          minHeight: 280,
           fontFamily: "'DM Sans', sans-serif",
         }}
       >
         <div style={{
           width: 64, height: 64, borderRadius: 14,
-          background: '#F8F3EE',
+          background: '#F4ECDF',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {stort.icon}
         </div>
         <h3 style={{
           fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 'clamp(24px, 3vw, 30px)',
-          fontWeight: 600, color: '#302218', margin: 0,
+          fontSize: 'clamp(28px, 3.4vw, 36px)',
+          fontWeight: 500, color: '#302218', margin: 0,
+          letterSpacing: '.005em',
+          lineHeight: 1.15,
         }}>
           {stort.title}
         </h3>
-        <p style={{ fontSize: 15, color: '#5C5048', margin: 0, lineHeight: 1.6, maxWidth: 460 }}>
+        <p style={{ fontSize: 15.5, color: '#5C5048', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
           {stort.desc}
         </p>
         {stort.stat ? (
@@ -183,31 +197,33 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
         <Link
           key={k.href}
           href={k.href}
+          className="asym-card"
           style={{
-            background: '#FFFFFF',
-            border: '1px solid #E5DDD9',
-            borderLeft: `4px solid ${k.accent}`,
+            background: '#FBF7F1',
+            border: '1px solid #EAE2D6',
+            borderLeft: `4px solid ${SAGE_SOFT}`,
             borderRadius: 12,
-            padding: '22px 22px 20px',
+            padding: '26px 26px 22px',
             textDecoration: 'none',
             color: 'inherit',
             display: 'flex',
             flexDirection: 'column',
-            gap: 10,
+            gap: 12,
             boxShadow: '0 1px 4px rgba(48,34,24,.06)',
             fontFamily: "'DM Sans', sans-serif",
           }}
         >
           <div style={{
-            width: 42, height: 42, borderRadius: 10,
-            background: '#F8F3EE',
+            width: 44, height: 44, borderRadius: 10,
+            background: '#F4ECDF',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
             {k.icon}
           </div>
           <h3 style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: 18, fontWeight: 600, color: '#302218', margin: 0,
+            fontSize: 20, fontWeight: 500, color: '#302218', margin: 0,
+            letterSpacing: '.005em',
           }}>
             {k.title}
           </h3>
