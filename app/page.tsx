@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { FeatureCard } from '@/components/app/FeatureCards'
 import { CommunityMagasin } from '@/components/app/CommunityMagasin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { fetchOwnProfile } from '@/lib/community'
+import { fetchSavedRecipes } from '@/lib/data/saved-recipes'
 import { naestkommendeEvents } from './kalender/events'
 
 export const metadata: Metadata = {
@@ -96,6 +98,8 @@ type AsymKort = {
   desc: string
   accent: string
   icon: React.ReactNode
+  /** Lille stats-label i lysegrøn caps nederst på kortet (i stedet for "Åbn →"). */
+  stat?: string
 }
 
 /**
@@ -158,9 +162,20 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
         <p style={{ fontSize: 15, color: '#5C5048', margin: 0, lineHeight: 1.6, maxWidth: 460 }}>
           {stort.desc}
         </p>
-        <span style={{ fontSize: 13.5, color: '#9B6272', fontWeight: 500, marginTop: 'auto' }}>
-          Åbn →
-        </span>
+        {stort.stat ? (
+          <span style={{
+            marginTop: 'auto',
+            fontSize: 11.5, fontWeight: 600,
+            color: '#61846D',
+            textTransform: 'uppercase', letterSpacing: '.12em',
+          }}>
+            {stort.stat}
+          </span>
+        ) : (
+          <span style={{ fontSize: 13.5, color: '#9B6272', fontWeight: 500, marginTop: 'auto' }}>
+            Åbn →
+          </span>
+        )}
       </Link>
 
       {/* Små kort */}
@@ -199,9 +214,20 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
           <p style={{ fontSize: 13, color: '#8C7E74', margin: 0, lineHeight: 1.55 }}>
             {k.desc}
           </p>
-          <span style={{ fontSize: 12.5, color: '#9B6272', fontWeight: 500, marginTop: 'auto', paddingTop: 4 }}>
-            Åbn →
-          </span>
+          {k.stat ? (
+            <span style={{
+              marginTop: 'auto', paddingTop: 4,
+              fontSize: 10.5, fontWeight: 600,
+              color: '#61846D',
+              textTransform: 'uppercase', letterSpacing: '.12em',
+            }}>
+              {k.stat}
+            </span>
+          ) : (
+            <span style={{ fontSize: 12.5, color: '#9B6272', fontWeight: 500, marginTop: 'auto', paddingTop: 4 }}>
+              Åbn →
+            </span>
+          )}
         </Link>
       ))}
     </div>
@@ -210,31 +236,45 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
 
 // ── Sektion: For dig (indlogget) ─────────────────────────────────────────────
 
-function ForDigSektion() {
+type Stats = {
+  aktive: number
+  faerdige: number
+  garner: number
+  favoritter: number
+}
+
+function ForDigSektion({ navn, stats }: { navn: string; stats: Stats }) {
   return (
-    <SektionWrapper title="For dig" subtitle="Spring direkte til dine egne data.">
+    <SektionWrapper
+      tag="For dig"
+      title={`Velkommen tilbage, ${navn}`}
+      cta={{ href: '/mit-striq', label: 'Se alt i Mit STRIQ' }}
+    >
       <AsymmetricGrid
         stort={{
           href: '/projekter',
           title: 'Mine projekter',
-          desc: 'Dit personlige arkiv med billeder, noter og garn-allokering. Hold styr på hvad du strikker lige nu og hvad du har færdiggjort.',
+          desc: 'Gem dine strikkeprojekter med billeder, noter og opskrifter — dit personlige arkiv over alt det du skaber.',
           accent: '#D4ADB6',
           icon: IconProjekt(38),
+          stat: `${stats.aktive} aktive · ${stats.faerdige} færdige`,
         }}
         smaa={[
           {
             href: '/garnlager',
             title: 'Mit garn',
-            desc: 'Søg, filtrér og hold styr på dit lager.',
+            desc: 'Hold styr på hele dit garnlager — søg på farve, fiber og mængde.',
             accent: '#61846D',
             icon: IconGarn(),
+            stat: `${stats.garner} garner på lager`,
           },
           {
             href: '/mine-favoritter',
             title: 'Mine favoritter',
-            desc: 'Opskrifter du har gemt med hjerte.',
+            desc: 'De opskrifter du har gemt til senere — klar når inspirationen rammer.',
             accent: '#D9BFC3',
             icon: IconFavoritter(),
+            stat: `${stats.favoritter} ${stats.favoritter === 1 ? 'favorit' : 'favoritter'}`,
           },
         ]}
       />
@@ -246,7 +286,12 @@ function ForDigSektion() {
 
 function KomIGangSektion() {
   return (
-    <SektionWrapper title="Kom i gang" subtitle="Opret en konto og få styr på dit garnlager og dine projekter.">
+    <SektionWrapper
+      tag="Kom i gang"
+      title="Velkommen til STRIQ"
+      subtitle="Opret en konto og få styr på dit garnlager og dine projekter."
+      cta={{ href: '/signup', label: 'Opret konto' }}
+    >
       <AsymmetricGrid
         stort={{
           href: '/signup',
@@ -278,23 +323,66 @@ function KomIGangSektion() {
 
 // ── Delt sektion-wrapper ──────────────────────────────────────────────────────
 
-function SektionWrapper({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+function SektionWrapper({
+  tag, title, subtitle, cta, children,
+}: {
+  /** Lille lysegrøn caps over titlen (fx "FOR DIG", "STÅR DU FAST?"). */
+  tag?: string
+  title: string
+  subtitle?: string
+  /** Valgfri CTA-link i højre side ved siden af titlen. */
+  cta?: { href: string; label: string }
+  children: React.ReactNode
+}) {
   return (
     <section style={{ maxWidth: 1080, margin: '0 auto', padding: '0 24px 48px' }}>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 'clamp(24px, 3.2vw, 32px)',
-          fontWeight: 600,
-          color: '#302218',
-          margin: '0 0 6px',
-        }}>
-          {title}
-        </h2>
-        {subtitle && (
-          <p style={{ fontSize: 14.5, color: '#8C7E74', margin: 0, fontFamily: "'DM Sans', sans-serif" }}>
-            {subtitle}
-          </p>
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        gap: 16,
+        marginBottom: 24,
+        flexWrap: 'wrap',
+      }}>
+        <div>
+          {tag && (
+            <div style={{
+              fontSize: 11, fontWeight: 600,
+              color: '#61846D',
+              textTransform: 'uppercase', letterSpacing: '.14em',
+              marginBottom: 8,
+              fontFamily: "'DM Sans', sans-serif",
+            }}>
+              {tag}
+            </div>
+          )}
+          <h2 style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: 'clamp(24px, 3.2vw, 32px)',
+            fontWeight: 600,
+            color: '#302218',
+            margin: '0 0 6px',
+          }}>
+            {title}
+          </h2>
+          {subtitle && (
+            <p style={{ fontSize: 14.5, color: '#8C7E74', margin: 0, fontFamily: "'DM Sans', sans-serif" }}>
+              {subtitle}
+            </p>
+          )}
+        </div>
+        {cta && (
+          <Link href={cta.href} style={{
+            fontSize: 12, fontWeight: 600,
+            color: '#9B6272',
+            textTransform: 'uppercase', letterSpacing: '.12em',
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+            paddingBottom: 6,
+            fontFamily: "'DM Sans', sans-serif",
+          }}>
+            {cta.label} →
+          </Link>
         )}
       </div>
       {children}
@@ -329,7 +417,7 @@ const IconAI = (
 
 function StaarDuFastSektion() {
   return (
-    <SektionWrapper title="Står du fast?" subtitle="Tre hurtige veje når et projekt har brug for hjælp.">
+    <SektionWrapper tag="Hjælp til projektet" title="Står du fast?">
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr',
@@ -371,7 +459,11 @@ function DetSkerSektion() {
   if (events.length === 0) return null
 
   return (
-    <SektionWrapper title="Det sker i strikke-Danmark" subtitle="Kommende festivaler, retreats og liveshows.">
+    <SektionWrapper
+      tag="Det sker i strikke-Danmark"
+      title="Kommende arrangementer"
+      cta={{ href: '/kalender', label: 'Se hele kalenderen' }}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {events.map((ev, i) => (
           <a
@@ -446,13 +538,6 @@ function DetSkerSektion() {
           </a>
         ))}
       </div>
-      <div style={{ marginTop: 14, textAlign: 'right' }}>
-        <Link href="/kalender" style={{
-          fontSize: 13, color: '#9B6272', fontWeight: 500, textDecoration: 'underline',
-        }}>
-          Se hele kalenderen →
-        </Link>
-      </div>
     </SektionWrapper>
   )
 }
@@ -486,12 +571,55 @@ function HjaelpOgEventsRow() {
   )
 }
 
+// ── Stats-hjælper ─────────────────────────────────────────────────────────────
+
+async function hentStats(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  userId: string,
+): Promise<Stats> {
+  // RLS-policies sikrer at vi kun får brugerens egne rækker.
+  // Henter projekter med status så vi kan tælle aktive vs færdige.
+  const [projektRes, garnRes, favoritter] = await Promise.all([
+    supabase.from('projects').select('status').eq('user_id', userId),
+    supabase.from('yarn_items').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    fetchSavedRecipes(supabase, userId).catch(() => new Set<string>()),
+  ])
+
+  const projekter = (projektRes.data ?? []) as Array<{ status: string | null }>
+  const aktive = projekter.filter(p => p.status === 'i_gang' || p.status === 'vil_gerne').length
+  const faerdige = projekter.filter(p => p.status === 'faerdigstrikket').length
+
+  return {
+    aktive,
+    faerdige,
+    garner: garnRes.count ?? 0,
+    favoritter: favoritter.size,
+  }
+}
+
+function displayName(profileName: string | null | undefined, email: string | null | undefined): string {
+  const trimmed = profileName?.trim()
+  if (trimmed) return trimmed
+  if (email) {
+    const local = email.split('@')[0] ?? ''
+    if (local) return local.charAt(0).toUpperCase() + local.slice(1)
+  }
+  return 'strikker'
+}
+
 // ── Forsiden ──────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  const isLoggedIn = Boolean(user)
+
+  let navn = ''
+  let stats: Stats | null = null
+  if (user) {
+    const profile = await fetchOwnProfile(supabase, user.id).catch(() => null)
+    navn = displayName(profile?.display_name, user.email)
+    stats = await hentStats(supabase, user.id)
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 58px - 57px)' }}>
@@ -499,7 +627,7 @@ export default async function HomePage() {
 
       {/* Cream-baggrund for resten af forsiden */}
       <div style={{ background: '#F8F3EE', flex: 1, padding: '40px 0 56px' }}>
-        {isLoggedIn ? <ForDigSektion /> : <KomIGangSektion />}
+        {user && stats ? <ForDigSektion navn={navn} stats={stats} /> : <KomIGangSektion />}
 
         <CommunityMagasin />
 
