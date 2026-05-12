@@ -35,16 +35,16 @@ export async function CommunityMagasin() {
   const heroCover = pickCover(hero.project_image_urls, hero.community_primary_image_index)
 
   return (
-    <section style={{ maxWidth: 1320, margin: '0 auto', padding: '0 24px 0', fontFamily: "'DM Sans', sans-serif" }}>
+    <section style={{ maxWidth: 1320, margin: '0 auto', padding: '0 60px 0', fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: 'clamp(36px, 4.5vw, 54px)',
+            fontSize: 'clamp(32px, 4.8vw, 52px)',
             fontWeight: 500,
             color: '#302218',
             margin: '0 0 8px',
-            lineHeight: 1.15,
+            lineHeight: 1.1,
             letterSpacing: '.005em',
           }}>
             Fra fællesskabet

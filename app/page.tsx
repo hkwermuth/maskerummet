@@ -396,7 +396,7 @@ function OpretKontoSektion() {
     <section style={{
       maxWidth: 1320,
       margin: '0 auto',
-      padding: '0 24px 48px',
+      padding: '0 60px 48px',
       fontFamily: "'DM Sans', sans-serif",
     }}>
       <div style={{
@@ -463,7 +463,7 @@ function SektionWrapper({
   children: React.ReactNode
 }) {
   return (
-    <section style={{ maxWidth: 1320, margin: '0 auto', padding: '0 24px 48px' }}>
+    <section style={{ maxWidth: 1320, margin: '0 auto', padding: '0 60px 48px' }}>
       <div style={{
         display: 'flex',
         alignItems: 'flex-end',
@@ -486,11 +486,11 @@ function SektionWrapper({
           )}
           <h2 style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: 'clamp(36px, 4.5vw, 54px)',
+            fontSize: 'clamp(32px, 4.8vw, 52px)',
             fontWeight: 500,
             color: '#302218',
             margin: '0 0 8px',
-            lineHeight: 1.15,
+            lineHeight: 1.1,
             letterSpacing: '.005em',
           }}>
             {title}
@@ -547,7 +547,7 @@ const IconAI = (
 
 function StaarDuFastSektion() {
   return (
-    <SektionWrapper tag="STRIQ-værktøjer" title="Smarte hjælpe-værktøjer">
+    <SektionWrapper tag="Hjælp til projektet" title="Står du fast?">
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr',
@@ -679,7 +679,7 @@ function HjaelpOgEventsRow() {
     <div className="hjaelp-events-row" style={{
       maxWidth: 1320,
       margin: '0 auto',
-      padding: '0 24px 48px',
+      padding: '0 60px 48px',
       display: 'grid',
       gridTemplateColumns: '1fr',
       gap: 32,
