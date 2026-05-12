@@ -58,6 +58,8 @@ export async function CommunityMagasin() {
         </Link>
       </div>
 
+      {/* Dynamisk antal grid-rows baseret på antal små kort, så der ikke
+          opstår en tom række hvis DB'en har færre end 4 delte projekter. */}
       <div className="magasin-grid" style={{
         display: 'grid',
         gap: 16,
@@ -67,10 +69,10 @@ export async function CommunityMagasin() {
           @media (min-width: 760px) {
             .magasin-grid {
               grid-template-columns: 1.6fr 1fr !important;
-              grid-template-rows: repeat(3, 1fr) !important;
+              grid-template-rows: repeat(${Math.max(small.length, 1)}, 1fr) !important;
             }
             .magasin-grid > :first-child {
-              grid-row: 1 / span 3;
+              grid-row: 1 / span ${Math.max(small.length, 1)};
             }
           }
         `}</style>
