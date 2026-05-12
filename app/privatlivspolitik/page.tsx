@@ -72,10 +72,10 @@ const SEKTIONER = [
           <li><strong>Indsigt</strong> — få at vide hvilke data vi har om dig.</li>
           <li><strong>Rettelse</strong> — få rettet forkerte oplysninger.</li>
           <li><strong>Sletning</strong> — få slettet dine data.</li>
-          <li><strong>Dataportabilitet</strong> — få dine data udleveret i et læsbart format.</li>
+          <li><strong>Dataportabilitet</strong> — du kan downloade alle dine data som JSON-fil fra <a href="/min-konto" style={{ color: '#9B6272', textDecoration: 'underline' }}>Min konto-siden</a>.</li>
           <li><strong>Klage</strong> — du kan klage til <a href="https://www.datatilsynet.dk" target="_blank" rel="noopener noreferrer" style={{ color: '#9B6272', textDecoration: 'underline' }}>Datatilsynet</a>.</li>
         </ul>
-        <p>Kontakt os på <a href="mailto:kontakt@striq.dk" style={{ color: '#9B6272', textDecoration: 'underline' }}>kontakt@striq.dk</a> for at bruge dine rettigheder.</p>
+        <p>Kontakt os på <a href="mailto:kontakt@striq.dk" style={{ color: '#9B6272', textDecoration: 'underline' }}>kontakt@striq.dk</a> for at bruge dine øvrige rettigheder.</p>
       </>
     ),
   },
