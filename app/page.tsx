@@ -5,6 +5,7 @@ import { CommunityMagasin } from '@/components/app/CommunityMagasin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { fetchOwnProfile } from '@/lib/community'
 import { fetchSavedRecipes } from '@/lib/data/saved-recipes'
+import { loadRecipes } from '@/lib/data/recipes'
 import { naestkommendeEvents } from './kalender/events'
 
 export const metadata: Metadata = {
@@ -110,9 +111,8 @@ type AsymKort = {
  * Mobil: stacked.
  */
 function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, AsymKort] }) {
-  // sage-soft venstre-kant på alle kort så de matcher i serie og ikke
-  // konkurrerer om farve-opmærksomhed (brugerens spec).
-  const SAGE_SOFT = '#7DA088'
+  // Ingen venstre-kant på kortene — bare cream-light baggrund og soft shadow.
+  // Det giver et roligere, mere personligt look til "For dig"-sektionen.
   return (
     <>
       {/* <style> UDEN for grid'en så den ikke bliver :first-child og fanger
@@ -150,38 +150,43 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
         style={{
           background: '#FBF7F1',
           border: '1px solid #EAE2D6',
-          borderLeft: `4px solid ${SAGE_SOFT}`,
           borderRadius: 16,
-          padding: '44px 40px 40px',
+          padding: '36px 32px 32px',
           textDecoration: 'none',
           color: 'inherit',
           display: 'flex',
           flexDirection: 'column',
-          gap: 18,
+          gap: 16,
           boxShadow: '0 1px 4px rgba(48,34,24,.06)',
           minHeight: 280,
           fontFamily: "'DM Sans', sans-serif",
         }}
       >
-        <div style={{
-          width: 64, height: 64, borderRadius: 14,
-          background: '#F4ECDF',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          {stort.icon}
+        {/* Kompakt header: ikon + titel side-by-side */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 12,
+            background: '#F4ECDF',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            {stort.icon}
+          </div>
+          <h3 style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: 'clamp(24px, 2.8vw, 30px)',
+            fontWeight: 500, color: '#302218', margin: 0,
+            letterSpacing: '.005em',
+            lineHeight: 1.15,
+          }}>
+            {stort.title}
+          </h3>
         </div>
-        <h3 style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 'clamp(28px, 3.4vw, 36px)',
-          fontWeight: 500, color: '#302218', margin: 0,
-          letterSpacing: '.005em',
-          lineHeight: 1.15,
-        }}>
-          {stort.title}
-        </h3>
-        <p style={{ fontSize: 15.5, color: '#5C5048', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
-          {stort.desc}
-        </p>
+        {stort.desc && (
+          <p style={{ fontSize: 15.5, color: '#5C5048', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
+            {stort.desc}
+          </p>
+        )}
         {stort.extra}
         {stort.stat ? (
           <span style={{
@@ -208,7 +213,6 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
           style={{
             background: '#FBF7F1',
             border: '1px solid #EAE2D6',
-            borderLeft: `4px solid ${SAGE_SOFT}`,
             borderRadius: 12,
             padding: '26px 26px 22px',
             textDecoration: 'none',
@@ -261,15 +265,29 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
 
 // ── Sektion: For dig (indlogget) ─────────────────────────────────────────────
 
+type ProjektTeaser = {
+  id: string
+  title: string | null
+  cover: string | null
+  updated_at: string | null
+}
+
+type FavoritTeaser = {
+  external_id: string
+  source: string
+  name: string | null
+  image_url: string | null
+}
+
 type Stats = {
   aktive: number
   faerdige: number
   garner: number
   favoritter: number
   // Visuel data til For dig-kortene
-  projektThumbnails: string[]   // op til 3 cover-billeder fra aktive projekter
-  garnFarver: string[]           // op til 10 hex-farver fra yarn_items
-  senesteFav: string | null      // senest gemt opskrifts external_id
+  aktiveProjekter: ProjektTeaser[]  // op til 4: 1 hero + 3 thumbnails
+  garnFarver: string[]               // op til 10 hex-farver fra yarn_items
+  favoritTeasers: FavoritTeaser[]    // op til 3 senest gemte favoritter med titel + thumbnail
 }
 
 function ForDigSektion({ navn, stats }: { navn: string; stats: Stats }) {
@@ -283,11 +301,11 @@ function ForDigSektion({ navn, stats }: { navn: string; stats: Stats }) {
         stort={{
           href: '/projekter',
           title: 'Mine projekter',
-          desc: 'Gem dine strikkeprojekter med billeder, noter og opskrifter — dit personlige arkiv over alt det du skaber.',
+          desc: '', // ingen beskrivelse — det fremhævede projekt er indholdet
           accent: '#D4ADB6',
           icon: IconProjekt(38),
           stat: `${stats.aktive} aktive · ${stats.faerdige} færdige`,
-          extra: <ProjektThumbnails urls={stats.projektThumbnails} />,
+          extra: <MineProjekterIndhold projekter={stats.aktiveProjekter} />,
         }}
         smaa={[
           {
@@ -305,9 +323,8 @@ function ForDigSektion({ navn, stats }: { navn: string; stats: Stats }) {
             desc: 'De opskrifter du har gemt til senere — klar når inspirationen rammer.',
             accent: '#D9BFC3',
             icon: IconFavoritter(),
-            stat: stats.senesteFav
-              ? `Senest gemt: ${stats.senesteFav}`
-              : `${stats.favoritter} ${stats.favoritter === 1 ? 'favorit' : 'favoritter'}`,
+            stat: `${stats.favoritter} ${stats.favoritter === 1 ? 'favorit' : 'favoritter'}`,
+            extra: <FavoritThumbnails favoritter={stats.favoritTeasers} />,
           },
         ]}
       />
@@ -317,38 +334,114 @@ function ForDigSektion({ navn, stats }: { navn: string; stats: Stats }) {
 
 // ── Visuelle elementer til For dig-kortene ──────────────────────────────────
 
-function ProjektThumbnails({ urls }: { urls: string[] }) {
-  if (urls.length === 0) {
+function formatDanskDato(iso: string | null): string {
+  if (!iso) return ''
+  try {
+    const d = new Date(iso)
+    const dag = d.getDate()
+    const maaneder = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec']
+    return `${dag}. ${maaneder[d.getMonth()]}.`
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Hero-projekt øverst + række af thumbnails for øvrige aktive projekter.
+ * Læses som "fortsæt hvor du slap" snarere end "her er din projekt-kategori".
+ */
+function MineProjekterIndhold({ projekter }: { projekter: ProjektTeaser[] }) {
+  if (projekter.length === 0) {
     return (
       <div style={{
         marginTop: 4,
-        fontSize: 13,
-        color: '#9B6272',
-        fontStyle: 'italic',
+        padding: '24px 20px',
+        background: '#F4ECDF',
+        borderRadius: 12,
         fontFamily: "'Cormorant Garamond', serif",
+        fontStyle: 'italic',
+        fontSize: 16,
+        color: '#9B6272',
+        textAlign: 'center',
       }}>
         Start dit første projekt — det venter på dig.
       </div>
     )
   }
+
+  const [hero, ...rest] = projekter
+
   return (
-    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-      {urls.map((url, i) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={i}
-          src={url}
-          alt=""
-          style={{
-            width: 72,
-            height: 72,
-            borderRadius: 10,
-            objectFit: 'cover',
-            border: '1px solid #EAE2D6',
-            boxShadow: '0 1px 3px rgba(48,34,24,.08)',
-          }}
-        />
-      ))}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 4 }}>
+      {/* Hero-projekt */}
+      <div>
+        {hero.cover ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={hero.cover}
+            alt={hero.title ?? 'Aktivt projekt'}
+            style={{
+              width: '100%',
+              height: 200,
+              borderRadius: 12,
+              objectFit: 'cover',
+              display: 'block',
+              boxShadow: '0 2px 6px rgba(48,34,24,.10)',
+            }}
+          />
+        ) : (
+          <div style={{
+            width: '100%',
+            height: 200,
+            borderRadius: 12,
+            background: 'linear-gradient(135deg, #D4ADB6 0%, #D9BFC3 100%)',
+            boxShadow: '0 2px 6px rgba(48,34,24,.10)',
+          }} />
+        )}
+        <h4 style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: 24,
+          fontWeight: 500,
+          color: '#302218',
+          margin: '12px 0 2px',
+          letterSpacing: '.005em',
+          lineHeight: 1.2,
+        }}>
+          {hero.title ?? 'Uden titel'}
+        </h4>
+        <p style={{
+          fontSize: 12.5,
+          color: '#9B6272',
+          fontStyle: 'italic',
+          fontFamily: "'Cormorant Garamond', serif",
+          margin: 0,
+        }}>
+          {hero.updated_at ? `Senest opdateret ${formatDanskDato(hero.updated_at)}` : 'Fortsæt hvor du slap'}
+        </p>
+      </div>
+
+      {/* Række af thumbnails for øvrige aktive projekter */}
+      {rest.length > 0 && (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {rest.map(p => (
+            <div
+              key={p.id}
+              title={p.title ?? ''}
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 8,
+                background: p.cover ? `url(${p.cover})` : 'linear-gradient(135deg, #D4ADB6 0%, #D9BFC3 100%)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                border: '1px solid #EAE2D6',
+                boxShadow: '0 1px 3px rgba(48,34,24,.08)',
+                flexShrink: 0,
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -376,6 +469,48 @@ function GarnFarvePalette({ farver }: { farver: string[] }) {
             boxShadow: '0 1px 2px rgba(48,34,24,.06)',
           }}
         />
+      ))}
+    </div>
+  )
+}
+
+function FavoritThumbnails({ favoritter }: { favoritter: FavoritTeaser[] }) {
+  if (favoritter.length === 0) return null
+  return (
+    <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+      {favoritter.map((f, i) => (
+        f.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={i}
+            src={f.image_url}
+            alt={f.name ?? ''}
+            title={f.name ?? ''}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 8,
+              objectFit: 'cover',
+              border: '1px solid #EAE2D6',
+              boxShadow: '0 1px 3px rgba(48,34,24,.08)',
+              flexShrink: 0,
+            }}
+          />
+        ) : (
+          <div
+            key={i}
+            title={f.name ?? f.external_id}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 8,
+              background: 'linear-gradient(135deg, #D4ADB6 0%, #D9BFC3 100%)',
+              border: '1px solid #EAE2D6',
+              boxShadow: '0 1px 3px rgba(48,34,24,.08)',
+              flexShrink: 0,
+            }}
+          />
+        )
       ))}
     </div>
   )
@@ -833,39 +968,40 @@ async function hentStats(
   userId: string,
 ): Promise<Stats> {
   // RLS-policies sikrer at vi kun får brugerens egne rækker.
-  // Tager projekter med billeder + garner med farver + seneste favorit
+  // Tager projekter med billeder + garner med farver + favoritter
   // parallelt for at undgå serielle roundtrips.
-  const [projektRes, garnRes, garnCountRes, favoritter, senesteFavRes] = await Promise.all([
-    // Projekter — tæl status + hent thumbnails fra aktive
+  const [projektRes, garnRes, garnCountRes, favoritter, senesteFavoritter] = await Promise.all([
+    // Projekter — fuld teaser-data
     supabase
       .from('projects')
-      .select('status, project_image_urls, community_primary_image_index, updated_at')
+      .select('id, title, status, project_image_urls, community_primary_image_index, updated_at')
       .eq('user_id', userId),
-    // Op til 10 hex-farver fra yarn_items (foretrækker hex_colors-array, ellers hex_color)
+    // Op til 40 yarn_items til farve-palette (foretrækker hex_colors-array, ellers hex_color)
     supabase
       .from('yarn_items')
       .select('hex_color, hex_colors')
       .eq('user_id', userId)
-      .limit(40), // hent flere så vi kan filtrere null/empty bort
+      .limit(40),
     // Antal garner
     supabase
       .from('yarn_items')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId),
-    // Favoritter (nøgle-sæt)
+    // Favoritter (samlet sæt af nøgler)
     fetchSavedRecipes(supabase, userId).catch(() => new Set<string>()),
-    // Senest gemte favorit — recipe_external_id som vi kan vise
+    // 3 senest gemte favoritter — så vi kan vise dem som thumbnails
     supabase
       .from('saved_recipes')
       .select('recipe_external_id, recipe_source, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+      .limit(3),
   ])
 
-  // Projekter — status-count + thumbnails fra aktive
+  // Projekter — status-count + teaser-data for aktive
   const projekter = (projektRes.data ?? []) as Array<{
+    id: string
+    title: string | null
     status: string | null
     project_image_urls: string[] | null
     community_primary_image_index: number | null
@@ -874,17 +1010,21 @@ async function hentStats(
   const aktive = projekter.filter(p => p.status === 'i_gang' || p.status === 'vil_gerne').length
   const faerdige = projekter.filter(p => p.status === 'faerdigstrikket').length
 
-  // 3 seneste aktive projekters cover-billede
-  const projektThumbnails = projekter
-    .filter(p => (p.status === 'i_gang' || p.status === 'vil_gerne') && p.project_image_urls && p.project_image_urls.length > 0)
+  // Op til 4 seneste aktive projekter (1 hero + op til 3 thumbnails)
+  const aktiveProjekter: ProjektTeaser[] = projekter
+    .filter(p => p.status === 'i_gang' || p.status === 'vil_gerne')
     .sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''))
-    .slice(0, 3)
+    .slice(0, 4)
     .map(p => {
       const urls = p.project_image_urls ?? []
       const idx = p.community_primary_image_index ?? 0
-      return urls[idx] ?? urls[0] ?? ''
+      return {
+        id: p.id,
+        title: p.title,
+        cover: urls[idx] ?? urls[0] ?? null,
+        updated_at: p.updated_at,
+      }
     })
-    .filter(Boolean)
 
   // Hex-farver fra yarn_items — fladt array, op til 10 unikke
   const farverSet = new Set<string>()
@@ -898,17 +1038,30 @@ async function hentStats(
   }
   const garnFarver = Array.from(farverSet).slice(0, 10)
 
-  // Senest gemte favorit — vis external_id som teaser (slugify til pænt navn)
-  const senesteFav = senesteFavRes.data?.recipe_external_id ?? null
+  // Favorit-teasers: slå op i DROPS-katalog for titel + thumbnail
+  const recipes = loadRecipes()
+  const favRows = (senesteFavoritter.data ?? []) as Array<{
+    recipe_external_id: string
+    recipe_source: string
+  }>
+  const favoritTeasers: FavoritTeaser[] = favRows.map(row => {
+    const recipe = recipes.find(r => r.external_id === row.recipe_external_id && r.source === row.recipe_source)
+    return {
+      external_id: row.recipe_external_id,
+      source: row.recipe_source,
+      name: recipe?.name ?? null,
+      image_url: recipe?.image_url ?? null,
+    }
+  })
 
   return {
     aktive,
     faerdige,
     garner: garnCountRes.count ?? 0,
     favoritter: favoritter.size,
-    projektThumbnails,
+    aktiveProjekter,
     garnFarver,
-    senesteFav,
+    favoritTeasers,
   }
 }
 
