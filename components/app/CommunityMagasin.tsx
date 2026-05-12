@@ -15,23 +15,23 @@ function displayName(name: string | null): string {
 }
 
 /**
- * Magasin-layout: 1 stort billede til venstre + op til 3 små stablet til højre.
+ * Magasin-layout: 1 stort billede til venstre + op til 4 små i 2x2-grid til højre.
  * Klik fører til /faellesskabet (intet detaljeret modal-flow på forsiden).
  *
- * Server-component — fetcher 4 nyeste public_shared_projects.
+ * Server-component — fetcher 5 nyeste public_shared_projects.
  * Bruger view'et som har column-level GRANTs så vi ikke kan ramme private felter.
  */
 export async function CommunityMagasin() {
   const supabase = await createSupabaseServerClient()
   const projects = await fetchSharedProjects(supabase)
-  const top4 = projects.slice(0, 4)
+  const top5 = projects.slice(0, 5)
 
   // Hvis ingen projekter er delt endnu, skjul sektionen helt — undgår
   // tom-sektion-pinlighed på en frisk testbruger-DB.
-  if (top4.length === 0) return null
+  if (top5.length === 0) return null
 
-  const [hero, ...rest] = top4
-  const small = rest.slice(0, 3)
+  const [hero, ...rest] = top5
+  const small = rest.slice(0, 4)
   const heroCover = pickCover(hero.project_image_urls, hero.community_primary_image_index)
 
   return (
@@ -58,8 +58,9 @@ export async function CommunityMagasin() {
         </Link>
       </div>
 
-      {/* Dynamisk antal grid-rows baseret på antal små kort, så der ikke
-          opstår en tom række hvis DB'en har færre end 4 delte projekter. */}
+      {/* 1 stort + 4 små i 2x2-grid på desktop. Stort spænder venstre kolonne
+          (begge rækker), de små i 2x2 til højre. Færre end 4 små → grid
+          tilpasser sig dynamisk (1 lille = 1 række, 2 små = 1 række × 2 kolonner). */}
       <div className="magasin-grid" style={{
         display: 'grid',
         gap: 16,
@@ -68,11 +69,15 @@ export async function CommunityMagasin() {
         <style>{`
           @media (min-width: 760px) {
             .magasin-grid {
-              grid-template-columns: 1.6fr 1fr !important;
-              grid-template-rows: repeat(${Math.max(small.length, 1)}, 1fr) !important;
+              /* Stort kort + 2 højre-kolonner */
+              grid-template-columns: 1.6fr 1fr 1fr !important;
+              /* Antal rækker bestemmes af antal små: 1-2 små → 1 række, 3-4 små → 2 rækker */
+              grid-template-rows: repeat(${small.length <= 2 ? 1 : 2}, 1fr) !important;
             }
             .magasin-grid > :first-child {
-              grid-row: 1 / span ${Math.max(small.length, 1)};
+              /* Stort kort: venstre kolonne, alle rækker */
+              grid-row: 1 / span ${small.length <= 2 ? 1 : 2};
+              grid-column: 1;
             }
           }
         `}</style>
@@ -80,7 +85,7 @@ export async function CommunityMagasin() {
         {/* Stort kort */}
         <ProjektKort project={hero} cover={heroCover} variant="lg" />
 
-        {/* Små kort */}
+        {/* Små kort — auto-placeres i de resterende cells (række 1 først, så række 2) */}
         {small.map(p => (
           <ProjektKort
             key={p.id}
@@ -100,7 +105,9 @@ type Project = Awaited<ReturnType<typeof fetchSharedProjects>>[number]
 
 function ProjektKort({ project, cover, variant }: { project: Project; cover: string | null; variant: 'sm' | 'lg' }) {
   const isLg = variant === 'lg'
-  const minHeight = isLg ? 360 : 140
+  // Stort kort: 320px svarer ca. til 2 rækker små (140px) + gap (16px) på desktop.
+  // Grid-stretch sikrer at det altid matcher de små kortes faktiske højde.
+  const minHeight = isLg ? 320 : 140
 
   return (
     <Link
