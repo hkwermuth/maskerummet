@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { FeatureCard } from '@/components/app/FeatureCards'
 import { CommunityMagasin } from '@/components/app/CommunityMagasin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { naestkommendeEvents } from './kalender/events'
 
 export const metadata: Metadata = {
   title: 'STRIQ — Dit personlige garnunivers',
@@ -331,8 +332,8 @@ function StaarDuFastSektion() {
     <SektionWrapper title="Står du fast?" subtitle="Tre hurtige veje når et projekt har brug for hjælp.">
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: 18,
+        gridTemplateColumns: '1fr',
+        gap: 14,
       }}>
         <FeatureCard
           href="/opskrifter-og-garn"
@@ -340,6 +341,7 @@ function StaarDuFastSektion() {
           desc="Foreslå alternativer baseret på fiber, vægt og strikkefasthed."
           accent="#61846D"
           icon={IconErstatning}
+          size="sm"
         />
         <FeatureCard
           href="/opskrifter-og-garn"
@@ -347,6 +349,7 @@ function StaarDuFastSektion() {
           desc="Match dit garnlager med opskrifter der passer."
           accent="#D4ADB6"
           icon={IconOpskriftMatch}
+          size="sm"
         />
         <FeatureCard
           href="/visualizer"
@@ -354,9 +357,132 @@ function StaarDuFastSektion() {
           desc="Upload et foto og se dit projekt i nye farver."
           accent="#D9BFC3"
           icon={IconAI}
+          size="sm"
         />
       </div>
     </SektionWrapper>
+  )
+}
+
+// ── Sektion: Det sker i strikke-Danmark ──────────────────────────────────────
+
+function DetSkerSektion() {
+  const events = naestkommendeEvents(3)
+  if (events.length === 0) return null
+
+  return (
+    <SektionWrapper title="Det sker i strikke-Danmark" subtitle="Kommende festivaler, retreats og liveshows.">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {events.map((ev, i) => (
+          <a
+            key={`${ev.titel}-${i}`}
+            href={ev.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: '#FFFFFF',
+              border: '1px solid #E5DDD9',
+              borderLeft: `4px solid ${ev.farve}`,
+              borderRadius: 12,
+              padding: '16px 18px',
+              display: 'flex',
+              gap: 14,
+              alignItems: 'flex-start',
+              textDecoration: 'none',
+              color: 'inherit',
+              fontFamily: "'DM Sans', sans-serif",
+              boxShadow: '0 1px 4px rgba(48,34,24,.06)',
+            }}
+          >
+            <div style={{
+              minWidth: 64,
+              padding: '8px 6px',
+              background: '#F8F3EE',
+              borderRadius: 8,
+              textAlign: 'center',
+              flexShrink: 0,
+            }}>
+              <div style={{ fontSize: 10, color: '#8C7E74', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 2 }}>
+                {ev.maaned.split(' ')[0]}
+              </div>
+              <div style={{
+                fontFamily: "'Cormorant Garamond', serif",
+                fontSize: 16, fontWeight: 600,
+                color: '#302218', lineHeight: 1.2,
+              }}>
+                {ev.dato.split('.')[0]}.
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontFamily: "'Cormorant Garamond', serif",
+                fontSize: 17, fontWeight: 600,
+                color: '#302218',
+                marginBottom: 2,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}>
+                {ev.titel}
+              </div>
+              <div style={{ fontSize: 12.5, color: '#8C7E74', lineHeight: 1.45 }}>
+                {ev.sted}
+              </div>
+              <div style={{
+                marginTop: 6,
+                display: 'inline-block',
+                padding: '2px 9px',
+                background: `${ev.farve}26`,
+                color: ev.farve,
+                fontSize: 10.5,
+                fontWeight: 600,
+                borderRadius: 12,
+                letterSpacing: '.04em',
+                textTransform: 'uppercase',
+              }}>
+                {ev.type}
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+      <div style={{ marginTop: 14, textAlign: 'right' }}>
+        <Link href="/kalender" style={{
+          fontSize: 13, color: '#9B6272', fontWeight: 500, textDecoration: 'underline',
+        }}>
+          Se hele kalenderen →
+        </Link>
+      </div>
+    </SektionWrapper>
+  )
+}
+
+// ── Side-by-side wrapper for Fase 5 + 6 på desktop ───────────────────────────
+
+function HjaelpOgEventsRow() {
+  return (
+    <div className="hjaelp-events-row" style={{
+      maxWidth: 1080,
+      margin: '0 auto',
+      padding: '0 24px 48px',
+      display: 'grid',
+      gridTemplateColumns: '1fr',
+      gap: 32,
+    }}>
+      <style>{`
+        @media (min-width: 960px) {
+          .hjaelp-events-row {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 28px !important;
+          }
+          .hjaelp-events-row > section {
+            padding: 0 !important;
+          }
+        }
+      `}</style>
+      <StaarDuFastSektion />
+      <DetSkerSektion />
+    </div>
   )
 }
 
@@ -377,7 +503,7 @@ export default async function HomePage() {
 
         <CommunityMagasin />
 
-        <StaarDuFastSektion />
+        <HjaelpOgEventsRow />
       </div>
     </div>
   )
