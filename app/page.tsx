@@ -466,7 +466,7 @@ function SektionWrapper({
     <section style={{ maxWidth: 1320, margin: '0 auto', padding: '0 60px 90px' }}>
       <div style={{
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
         gap: 16,
         marginBottom: 24,
@@ -694,10 +694,13 @@ function HjaelpOgEventsRow() {
           .hjaelp-events-row > section {
             padding: 0 !important;
           }
-          /* Samme margin-bottom under overskrifts-blokken i begge spalter */
+          /* Tving header-blokken til samme højde i begge spalter,
+             selvom titlen wrapper forskelligt. Plads til 2-linje
+             52px Cormorant + tag + margin. */
           .hjaelp-events-row > section > div:first-child {
-            margin-bottom: 28px !important;
-            min-height: 110px;
+            margin-bottom: 32px !important;
+            min-height: 160px;
+            align-items: flex-end !important;
           }
         }
       `}</style>
