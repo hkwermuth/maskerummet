@@ -602,68 +602,84 @@ function DetSkerSektion() {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              background: '#FFFFFF',
-              border: '1px solid #E5DDD9',
-              borderLeft: `4px solid ${ev.farve}`,
-              borderRadius: 12,
-              padding: '16px 18px',
+              // Cream-light baggrund, ingen border-left — dato-blokken er accenten.
+              background: '#FBF7F1',
+              border: '1px solid #EAE2D6',
+              borderRadius: 14,
+              padding: 22,
               display: 'flex',
-              gap: 14,
-              alignItems: 'flex-start',
+              gap: 20,
+              alignItems: 'center',
               textDecoration: 'none',
               color: 'inherit',
               fontFamily: "'DM Sans', sans-serif",
               boxShadow: '0 1px 4px rgba(48,34,24,.06)',
             }}
           >
+            {/* Stor bordeaux dato-blok — kortets visuelle hjerte */}
             <div style={{
-              minWidth: 64,
-              padding: '8px 6px',
-              background: '#F8F3EE',
-              borderRadius: 8,
-              textAlign: 'center',
               flexShrink: 0,
+              minWidth: 84,
+              padding: '14px 18px',
+              background: '#8B3A3A',
+              color: '#F5EFE6',
+              borderRadius: 12,
+              textAlign: 'center',
             }}>
-              <div style={{ fontSize: 10, color: '#8C7E74', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 2 }}>
+              <div style={{
+                fontSize: 11,
+                textTransform: 'uppercase',
+                letterSpacing: '2px',
+                marginBottom: 6,
+                opacity: 0.92,
+              }}>
                 {ev.maaned.split(' ')[0]}
               </div>
               <div style={{
                 fontFamily: "'Cormorant Garamond', serif",
-                fontSize: 16, fontWeight: 600,
-                color: '#302218', lineHeight: 1.2,
+                fontSize: 40,
+                fontWeight: 500,
+                lineHeight: 1,
               }}>
-                {ev.dato.split('.')[0]}.
+                {ev.dato.match(/\d+/)?.[0] ?? ''}
               </div>
             </div>
+
+            {/* Tekst-indhold til højre */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
+              <h4 style={{
                 fontFamily: "'Cormorant Garamond', serif",
-                fontSize: 17, fontWeight: 600,
+                fontSize: 22,
+                fontWeight: 500,
                 color: '#302218',
-                marginBottom: 2,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                margin: '0 0 4px',
+                letterSpacing: '.005em',
+                lineHeight: 1.2,
               }}>
                 {ev.titel}
-              </div>
-              <div style={{ fontSize: 12.5, color: '#8C7E74', lineHeight: 1.45 }}>
+              </h4>
+              <p style={{
+                fontSize: 14,
+                color: '#8C7E74',
+                margin: 0,
+                lineHeight: 1.45,
+              }}>
                 {ev.sted}
-              </div>
-              <div style={{
-                marginTop: 6,
+              </p>
+              <span style={{
                 display: 'inline-block',
-                padding: '2px 9px',
-                background: `${ev.farve}26`,
-                color: ev.farve,
+                marginTop: 8,
+                padding: '3px 10px',
+                background: 'rgba(97, 132, 109, 0.14)',
+                color: '#61846D',
                 fontSize: 10.5,
                 fontWeight: 600,
                 borderRadius: 12,
-                letterSpacing: '.04em',
+                letterSpacing: '.06em',
                 textTransform: 'uppercase',
               }}>
                 {ev.type}
-              </div>
+              </span>
             </div>
           </a>
         ))}
