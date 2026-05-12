@@ -683,15 +683,21 @@ function HjaelpOgEventsRow() {
       display: 'grid',
       gridTemplateColumns: '1fr',
       gap: 32,
+      alignItems: 'start', // baseline-align top af de to spalter
     }}>
       <style>{`
         @media (min-width: 960px) {
           .hjaelp-events-row {
             grid-template-columns: 1fr 1fr !important;
-            gap: 28px !important;
+            gap: 48px !important;
           }
           .hjaelp-events-row > section {
             padding: 0 !important;
+          }
+          /* Samme margin-bottom under overskrifts-blokken i begge spalter */
+          .hjaelp-events-row > section > div:first-child {
+            margin-bottom: 28px !important;
+            min-height: 110px;
           }
         }
       `}</style>
