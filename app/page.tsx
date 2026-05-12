@@ -547,7 +547,7 @@ const IconAI = (
 
 function StaarDuFastSektion() {
   return (
-    <SektionWrapper tag="Hjælp til projektet" title="Står du fast?">
+    <SektionWrapper tag="Værktøjer" title="Brug for hjælp?">
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr',
@@ -590,8 +590,8 @@ function DetSkerSektion() {
 
   return (
     <SektionWrapper
-      tag="Det sker i strikke-Danmark"
-      title="Kommende arrangementer"
+      tag="Kommende arrangementer"
+      title="På farten med strikketøjet"
       cta={{ href: '/kalender', label: 'Se hele kalenderen' }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
