@@ -35,7 +35,7 @@ export async function CommunityMagasin() {
   const heroCover = pickCover(hero.project_image_urls, hero.community_primary_image_index)
 
   return (
-    <section style={{ maxWidth: 1320, margin: '0 auto', padding: '0 60px 0', fontFamily: "'DM Sans', sans-serif" }}>
+    <section style={{ maxWidth: 1320, margin: '0 auto', padding: '0 60px 90px', fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h2 style={{

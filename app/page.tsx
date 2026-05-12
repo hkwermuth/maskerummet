@@ -396,7 +396,7 @@ function OpretKontoSektion() {
     <section style={{
       maxWidth: 1320,
       margin: '0 auto',
-      padding: '0 60px 48px',
+      padding: '0 60px 90px',
       fontFamily: "'DM Sans', sans-serif",
     }}>
       <div style={{
@@ -463,7 +463,7 @@ function SektionWrapper({
   children: React.ReactNode
 }) {
   return (
-    <section style={{ maxWidth: 1320, margin: '0 auto', padding: '0 60px 48px' }}>
+    <section style={{ maxWidth: 1320, margin: '0 auto', padding: '0 60px 90px' }}>
       <div style={{
         display: 'flex',
         alignItems: 'flex-end',
@@ -679,7 +679,7 @@ function HjaelpOgEventsRow() {
     <div className="hjaelp-events-row" style={{
       maxWidth: 1320,
       margin: '0 auto',
-      padding: '0 60px 48px',
+      padding: '0 60px 90px',
       display: 'grid',
       gridTemplateColumns: '1fr',
       gap: 32,
