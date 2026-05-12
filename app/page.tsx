@@ -282,42 +282,70 @@ function ForDigSektion({ navn, stats }: { navn: string; stats: Stats }) {
   )
 }
 
-// ── Sektion: Kom i gang (ikke logget ind) ────────────────────────────────────
+// ── Banner: diskret CTA for ikke-loggede brugere ─────────────────────────────
 
-function KomIGangSektion() {
+function OpretKontoBanner() {
   return (
-    <SektionWrapper
-      tag="Kom i gang"
-      title="Velkommen til STRIQ"
-      subtitle="Opret en konto og få styr på dit garnlager og dine projekter."
-      cta={{ href: '/signup', label: 'Opret konto' }}
-    >
-      <AsymmetricGrid
-        stort={{
-          href: '/signup',
-          title: 'Opret konto',
-          desc: 'Få adgang til dit personlige garnlager, projekter og favoritter. Det er gratis at oprette en konto.',
-          accent: '#D4ADB6',
-          icon: IconProjekt(38),
-        }}
-        smaa={[
-          {
-            href: '/opskrifter-og-garn',
-            title: 'Udforsk opskrifter',
-            desc: 'Browse opskrifter og garn — kræver ingen konto.',
-            accent: '#61846D',
-            icon: IconOpdage(),
-          },
-          {
-            href: '/faellesskab',
-            title: 'Se fællesskabet',
-            desc: 'Bliv inspireret af andres projekter.',
-            accent: '#D9BFC3',
-            icon: IconFaellesskab(),
-          },
-        ]}
-      />
-    </SektionWrapper>
+    <div style={{
+      maxWidth: 1080,
+      margin: '0 auto 32px',
+      padding: '0 24px',
+    }}>
+      <div style={{
+        background: 'linear-gradient(135deg, #D4ADB6 0%, #D9BFC3 100%)',
+        borderRadius: 14,
+        padding: '20px 28px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 20,
+        flexWrap: 'wrap',
+        fontFamily: "'DM Sans', sans-serif",
+        boxShadow: '0 1px 4px rgba(48,34,24,.06)',
+      }}>
+        <div style={{ minWidth: 240 }}>
+          <h3 style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: 22,
+            fontWeight: 600,
+            color: '#302218',
+            margin: '0 0 4px',
+            letterSpacing: '.01em',
+          }}>
+            Vil du have dit eget garnlager?
+          </h3>
+          <p style={{ fontSize: 14, color: '#5C2840', margin: 0, lineHeight: 1.5 }}>
+            Opret en konto og få styr på garn, projekter og favoritter.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Link href="/signup" style={{
+            padding: '10px 22px',
+            background: '#9B6272',
+            color: '#fff',
+            borderRadius: 24,
+            fontSize: 14,
+            fontWeight: 500,
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+          }}>
+            Opret konto
+          </Link>
+          <Link href="/login" style={{
+            padding: '10px 22px',
+            background: 'rgba(255,255,255,0.55)',
+            color: '#302218',
+            borderRadius: 24,
+            fontSize: 14,
+            fontWeight: 500,
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+          }}>
+            Log ind
+          </Link>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -627,7 +655,11 @@ export default async function HomePage() {
 
       {/* Cream-baggrund for resten af forsiden */}
       <div style={{ background: '#F8F3EE', flex: 1, padding: '40px 0 56px' }}>
-        {user && stats ? <ForDigSektion navn={navn} stats={stats} /> : <KomIGangSektion />}
+        {user && stats ? (
+          <ForDigSektion navn={navn} stats={stats} />
+        ) : (
+          <OpretKontoBanner />
+        )}
 
         <CommunityMagasin />
 
