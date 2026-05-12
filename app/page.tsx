@@ -287,7 +287,7 @@ function ForDigSektion({ navn, stats }: { navn: string; stats: Stats }) {
 function OpretKontoBanner() {
   return (
     <div style={{
-      maxWidth: 1080,
+      maxWidth: 1320,
       margin: '0 auto 32px',
       padding: '0 24px',
     }}>
@@ -363,7 +363,7 @@ function SektionWrapper({
   children: React.ReactNode
 }) {
   return (
-    <section style={{ maxWidth: 1080, margin: '0 auto', padding: '0 24px 48px' }}>
+    <section style={{ maxWidth: 1320, margin: '0 auto', padding: '0 24px 48px' }}>
       <div style={{
         display: 'flex',
         alignItems: 'flex-end',
@@ -575,7 +575,7 @@ function DetSkerSektion() {
 function HjaelpOgEventsRow() {
   return (
     <div className="hjaelp-events-row" style={{
-      maxWidth: 1080,
+      maxWidth: 1320,
       margin: '0 auto',
       padding: '0 24px 48px',
       display: 'grid',

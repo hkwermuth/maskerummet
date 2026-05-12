@@ -63,7 +63,7 @@ export function HubLayout({ emoji, title, tagline, heroFrom, heroTo, cards, extr
       </div>
 
       {/* Kort-grid */}
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '40px 24px 56px' }}>
+      <div style={{ maxWidth: 1320, margin: '0 auto', padding: '40px 24px 56px' }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
