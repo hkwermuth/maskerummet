@@ -312,10 +312,10 @@ function OpretKontoBanner() {
             margin: '0 0 4px',
             letterSpacing: '.01em',
           }}>
-            Vil du have dit eget garnlager?
+            Hold styr på garn, projekter og inspiration
           </h3>
           <p style={{ fontSize: 14, color: '#5C2840', margin: 0, lineHeight: 1.5 }}>
-            Opret en konto og få styr på garn, projekter og favoritter.
+            Opret en konto og kom i gang — det er gratis.
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
