@@ -486,10 +486,12 @@ function SektionWrapper({
           )}
           <h2 style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: 'clamp(24px, 3.2vw, 32px)',
-            fontWeight: 600,
+            fontSize: 'clamp(36px, 4.5vw, 54px)',
+            fontWeight: 500,
             color: '#302218',
-            margin: '0 0 6px',
+            margin: '0 0 8px',
+            lineHeight: 1.15,
+            letterSpacing: '.005em',
           }}>
             {title}
           </h2>
