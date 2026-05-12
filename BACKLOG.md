@@ -759,6 +759,33 @@ Anden fokusgruppe-runde med samme 8 profiler, denne gang med pris som indgang. A
 
 ### KAN-VENTE (efter testbrugere)
 
+**Garncafé-anmeldelser på forsiden (2026-05-12, fra Hannah):**
+
+Forslag til "Fra fællesskabet"-sektionens senere udvidelse: et roterende rul med kundeudtalelser fra garncaféer rundt om i Danmark. Formål: gøre forsiden mere levende, vise mangfoldighed i strikkecafé-fællesskabet, og give caféerne synlighed.
+
+**Tre niveauer:**
+
+1. **Simpelt café-rul** (~1-2 timer) — horizontal scroll-row med 6-8 caféer fra `stores`-tabellen (hvor `is_strikkecafe=true`). Hver: navn, by, `note` som teaser. Linker til /strikkecafeer. Ingen ny data.
+
+2. **Rul med hardcoded citater** (~2-3 timer) — Hannah leverer 4-6 citater fra caféejere/-gæster, eller jeg foreslår generiske. Format: "[Citat]" — Navn, Café · By. Statisk content-modul, ingen DB.
+
+3. **Bruger-anmeldelser** (~2-3 dage) — fuld feature:
+   - Ny tabel `cafe_reviews` med kolonner: id, store_id (FK), author_user_id, review_text, rating (1-5), created_at, status (`pending`/`approved`/`rejected`)
+   - RLS-policies: SELECT på `approved` til anon, INSERT for authenticated, UPDATE/DELETE kun egne pending-anmeldelser, moderation via editor-rolle
+   - GRANT'er som ved øvrige tabeller (CLAUDE.md-konvention)
+   - Indleveringsformular på café-detalje-side eller modal fra `/strikkecafeer`
+   - Moderation-flow under `/admin/cafe-anmeldelser` (genbruger `is_editor`-pattern fra barcode-suggestions)
+   - Forside-rul: server-component der henter 6-8 nyeste `approved` anmeldelser, viser som auto-scrollende eller manuelt scroll-row
+   - Stjernerangering valgfri — start uden, tilføj hvis efterspurgt
+
+**Anbefalet rækkefølge:** Start med #1 eller #2 hvis Hannah vil teste konceptet hurtigt. Spring direkte til #3 hvis intentionen er at give caféer en stemme i fællesskabet og at det er en kerne-værdi.
+
+⚠️ **Spørg Hannah ved opstart**: Skal anmeldelser være knyttet til en konkret café (kræver café-detalje-side først), eller frit citat fra hvilken som helst café-gæst? Skal anonyme anmeldelser være tilladt, eller altid med display_name? Skal cafén selv kunne svare på en anmeldelse?
+
+Kør med (efter launch): `/ny-feature Garncafé-anmeldelser med rul på forsiden`
+
+---
+
 **Fra Jesper (IT-arkitekt, 2026-04-19):**
 - **Erstat `xlsx`-pakke med `exceljs`** (valgt A for nu: `xlsx` bruges kun server-side med betroede filer, så HIGH-vulnerability er lav reel risiko. Skift hvis bruger-upload af Excel kommer senere)
 - **AI-substitutions-strategi** — pre-compute ved yarn-insert + nightly refresh vs. on-demand. Arkitekturel beslutning, udskudt til efter launch.

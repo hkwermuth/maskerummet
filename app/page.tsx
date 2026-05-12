@@ -445,7 +445,7 @@ const IconAI = (
 
 function StaarDuFastSektion() {
   return (
-    <SektionWrapper tag="Hjælp til projektet" title="Står du fast?">
+    <SektionWrapper tag="STRIQ-værktøjer" title="Smarte hjælpe-værktøjer">
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr',
