@@ -81,6 +81,7 @@ describe('A2 fetchAllStores filters lat/lng and sorts by name', () => {
       {
         id: '1', name: 'Alpaka', address: 'Vejen 1', postcode: '1000',
         city: 'Kbh', phone: null, website: null, lat: 55.7, lng: 12.5,
+        is_strikkecafe: false, note: null,
         store_brands: [],
       },
     ]
@@ -90,6 +91,7 @@ describe('A2 fetchAllStores filters lat/lng and sorts by name', () => {
       {
         id: '1', name: 'Alpaka', address: 'Vejen 1', postcode: '1000',
         city: 'Kbh', phone: null, website: null, lat: 55.7, lng: 12.5,
+        is_strikkecafe: false, note: null,
         brands: [],
       },
     ])
