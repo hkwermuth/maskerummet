@@ -710,13 +710,14 @@ function HjaelpOgEventsRow() {
           .hjaelp-events-row > section {
             padding: 0 !important;
           }
-          /* Tving header-blokken til samme højde i begge spalter,
-             selvom titlen wrapper forskelligt. Plads til 2-linje
-             52px Cormorant + tag + margin. */
+          /* Eyebrow-tekst skal starte på samme baseline øverst i begge spalter.
+             align-items: flex-start sikrer at toppen aligner uanset om titlen
+             er 1 eller 2 linjer. min-height holder header-blokken konsistent
+             så indholdet under (kortene) aligner. */
           .hjaelp-events-row > section > div:first-child {
             margin-bottom: 32px !important;
             min-height: 160px;
-            align-items: flex-end !important;
+            align-items: flex-start !important;
           }
         }
       `}</style>
