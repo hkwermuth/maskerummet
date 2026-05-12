@@ -40,9 +40,12 @@ const SEKTIONER = [
     ),
   },
   {
-    titel: 'Cookies og tracking',
+    titel: 'Cookies og lokal lagring',
     indhold: (
-      <p>STRIQ bruger kun en session-cookie fra Supabase Auth til at holde dig logget ind. Vi bruger ingen analytics, ingen tredjeparts-tracking og ingen reklame-cookies.</p>
+      <>
+        <p>STRIQ bruger kun en session-cookie fra Supabase Auth til at holde dig logget ind. Vi bruger ingen analytics, ingen tredjeparts-tracking og ingen reklame-cookies.</p>
+        <p>Derudover gemmer din browser et par praktiske præferencer lokalt på din enhed (localStorage): din e-mail (så feltet er udfyldt ved næste login) og dine valgte filtre i Mit Garnlager (så de huskes mellem besøg). Disse oplysninger forlader ikke din enhed og sendes ikke til STRIQ eller tredjeparter. Du kan rydde dem ved at slette browserdata for striq.dk.</p>
+      </>
     ),
   },
   {
@@ -79,7 +82,7 @@ const SEKTIONER = [
   {
     titel: 'Ændringer',
     indhold: (
-      <p>Vi kan opdatere denne privatlivspolitik. Ved væsentlige ændringer giver vi besked via e-mail. Senest opdateret: april 2026.</p>
+      <p>Vi kan opdatere denne privatlivspolitik. Ved væsentlige ændringer giver vi besked via e-mail. Senest opdateret: maj 2026.</p>
     ),
   },
 ]
