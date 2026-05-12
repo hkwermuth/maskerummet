@@ -66,7 +66,7 @@ function Hero() {
     }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/brand/striq-logo-creme-rosa-traad-3d-transparent.png"
+        src="/brand/striq-logo-hvid-creme-traad-transparent.png"
         alt="STRIQ"
         style={{
           height: 'clamp(110px, 24vw, 190px)',
@@ -100,6 +100,8 @@ type AsymKort = {
   icon: React.ReactNode
   /** Lille stats-label i lysegrøn caps nederst på kortet (i stedet for "Åbn →"). */
   stat?: string
+  /** Ekstra visuelt indhold mellem beskrivelse og stat (fx thumbnails, farve-prikker). */
+  extra?: React.ReactNode
 }
 
 /**
@@ -112,11 +114,9 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
   // konkurrerer om farve-opmærksomhed (brugerens spec).
   const SAGE_SOFT = '#7DA088'
   return (
-    <div className="asym-grid" style={{
-      display: 'grid',
-      gap: 24,
-      gridTemplateColumns: '1fr',
-    }}>
+    <>
+      {/* <style> UDEN for grid'en så den ikke bliver :first-child og fanger
+          grid-row-reglen i stedet for det store kort. */}
       <style>{`
         @media (min-width: 900px) {
           .asym-grid {
@@ -124,8 +124,9 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
             grid-template-rows: 1fr 1fr !important;
             gap: 24px !important;
           }
-          .asym-grid > :first-child {
+          .asym-grid > .asym-stort {
             grid-row: 1 / span 2;
+            grid-column: 1;
           }
         }
         .asym-card {
@@ -136,11 +137,16 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
           box-shadow: 0 6px 18px rgba(48,34,24,.10);
         }
       `}</style>
+      <div className="asym-grid" style={{
+        display: 'grid',
+        gap: 24,
+        gridTemplateColumns: '1fr',
+      }}>
 
-      {/* Stort kort */}
+      {/* Stort kort — eksplicit class 'asym-stort' så grid-placering rammer rigtigt */}
       <Link
         href={stort.href}
-        className="asym-card"
+        className="asym-card asym-stort"
         style={{
           background: '#FBF7F1',
           border: '1px solid #EAE2D6',
@@ -176,6 +182,7 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
         <p style={{ fontSize: 15.5, color: '#5C5048', margin: 0, lineHeight: 1.65, maxWidth: 480 }}>
           {stort.desc}
         </p>
+        {stort.extra}
         {stort.stat ? (
           <span style={{
             marginTop: 'auto',
@@ -230,6 +237,7 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
           <p style={{ fontSize: 13, color: '#8C7E74', margin: 0, lineHeight: 1.55 }}>
             {k.desc}
           </p>
+          {k.extra}
           {k.stat ? (
             <span style={{
               marginTop: 'auto', paddingTop: 4,
@@ -246,7 +254,8 @@ function AsymmetricGrid({ stort, smaa }: { stort: AsymKort; smaa: [AsymKort, Asy
           )}
         </Link>
       ))}
-    </div>
+      </div>
+    </>
   )
 }
 
@@ -257,6 +266,10 @@ type Stats = {
   faerdige: number
   garner: number
   favoritter: number
+  // Visuel data til For dig-kortene
+  projektThumbnails: string[]   // op til 3 cover-billeder fra aktive projekter
+  garnFarver: string[]           // op til 10 hex-farver fra yarn_items
+  senesteFav: string | null      // senest gemt opskrifts external_id
 }
 
 function ForDigSektion({ navn, stats }: { navn: string; stats: Stats }) {
@@ -274,6 +287,7 @@ function ForDigSektion({ navn, stats }: { navn: string; stats: Stats }) {
           accent: '#D4ADB6',
           icon: IconProjekt(38),
           stat: `${stats.aktive} aktive · ${stats.faerdige} færdige`,
+          extra: <ProjektThumbnails urls={stats.projektThumbnails} />,
         }}
         smaa={[
           {
@@ -283,6 +297,7 @@ function ForDigSektion({ navn, stats }: { navn: string; stats: Stats }) {
             accent: '#61846D',
             icon: IconGarn(),
             stat: `${stats.garner} garner på lager`,
+            extra: <GarnFarvePalette farver={stats.garnFarver} />,
           },
           {
             href: '/mine-favoritter',
@@ -290,11 +305,79 @@ function ForDigSektion({ navn, stats }: { navn: string; stats: Stats }) {
             desc: 'De opskrifter du har gemt til senere — klar når inspirationen rammer.',
             accent: '#D9BFC3',
             icon: IconFavoritter(),
-            stat: `${stats.favoritter} ${stats.favoritter === 1 ? 'favorit' : 'favoritter'}`,
+            stat: stats.senesteFav
+              ? `Senest gemt: ${stats.senesteFav}`
+              : `${stats.favoritter} ${stats.favoritter === 1 ? 'favorit' : 'favoritter'}`,
           },
         ]}
       />
     </SektionWrapper>
+  )
+}
+
+// ── Visuelle elementer til For dig-kortene ──────────────────────────────────
+
+function ProjektThumbnails({ urls }: { urls: string[] }) {
+  if (urls.length === 0) {
+    return (
+      <div style={{
+        marginTop: 4,
+        fontSize: 13,
+        color: '#9B6272',
+        fontStyle: 'italic',
+        fontFamily: "'Cormorant Garamond', serif",
+      }}>
+        Start dit første projekt — det venter på dig.
+      </div>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+      {urls.map((url, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={i}
+          src={url}
+          alt=""
+          style={{
+            width: 72,
+            height: 72,
+            borderRadius: 10,
+            objectFit: 'cover',
+            border: '1px solid #EAE2D6',
+            boxShadow: '0 1px 3px rgba(48,34,24,.08)',
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+function GarnFarvePalette({ farver }: { farver: string[] }) {
+  if (farver.length === 0) return null
+  return (
+    <div style={{
+      display: 'flex',
+      gap: 6,
+      marginTop: 4,
+      flexWrap: 'wrap',
+    }}>
+      {farver.map((hex, i) => (
+        <span
+          key={i}
+          title={hex}
+          style={{
+            display: 'inline-block',
+            width: 18,
+            height: 18,
+            borderRadius: '50%',
+            background: hex,
+            border: '1px solid rgba(48,34,24,0.08)',
+            boxShadow: '0 1px 2px rgba(48,34,24,.06)',
+          }}
+        />
+      ))}
+    </div>
   )
 }
 
@@ -750,22 +833,82 @@ async function hentStats(
   userId: string,
 ): Promise<Stats> {
   // RLS-policies sikrer at vi kun får brugerens egne rækker.
-  // Henter projekter med status så vi kan tælle aktive vs færdige.
-  const [projektRes, garnRes, favoritter] = await Promise.all([
-    supabase.from('projects').select('status').eq('user_id', userId),
-    supabase.from('yarn_items').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+  // Tager projekter med billeder + garner med farver + seneste favorit
+  // parallelt for at undgå serielle roundtrips.
+  const [projektRes, garnRes, garnCountRes, favoritter, senesteFavRes] = await Promise.all([
+    // Projekter — tæl status + hent thumbnails fra aktive
+    supabase
+      .from('projects')
+      .select('status, project_image_urls, community_primary_image_index, updated_at')
+      .eq('user_id', userId),
+    // Op til 10 hex-farver fra yarn_items (foretrækker hex_colors-array, ellers hex_color)
+    supabase
+      .from('yarn_items')
+      .select('hex_color, hex_colors')
+      .eq('user_id', userId)
+      .limit(40), // hent flere så vi kan filtrere null/empty bort
+    // Antal garner
+    supabase
+      .from('yarn_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
+    // Favoritter (nøgle-sæt)
     fetchSavedRecipes(supabase, userId).catch(() => new Set<string>()),
+    // Senest gemte favorit — recipe_external_id som vi kan vise
+    supabase
+      .from('saved_recipes')
+      .select('recipe_external_id, recipe_source, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
-  const projekter = (projektRes.data ?? []) as Array<{ status: string | null }>
+  // Projekter — status-count + thumbnails fra aktive
+  const projekter = (projektRes.data ?? []) as Array<{
+    status: string | null
+    project_image_urls: string[] | null
+    community_primary_image_index: number | null
+    updated_at: string | null
+  }>
   const aktive = projekter.filter(p => p.status === 'i_gang' || p.status === 'vil_gerne').length
   const faerdige = projekter.filter(p => p.status === 'faerdigstrikket').length
+
+  // 3 seneste aktive projekters cover-billede
+  const projektThumbnails = projekter
+    .filter(p => (p.status === 'i_gang' || p.status === 'vil_gerne') && p.project_image_urls && p.project_image_urls.length > 0)
+    .sort((a, b) => (b.updated_at ?? '').localeCompare(a.updated_at ?? ''))
+    .slice(0, 3)
+    .map(p => {
+      const urls = p.project_image_urls ?? []
+      const idx = p.community_primary_image_index ?? 0
+      return urls[idx] ?? urls[0] ?? ''
+    })
+    .filter(Boolean)
+
+  // Hex-farver fra yarn_items — fladt array, op til 10 unikke
+  const farverSet = new Set<string>()
+  for (const row of (garnRes.data ?? []) as Array<{ hex_color: string | null; hex_colors: string[] | null }>) {
+    if (row.hex_colors && row.hex_colors.length > 0) {
+      for (const h of row.hex_colors) if (h) farverSet.add(h.toUpperCase())
+    } else if (row.hex_color) {
+      farverSet.add(row.hex_color.toUpperCase())
+    }
+    if (farverSet.size >= 10) break
+  }
+  const garnFarver = Array.from(farverSet).slice(0, 10)
+
+  // Senest gemte favorit — vis external_id som teaser (slugify til pænt navn)
+  const senesteFav = senesteFavRes.data?.recipe_external_id ?? null
 
   return {
     aktive,
     faerdige,
-    garner: garnRes.count ?? 0,
+    garner: garnCountRes.count ?? 0,
     favoritter: favoritter.size,
+    projektThumbnails,
+    garnFarver,
+    senesteFav,
   }
 }
 
