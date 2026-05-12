@@ -123,49 +123,20 @@ export default function HomePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 58px - 57px)' }}>
 
-      {/* Under udvikling-banner */}
-      <div
-        role="status"
-        style={{
-          background: 'linear-gradient(90deg, #9B6272 0%, #B88A95 100%)',
-          color: '#FFFCF7',
-          padding: '22px 24px',
-          textAlign: 'center',
-          boxShadow: '0 2px 10px rgba(48,34,24,0.18)',
-        }}
-      >
-        <div style={{
-          fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase',
-          fontSize: 15, marginBottom: 6,
-        }}>
-          🚧 Under udvikling
-        </div>
-        <div style={{ fontSize: 16, lineHeight: 1.55, maxWidth: 640, margin: '0 auto' }}>
-          Skriv til{' '}
-          <a
-            href="mailto:kontakt@striq.dk?subject=Testbruger%20%E2%80%94%20STRIQ"
-            style={{ color: '#FFFCF7', textDecoration: 'underline', fontWeight: 600 }}
-          >
-            kontakt@striq.dk
-          </a>
-          , så kontakter vi dig når sitet er klar til testbrugere.
-        </div>
-      </div>
-
       {/* Hero */}
       <div style={{
         textAlign: 'center',
-        padding: '54px 20px 50px',
+        padding: '64px 20px 56px',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 14,
+        gap: 18,
       }}>
         <img
           src="/brand/striq-logo-creme-rosa-traad-3d-transparent.png"
           alt="STRIQ"
           style={{
-            height: 'clamp(96px, 22vw, 170px)',
+            height: 'clamp(110px, 24vw, 190px)',
             width: 'auto',
             maxWidth: '92vw',
             filter: 'drop-shadow(0 3px 18px rgba(0,0,0,0.28))',
@@ -173,7 +144,7 @@ export default function HomePage() {
         />
         <h1 style={{
           fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 'clamp(32px, 5vw, 52px)',
+          fontSize: 'clamp(34px, 5.5vw, 56px)',
           fontWeight: 600,
           color: '#FFFCF7',
           margin: 0,
@@ -182,16 +153,6 @@ export default function HomePage() {
         }}>
           Dit strikke-univers
         </h1>
-        <p style={{
-          fontSize: 16,
-          color: 'rgba(255,252,247,0.88)',
-          margin: 0,
-          maxWidth: 520,
-          lineHeight: 1.65,
-          textShadow: '0 1px 8px rgba(0,0,0,0.20)',
-        }}>
-          Hold styr på dit garnlager, gem dine projekter, find inspiration og prøv nye farver — alt samlet et sted.
-        </p>
       </div>
 
       {/* Feature-kort */}
