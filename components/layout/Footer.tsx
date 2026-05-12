@@ -18,6 +18,7 @@ export function Footer() {
         &copy; {new Date().getFullYear()} STRIQ &mdash; Dit personlige garnunivers
       </div>
       <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <a href="/om-striq" style={{ color: '#8C7E74', textDecoration: 'underline' }}>Om STRIQ</a>
         <a href="/min-konto" style={{ color: '#8C7E74', textDecoration: 'underline' }}>Min konto</a>
         <a href="/privatlivspolitik" style={{ color: '#8C7E74', textDecoration: 'underline' }}>Privatlivspolitik</a>
         <a href="mailto:kontakt@striq.dk" style={{ color: '#8C7E74', textDecoration: 'underline' }}>kontakt@striq.dk</a>

@@ -8,15 +8,17 @@ import type { User } from '@supabase/supabase-js'
 import { buildLoginHref } from '@/lib/auth/buildLoginHref'
 import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 
+// Hver hub-side samler beslægtede undersider.
+// Eksisterende ruter (/garnlager, /projekter, /opskrifter, /garn, /faellesskabet,
+// /kalender, /find-forhandler, /strikkecafeer, /faq, /strikkeskolen, /visualizer)
+// bevares — de er bare ikke topmenu-punkter længere.
 const NAV_LINKS = [
-  { href: '/',               label: 'Hjem' },
-  { href: '/garnlager',      label: 'Mit garn' },
-  { href: '/projekter',      label: 'Projekter' },
-  { href: '/garn',           label: 'Find garn' },
-  { href: '/find-forhandler',label: 'Find forhandler' },
-  { href: '/opskrifter',     label: 'Opskrifter' },
-  { href: '/faellesskabet',  label: 'Fællesskabet' },
-  { href: '/om-striq',       label: 'Om STRIQ' },
+  { href: '/',                    label: 'Hjem' },
+  { href: '/mit-striq',           label: 'Mit STRIQ',           subpaths: ['/garnlager', '/projekter', '/mine-favoritter'] },
+  { href: '/opskrifter-og-garn',  label: 'Opskrifter & garn',   subpaths: ['/opskrifter', '/garn', '/visualizer'] },
+  { href: '/striqipedia',         label: 'Striqipedia',         subpaths: ['/faq', '/strikkeskolen'] },
+  { href: '/faellesskab',         label: 'Fællesskab',          subpaths: ['/faellesskabet', '/kalender'] },
+  { href: '/garnbutikker',        label: 'Garnbutikker & caféer', subpaths: ['/find-forhandler', '/strikkecafeer'] },
 ]
 
 export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
@@ -51,7 +53,7 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
     return () => subscription.unsubscribe()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const visibleLinks = isEditor
+  const visibleLinks: Array<{ href: string; label: string; subpaths?: string[] }> = isEditor
     ? [...NAV_LINKS, { href: '/garn/admin', label: 'Admin' }]
     : NAV_LINKS
 
@@ -60,9 +62,11 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
 
   useEscapeKey(menuOpen, () => setMenuOpen(false))
 
-  const isActive = (href: string) => {
+  const isActive = (href: string, subpaths?: string[]) => {
     if (href === '/') return pathname === '/'
-    return pathname === href || pathname.startsWith(href + '/')
+    if (pathname === href || pathname.startsWith(href + '/')) return true
+    // Hub-fanen lyser op når man er på en af dens undersider.
+    return Boolean(subpaths?.some(sp => pathname === sp || pathname.startsWith(sp + '/')))
   }
 
   return (
@@ -141,7 +145,7 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
         {/* Nav-tabs (desktop) */}
         <div className="hidden md:flex" style={{ alignItems: 'center', gap: 2, flexWrap: 'nowrap' }}>
           {visibleLinks.map(link => {
-            const active = isActive(link.href)
+            const active = isActive(link.href, link.subpaths)
             return (
               <Link
                 key={link.href}
@@ -244,7 +248,7 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
           >
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {visibleLinks.map(link => {
-                const active = isActive(link.href)
+                const active = isActive(link.href, link.subpaths)
                 return (
                   <li key={link.href}>
                     <Link
