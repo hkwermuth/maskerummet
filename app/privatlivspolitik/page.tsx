@@ -60,7 +60,7 @@ const SEKTIONER = [
   {
     titel: 'Opbevaring og sletning',
     indhold: (
-      <p>Dine data opbevares så længe du har en konto hos STRIQ. Hvis du ønsker at slette din konto og alle tilhørende data, kan du skrive til <a href="mailto:kontakt@striq.dk" style={{ color: '#9B6272', textDecoration: 'underline' }}>kontakt@striq.dk</a>, så sletter vi alt inden 30 dage.</p>
+      <p>Dine data opbevares så længe du har en konto hos STRIQ. Du kan til enhver tid slette din konto og alle tilhørende data permanent fra <a href="/min-konto" style={{ color: '#9B6272', textDecoration: 'underline' }}>Min konto-siden</a>. Hvis du foretrækker det, kan du også skrive til <a href="mailto:kontakt@striq.dk" style={{ color: '#9B6272', textDecoration: 'underline' }}>kontakt@striq.dk</a>, så sletter vi alt inden 30 dage.</p>
     ),
   },
   {

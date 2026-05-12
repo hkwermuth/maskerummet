@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSupabase } from '@/lib/supabase/client'
 import { exportAlleMineData } from '@/lib/export/exportAlleMineData'
@@ -11,9 +12,20 @@ type Status =
   | { type: 'success'; tabeller: Record<string, number> }
   | { type: 'error'; message: string }
 
+type DeleteStatus =
+  | { type: 'idle' }
+  | { type: 'confirming' }
+  | { type: 'deleting' }
+  | { type: 'error'; message: string }
+
+const CONFIRM_PHRASE = 'SLET'
+
 export default function MinKontoClient({ email }: { email: string }) {
   const supabase = useSupabase()
+  const router = useRouter()
   const [status, setStatus] = useState<Status>({ type: 'idle' })
+  const [deleteStatus, setDeleteStatus] = useState<DeleteStatus>({ type: 'idle' })
+  const [confirmText, setConfirmText] = useState('')
 
   async function handleDownload() {
     setStatus({ type: 'loading' })
@@ -23,6 +35,28 @@ export default function MinKontoClient({ email }: { email: string }) {
     } else {
       setStatus({ type: 'error', message: result.error ?? 'Der skete en fejl.' })
     }
+  }
+
+  async function handleDelete() {
+    setDeleteStatus({ type: 'deleting' })
+    try {
+      const res = await fetch('/api/delete-account', { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setDeleteStatus({ type: 'error', message: data.error ?? `Sletning fejlede (${res.status}).` })
+        return
+      }
+      // Sletning lykkedes — log lokal session ud og redirect til afslutnings-side.
+      await supabase.auth.signOut()
+      router.replace('/konto-slettet')
+    } catch (err) {
+      setDeleteStatus({ type: 'error', message: err instanceof Error ? err.message : 'Der skete en fejl.' })
+    }
+  }
+
+  function cancelDelete() {
+    setDeleteStatus({ type: 'idle' })
+    setConfirmText('')
   }
 
   return (
@@ -133,11 +167,11 @@ export default function MinKontoClient({ email }: { email: string }) {
           </div>
         </section>
 
-        {/* Slet-konto-sektion — placeholder, implementeres i 8.5 */}
+        {/* Slet-konto-sektion */}
         <section style={{
           background: '#fff',
           border: '1px solid #E5DDD9',
-          borderLeft: '4px solid #D4ADB6',
+          borderLeft: '4px solid #8B3A2A',
           borderRadius: 12,
           padding: '28px 28px 24px',
           marginBottom: 20,
@@ -149,14 +183,108 @@ export default function MinKontoClient({ email }: { email: string }) {
           }}>
             Slet min konto
           </h2>
-          <p style={{ fontSize: 14, color: '#5C5048', lineHeight: 1.6, margin: '0 0 12px' }}>
-            Hvis du vil slette din konto og alle tilhørende data, kan du skrive til{' '}
-            <a href="mailto:kontakt@striq.dk" style={{ color: '#9B6272', textDecoration: 'underline' }}>kontakt@striq.dk</a>.
-            Vi sletter alt inden 30 dage.
+          <p style={{ fontSize: 14, color: '#5C5048', lineHeight: 1.6, margin: '0 0 8px' }}>
+            Når du sletter din konto, fjernes <strong>alle</strong> dine data permanent:
+            garnlager, projekter, gemte opskrifter, substitutions-stemmer og profil.
           </p>
-          <p style={{ fontSize: 12, color: '#8C7E74', lineHeight: 1.55, margin: 0, fontStyle: 'italic' }}>
-            En in-app slet-knap er på vej — indtil videre håndteres sletning manuelt.
+          <p style={{ fontSize: 13, color: '#8B3A2A', lineHeight: 1.6, margin: '0 0 18px', fontWeight: 500 }}>
+            Det kan ikke fortrydes. Overvej at downloade dine data først.
           </p>
+
+          {deleteStatus.type === 'idle' && (
+            <button
+              onClick={() => setDeleteStatus({ type: 'confirming' })}
+              style={{
+                padding: '10px 20px',
+                background: 'transparent',
+                color: '#8B3A2A',
+                border: '1px solid #8B3A2A',
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Slet min konto…
+            </button>
+          )}
+
+          {(deleteStatus.type === 'confirming' || deleteStatus.type === 'deleting' || deleteStatus.type === 'error') && (
+            <div style={{
+              border: '1px solid #8B3A2A',
+              borderRadius: 8,
+              padding: '16px 18px',
+              background: '#FCEBEB',
+            }}>
+              <p style={{ fontSize: 14, color: '#302218', margin: '0 0 12px', fontWeight: 500 }}>
+                Bekræft sletning ved at skrive <code style={{ background: '#fff', padding: '2px 8px', borderRadius: 4, color: '#8B3A2A', fontWeight: 700 }}>{CONFIRM_PHRASE}</code> herunder:
+              </p>
+              <input
+                type="text"
+                value={confirmText}
+                onChange={e => setConfirmText(e.target.value)}
+                placeholder={CONFIRM_PHRASE}
+                disabled={deleteStatus.type === 'deleting'}
+                autoComplete="off"
+                aria-label={`Skriv ${CONFIRM_PHRASE} for at bekræfte sletning`}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1px solid #D0C8BA',
+                  borderRadius: 6,
+                  fontSize: 14,
+                  background: '#fff',
+                  color: '#302218',
+                  fontFamily: "'DM Sans', sans-serif",
+                  marginBottom: 12,
+                  boxSizing: 'border-box',
+                }}
+              />
+
+              {deleteStatus.type === 'error' && (
+                <div role="alert" style={{ fontSize: 13, color: '#791F1F', marginBottom: 12, padding: '8px 12px', background: '#fff', borderRadius: 4 }}>
+                  {deleteStatus.message}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={handleDelete}
+                  disabled={confirmText !== CONFIRM_PHRASE || deleteStatus.type === 'deleting'}
+                  style={{
+                    padding: '10px 20px',
+                    background: confirmText === CONFIRM_PHRASE && deleteStatus.type !== 'deleting' ? '#8B3A2A' : '#C8BFB6',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: confirmText === CONFIRM_PHRASE && deleteStatus.type !== 'deleting' ? 'pointer' : 'not-allowed',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  {deleteStatus.type === 'deleting' ? 'Sletter…' : 'Slet kontoen permanent'}
+                </button>
+                <button
+                  onClick={cancelDelete}
+                  disabled={deleteStatus.type === 'deleting'}
+                  style={{
+                    padding: '10px 20px',
+                    background: 'transparent',
+                    color: '#8C7E74',
+                    border: '1px solid #D0C8BA',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    cursor: deleteStatus.type === 'deleting' ? 'not-allowed' : 'pointer',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                >
+                  Annuller
+                </button>
+              </div>
+            </div>
+          )}
         </section>
 
         <div style={{ textAlign: 'center', marginTop: 24 }}>
