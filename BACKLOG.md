@@ -576,6 +576,21 @@ store JSX-filer. Tilføj til vitest.config.ts:
 Kør npm run test:run og verificer at worker-crash-antal er reduceret.
 ```
 
+**Status 2026-05-13**: Trin 1 *delvist landed*. Vitest 4-korrekt config sat (`pool: 'forks'`, `maxWorkers: 2`, `minWorkers: 1`, `isolate: true`). `cross-env` installeret som devDep og `NODE_OPTIONS=--max-old-space-size=8192` indlejret i `test`/`test:run`-scripts. Resultat: **90 af 91 testfiler grønne, 1297 tests passerer**. Garnlager-tests OOM'er stadig — leak'en er reproducerbar med 1 fork + 8 GB heap + alle sub-komponenter mocked, så det er en **dybere leak i Garnlager.jsx's egen module-graf** (~33 MB/s allocation rate når komponenten loades i jsdom), ikke parallel-belastning. **Ny blocker** (se næste blok). Mock-path-bug i `Garnlager.behavior.test.tsx` rettet på vejen (`./BarcodeScanner` → `@/components/app/BarcodeScanner`, samme for BrugNoeglerModal).
+
+**Trin 1b — Garnlager.jsx memory-leak** *(NY BLOCKER, åbnet 2026-05-13)*
+
+Reproducerbar OOM i Garnlager.jsx's module-graf når den indlæses af Vitest/jsdom. Heap-belastning ~33 MB/s indtil OOM (~8 GB efter 110-120s). Rammer alle 7 Garnlager-testfiler. Ikke en parallel-belastning eller config-issue.
+
+Mulige rod-årsager:
+- jsdom-incompatibel side-effect ved module-evaluering (useEffect/useRef-mønster på fil-niveau?)
+- En sub-komponent eller lib-fil med global registrering (event listener, timer, observer)
+- pdfjs/zxing/React-internals der allokerer aggressivt i jsdom
+
+Realistisk fix: **udfør Trin 2-3 først** (split Garnlager.jsx i mindre filer) — leak'en forsvinder muligvis når komponenten ikke længere er ét monolittisk module. Hvis ikke, kør binary-search ved at fjerne kode-blokke midlertidigt.
+
+
+
 **Trin 2 — Garnlager: GarnKort + useGarnFilters**
 ```
 /ny-feature Udtræk GarnKort og useGarnFilters fra Garnlager.jsx.

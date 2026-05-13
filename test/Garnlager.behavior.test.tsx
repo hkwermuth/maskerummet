@@ -51,11 +51,31 @@ vi.mock('@/lib/export/exportGarnlager', () => ({
   exportGarnlager: vi.fn(),
 }))
 
-vi.mock('./BarcodeScanner', () => ({
+vi.mock('@/components/app/BarcodeScanner', () => ({
   default: () => null,
 }))
 
-vi.mock('./BrugNoeglerModal', () => ({
+vi.mock('@/components/app/BrugNoeglerModal', () => ({
+  default: () => null,
+}))
+
+// Garnlager.jsx importerer 5 sub-komponenter der trækker tunge dependency-træer
+// ind (pdfjs, @zxing, react-aria-internals, etc.) når de evalueres af jsdom.
+// I .behavior-test mocker vi dem til null/simple stubs — vi tester Garnlager's
+// adfærd som container, ikke sub-komponenternes interne renderlogik.
+vi.mock('@/components/app/KatalogInfoblok', () => ({
+  default: () => null,
+}))
+vi.mock('@/components/app/BrugtOpFoldeUd', () => ({
+  default: () => null,
+}))
+vi.mock('@/components/app/FarvekategoriCirkler', () => ({
+  default: () => null,
+}))
+vi.mock('@/components/app/FlereFarverVælger', () => ({
+  default: () => null,
+}))
+vi.mock('@/components/app/AntalStepper', () => ({
   default: () => null,
 }))
 
