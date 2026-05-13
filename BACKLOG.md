@@ -624,7 +624,7 @@ Alle skal være grønne. Manuelt: tilføj garn, rediger, slet.
 
 **Status 2026-05-13**: Implementeret. Garnlager.jsx ned fra 1376 → 815 linjer (under mål 950). GarnModal.jsx er pure præsentation med ~32 props; state forbliver i Garnlager.jsx. YarnCatalogSearch, Field/Label/inputStyle og PROJECT_STATUS_BADGE_* flyttet med modalen (modal-lokale). `router.push` erstattet med `onOpenProject`-callback for at holde modalen Next-uafhængig. Non-Garnlager full suite: 92/93 testfiler grønne, 1341 tests passerer (+44 fra Trin 1). Garnlager-OOM persisterer som Trin 1b — strukturel refaktor fixede ikke leak'en. Nice-to-haves fra reviewer: konstant-duplikering (WEIGHTS/STATUSES/FIBER_PILLS dupliceres mellem Garnlager og GarnModal), peer-import af `isCatalogSwatchUrl` fra GarnKort, props-count på 32 i grænseland.
 
-**Trin 4 — Arkiv: hooks og helpers**
+**Trin 4 — Arkiv: hooks og helpers** *(implementeret 2026-05-13)*
 ```
 /ny-feature Ryd op i Arkiv.jsx — fjern duplikeret kode.
 
@@ -643,6 +643,8 @@ Alle skal være grønne. Manuelt: tilføj garn, rediger, slet.
 
 Kør npx vitest run test/Arkiv.* og test/Arkiv.behavior.test.tsx.
 ```
+
+**Status 2026-05-13**: Implementeret. Arkiv.jsx ned fra 3013 → 2722 linjer (291 færre, i mål). 3 nye filer: project-form-helpers.ts (6 pure helpers), useProjectImages.ts (billede-grid med trackRemoved + atomar clearAll), usePdfPattern.ts (PDF + pattern-mode-state med trackRemove). Tester tilføjede 60 nye unit-tests (project-form-helpers + useProjectImages + usePdfPattern). Reviewer fandt og fik fixet en orphan-storage-regression: pattern-images i Storage blev ikke deleteret ved mode-switch images→pdf. Fix: `clearAll()` på useProjectImages der atomart pusher existing URLs til removedUrls (respekterer trackRemoved). Full non-Garnlager suite: 92/93 testfiler, 1341 tests grønne + 8 skipped. Garnlager-OOM persisterer som Trin 1b.
 
 **Trin 5 — Verificer**
 ```

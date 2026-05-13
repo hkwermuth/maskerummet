@@ -8,9 +8,17 @@ import {
   uploadFile as uploadFileRaw,
   uploadFilesParallel,
   deleteFiles,
-  validateUploadFile,
 } from '@/lib/supabase/storage'
-import { renderPdfFirstPage } from '@/lib/pdf-thumbnail'
+import { useProjectImages } from '@/lib/hooks/useProjectImages'
+import { usePdfPattern } from '@/lib/hooks/usePdfPattern'
+import {
+  safeExt,
+  makeImagePath,
+  findDuplicateLineIndex,
+  patchTouchesIdentity,
+  pathFromUrl,
+  mergeDuplicateLines,
+} from '@/lib/project-form-helpers'
 import { displayYarnName, fetchColorsByIds, fetchColorsForYarn, searchYarnsFull } from '@/lib/catalog'
 import { dedupeYarnNameFromBrand, yarnDisplayLabel } from '@/lib/yarn-display'
 import { exportProjekter } from '@/lib/export/exportProjekter'
@@ -47,73 +55,6 @@ const PROJECT_FIELDS =
 
 const IMAGES_BUCKET   = 'yarn-images'
 const PATTERNS_BUCKET = 'patterns'
-
-function safeExt(name, fallback = 'bin') {
-  const m = (name || '').match(/\.([a-z0-9]+)$/i)
-  return m ? m[1].toLowerCase() : fallback
-}
-
-function makeImagePath(userId, projectId) {
-  // Stabile UUID-baserede paths så reorder ikke kræver rename i Storage.
-  const uuid = (typeof crypto !== 'undefined' && crypto.randomUUID)
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  return (ext) => `${userId}/projects/${projectId}/${uuid}.${ext}`
-}
-
-// Find evt. eksisterende linje i samme projekt der matcher det nye garn
-// (samme yarn_item_id, eller samme catalog_color_id, eller samme
-// brand+colorName+colorCode case-insensitive). Bruges til dup-merge-prompt
-// når brugeren tilføjer et garn der allerede findes på projektet.
-function findDuplicateLineIndex(lines, current, currentIdx) {
-  const norm = s => (s ?? '').toString().trim().toLowerCase()
-  if (current.yarnItemId) {
-    const idx = lines.findIndex((l, i) => i !== currentIdx && l.yarnItemId === current.yarnItemId)
-    if (idx !== -1) return idx
-  }
-  if (current.catalogColorId) {
-    const idx = lines.findIndex((l, i) => i !== currentIdx && l.catalogColorId === current.catalogColorId)
-    if (idx !== -1) return idx
-  }
-  if (current.yarnBrand && current.colorName && current.colorCode) {
-    const idx = lines.findIndex((l, i) =>
-      i !== currentIdx &&
-      norm(l.yarnBrand) === norm(current.yarnBrand) &&
-      norm(l.colorName) === norm(current.colorName) &&
-      norm(l.colorCode) === norm(current.colorCode)
-    )
-    if (idx !== -1) return idx
-  }
-  return -1
-}
-
-// True hvis patch indeholder mindst ét felt der ændrer linjens identitet —
-// dvs. det er først nu vi skal trigger dup-detection.
-function patchTouchesIdentity(patch) {
-  return (
-    'yarnItemId'     in patch ||
-    'catalogColorId' in patch ||
-    'yarnBrand'      in patch ||
-    'colorName'      in patch ||
-    'colorCode'      in patch
-  )
-}
-
-function pathFromUrl(url) {
-  // Vi gemmer URL'er i DB; storage.remove kræver path. Vi parser path ud af
-  // signed/public URL'er ved at finde "/<bucket>/" og tage resten frem til "?".
-  if (!url) return null
-  try {
-    const u = new URL(url)
-    const parts = u.pathname.split('/').filter(Boolean)
-    // Format: .../object/{public|sign}/<bucket>/<path...>
-    const idx = parts.findIndex(p => p === IMAGES_BUCKET || p === PATTERNS_BUCKET)
-    if (idx === -1) return null
-    return parts.slice(idx + 1).join('/')
-  } catch {
-    return null
-  }
-}
 
 function StatusChips({ value, onChange }) {
   return (
@@ -584,41 +525,82 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
 
   const [userYarnItems, setUserYarnItems] = useState([])
 
-  // Strik-billeder
-  const [projectImages, setProjectImages] = useState(() =>
-    (entry?.project_image_urls ?? []).map((url, i) => ({
+  // Strik-billeder — useProjectImages ejer state + handlers.
+  const {
+    images: projectImages,
+    setImages: setProjectImages,
+    removedUrls: removedProjectImageUrls,
+    resetRemovedUrls: resetRemovedProjectImageUrls,
+    addImages: addProjectImages,
+    removeImage: removeProjectImage,
+    reorderImage: reorderProjectImage,
+  } = useProjectImages({
+    initial: (entry?.project_image_urls ?? []).map((url, i) => ({
       url, pendingFile: null, isExisting: true, _key: `e-${i}-${url}`,
-    }))
-  )
-  const [removedProjectImageUrls, setRemovedProjectImageUrls] = useState([])
+    })),
+    max: MAX_PROJECT_IMAGES,
+    trackRemoved: true,
+    keyPrefix: 'n-',
+    validate: { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME },
+    onError: msg => setSaveError(msg),
+  })
 
-  // Opskrift
+  // Pattern-billeder (samme hook, anden invocation).
+  const {
+    images: patternImages,
+    setImages: setPatternImages,
+    removedUrls: removedPatternImageUrls,
+    resetRemovedUrls: resetRemovedPatternImageUrls,
+    addImages: addPatternImages,
+    removeImage: removePatternImage,
+    reorderImage: reorderPatternImage,
+    clearAll: clearAllPatternImages,
+  } = useProjectImages({
+    initial: (entry?.pattern_image_urls ?? []).map((url, i) => ({
+      url, pendingFile: null, isExisting: true, _key: `pe-${i}-${url}`,
+    })),
+    max: MAX_PATTERN_IMAGES,
+    trackRemoved: true,
+    keyPrefix: 'pn-',
+    validate: { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME },
+    onError: msg => setSaveError(msg),
+  })
+
+  // Opskrift mode + PDF — usePdfPattern ejer state + handlers.
   const initialPatternMode =
     entry?.pattern_pdf_url ? 'pdf'
     : (entry?.pattern_image_urls?.length ?? 0) > 0 ? 'images'
     : 'pdf'
-  const [patternMode, setPatternMode] = useState(initialPatternMode)
-
-  // PDF-mode state
-  const [pdfFile, setPdfFile]       = useState(null)
-  const [pdfFileName, setPdfFileName] = useState(null)
   const [existingPdfUrl, setExistingPdfUrl] = useState(entry?.pattern_pdf_url ?? null)
-  const [pdfThumbnailBlob, setPdfThumbnailBlob] = useState(null)
-  const [pdfThumbnailPreview, setPdfThumbnailPreview] = useState(entry?.pattern_pdf_thumbnail_url ?? null)
-  const [removePdf, setRemovePdf]   = useState(false)
-  const [renderingThumb, setRenderingThumb] = useState(false)
-
-  // Billed-mode state
-  const [patternImages, setPatternImages] = useState(() =>
-    (entry?.pattern_image_urls ?? []).map((url, i) => ({
-      url, pendingFile: null, isExisting: true, _key: `pe-${i}-${url}`,
-    }))
-  )
-  const [removedPatternImageUrls, setRemovedPatternImageUrls] = useState([])
+  const {
+    patternMode,
+    setPatternMode,
+    pdfFile,
+    pdfFileName,
+    pdfThumbnailBlob,
+    pdfThumbnailPreview,
+    removePdf,
+    renderingThumb,
+    handlePdfPick,
+    clearPdf,
+    switchPatternMode,
+    resetPdfState,
+  } = usePdfPattern({
+    initialMode: initialPatternMode,
+    existingPdfUrl,
+    existingThumbnailUrl: entry?.pattern_pdf_thumbnail_url ?? null,
+    trackRemove: true,
+    patternImagesCount: patternImages.length,
+    clearPatternImages: clearAllPatternImages,
+    validate: { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_PDF_MIME },
+    onError: msg => setSaveError(msg),
+  })
 
   const [colorsByYarnId, setColorsByYarnId] = useState(new Map())
 
-  // Cleanup blob URLs ved unmount
+  // Cleanup blob URLs ved unmount. images-arrays er ejet af useProjectImages
+  // men deres pendingFile-blob-URLs blev oprettet inde i hooken — vi rydder
+  // op via en eksplicit unmount-effect her fordi hooken ikke gør det selv.
   useEffect(() => {
     return () => {
       projectImages.forEach(it => { if (!it.isExisting) URL.revokeObjectURL(it.url) })
@@ -759,52 +741,6 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
   // `seen`-sættet forhindrer re-prompt for samme garn-identitet hvis bruger
   // har sagt nej én gang — undgår at vise samme prompt for hver dup-par i
   // en triple-dup-situation (A,B,C alle samme garn).
-  function mergeDuplicateLines(lines) {
-    if (typeof window === 'undefined') return lines
-    let merged = [...lines]
-    let mergeCount = 0
-    const declined = new Set()
-    function identityKey(l) {
-      if (l.yarnItemId)     return `id:${l.yarnItemId}`
-      if (l.catalogColorId) return `cat:${l.catalogColorId}`
-      const norm = s => (s ?? '').toString().trim().toLowerCase()
-      return `bnc:${norm(l.yarnBrand)}|${norm(l.colorName)}|${norm(l.colorCode)}`
-    }
-    for (let i = 0; i < merged.length; i++) {
-      const dupIdx = findDuplicateLineIndex(merged, merged[i], i)
-      if (dupIdx === -1) continue
-      // Behold altid linjen med LAVERE index, fjern den med højere — så prompten
-      // viser ngl i samme rækkefølge som linjerne i UI'et (først → anden).
-      const keepIdx   = Math.min(i, dupIdx)
-      const removeIdx = Math.max(i, dupIdx)
-      const a = merged[keepIdx]
-      const b = merged[removeIdx]
-      const aQty = Number(a.quantityUsed ?? 0) || 0
-      const bQty = Number(b.quantityUsed ?? 0) || 0
-      // Skip prompt hvis ÉN af linjerne er tom (qty=0).
-      if (aQty === 0 || bQty === 0) continue
-      const key = identityKey(a)
-      if (declined.has(key)) continue           // bruger har allerede sagt nej for denne identitet
-      const label = [a.yarnBrand, a.yarnName].filter(Boolean).join(' · ') || 'samme garn'
-      const sum = aQty + bQty
-      const ok = window.confirm(
-        `Du har ${label} på 2 linjer (${aQty} ngl + ${bQty} ngl). Læg sammen til én linje med ${sum} ngl?`
-      )
-      if (ok) {
-        merged = merged
-          .map((l, idx) => idx === keepIdx ? { ...l, quantityUsed: sum } : l)
-          .filter((_, idx) => idx !== removeIdx)
-        mergeCount++
-        i = -1                                   // restart for at finde flere dups
-      } else {
-        declined.add(key)
-      }
-    }
-    // Returnér merged hvis mindst én bekræftelse skete. Cancels på efterfølgende
-    // dup-par bevarer tidligere bekræftede merges (bevidst — bruger sagde ja én gang).
-    return mergeCount > 0 ? merged : lines
-  }
-
   // Konvertér en yarn-line til FinalizableSource for lib/yarn-finalize.
   function lineToFinalizableSource(line) {
     return {
@@ -829,150 +765,6 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
       return next
     })
     return colors
-  }
-
-  function addProjectImages(files) {
-    setSaveError(null)
-    const accepted = []
-    for (const file of files) {
-      try {
-        validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME })
-      } catch (e) {
-        setSaveError(e.message)
-        return
-      }
-      accepted.push({
-        url: URL.createObjectURL(file),
-        pendingFile: file,
-        isExisting: false,
-        _key: `n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      })
-    }
-    setProjectImages(prev => [...prev, ...accepted].slice(0, MAX_PROJECT_IMAGES))
-  }
-  function removeProjectImage(index) {
-    setProjectImages(prev => {
-      const next = [...prev]
-      const [removed] = next.splice(index, 1)
-      if (removed.isExisting) {
-        setRemovedProjectImageUrls(rs => [...rs, removed.url])
-      } else {
-        URL.revokeObjectURL(removed.url)
-      }
-      return next
-    })
-  }
-  function reorderProjectImage(from, to) {
-    setProjectImages(prev => {
-      const next = [...prev]
-      const [it] = next.splice(from, 1)
-      next.splice(to, 0, it)
-      return next
-    })
-  }
-
-  function addPatternImages(files) {
-    setSaveError(null)
-    const accepted = []
-    for (const file of files) {
-      try {
-        validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME })
-      } catch (e) {
-        setSaveError(e.message)
-        return
-      }
-      accepted.push({
-        url: URL.createObjectURL(file),
-        pendingFile: file,
-        isExisting: false,
-        _key: `pn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      })
-    }
-    setPatternImages(prev => [...prev, ...accepted].slice(0, MAX_PATTERN_IMAGES))
-  }
-  function removePatternImage(index) {
-    setPatternImages(prev => {
-      const next = [...prev]
-      const [removed] = next.splice(index, 1)
-      if (removed.isExisting) {
-        setRemovedPatternImageUrls(rs => [...rs, removed.url])
-      } else {
-        URL.revokeObjectURL(removed.url)
-      }
-      return next
-    })
-  }
-  function reorderPatternImage(from, to) {
-    setPatternImages(prev => {
-      const next = [...prev]
-      const [it] = next.splice(from, 1)
-      next.splice(to, 0, it)
-      return next
-    })
-  }
-
-  async function handlePdfPick(e) {
-    const file = e.target.files[0]
-    e.target.value = ''
-    if (!file) return
-    try {
-      validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_PDF_MIME })
-    } catch (err) {
-      setSaveError(err.message)
-      return
-    }
-    setSaveError(null)
-    setPdfFile(file)
-    setPdfFileName(file.name)
-    setRemovePdf(false)
-    // Render thumbnail i baggrunden — fejler den, fortsætter vi alligevel.
-    setRenderingThumb(true)
-    try {
-      const blob = await renderPdfFirstPage(file)
-      setPdfThumbnailBlob(blob)
-      if (pdfThumbnailPreview && pdfThumbnailPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(pdfThumbnailPreview)
-      }
-      setPdfThumbnailPreview(URL.createObjectURL(blob))
-    } catch {
-      setPdfThumbnailBlob(null)
-    }
-    setRenderingThumb(false)
-  }
-  function clearPdf() {
-    setPdfFile(null)
-    setPdfFileName(null)
-    setPdfThumbnailBlob(null)
-    if (pdfThumbnailPreview && pdfThumbnailPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(pdfThumbnailPreview)
-    }
-    setPdfThumbnailPreview(null)
-    setRemovePdf(true)
-  }
-
-  function switchPatternMode(next) {
-    if (next === patternMode) return
-    const hasPdf    = patternMode === 'pdf'    && (pdfFile || (existingPdfUrl && !removePdf))
-    const hasImages = patternMode === 'images' && patternImages.length > 0
-    if (hasPdf || hasImages) {
-      const ok = typeof window === 'undefined'
-        ? true
-        : window.confirm('Skift af opskrift-format sletter den nuværende opskrift. Fortsæt?')
-      if (!ok) return
-      if (patternMode === 'pdf') {
-        clearPdf()
-      } else {
-        for (const it of patternImages) {
-          if (it.isExisting) {
-            setRemovedPatternImageUrls(rs => [...rs, it.url])
-          } else {
-            URL.revokeObjectURL(it.url)
-          }
-        }
-        setPatternImages([])
-      }
-    }
-    setPatternMode(next)
   }
 
   async function handleSave() {
@@ -1489,12 +1281,10 @@ function DetailModal({ entry, user, onClose, onDelete, onSaved, onShare }) {
       }
 
       // Reset removal-trackere; lokale URL-objekter overskrives af entry-data
-      setRemovedProjectImageUrls([])
-      setRemovedPatternImageUrls([])
+      resetRemovedProjectImageUrls()
+      resetRemovedPatternImageUrls()
       setExistingPdfUrl(data.pattern_pdf_url ?? null)
-      setPdfFile(null)
-      setPdfFileName(null)
-      setRemovePdf(false)
+      resetPdfState()
 
       onSaved({ ...data, yarnLines: (savedUsages ?? []).map(fromUsageDb) })
       setEditing(false)
@@ -2047,19 +1837,65 @@ function NytProjektModal({ user, onClose, onSaved }) {
   const supabase = useSupabase()
   const [form, setForm]           = useState(EMPTY_NEW)
   const [userYarnItems, setUserYarnItems] = useState([])
-  const [projectImages, setProjectImages] = useState([])
-  const [patternMode, setPatternMode] = useState('pdf')
-  const [pdfFile, setPdfFile]     = useState(null)
-  const [pdfFileName, setPdfFileName] = useState(null)
-  const [pdfThumbnailBlob, setPdfThumbnailBlob] = useState(null)
-  const [pdfThumbnailPreview, setPdfThumbnailPreview] = useState(null)
-  const [renderingThumb, setRenderingThumb] = useState(false)
-  const [patternImages, setPatternImages] = useState([])
   const [saving, setSaving]       = useState(false)
   const [error, setError]         = useState(null)
   const [colorsByYarnId, setColorsByYarnId] = useState(new Map())
   // Promise-wrapped state for MarkYarnsBrugtOpModal når status=faerdigstrikket
   const [finalizeModalState, setFinalizeModalState] = useState(null)
+
+  // Strik-billeder (create-mode: ingen existing, ingen removal-tracking).
+  const {
+    images: projectImages,
+    setImages: setProjectImages,
+    addImages: addProjectImagesNew,
+    removeImage: removeProjectImageNew,
+    reorderImage: reorderProjectImageNew,
+  } = useProjectImages({
+    initial: [],
+    max: MAX_PROJECT_IMAGES,
+    trackRemoved: false,
+    keyPrefix: 'n-',
+    validate: { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME },
+    onError: msg => setError(msg),
+  })
+
+  // Pattern-billeder (samme hook, anden invocation).
+  const {
+    images: patternImages,
+    setImages: setPatternImages,
+    addImages: addPatternImagesNew,
+    removeImage: removePatternImageNew,
+    reorderImage: reorderPatternImageNew,
+    clearAll: clearAllPatternImages,
+  } = useProjectImages({
+    initial: [],
+    max: MAX_PATTERN_IMAGES,
+    trackRemoved: false,
+    keyPrefix: 'pn-',
+    validate: { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME },
+    onError: msg => setError(msg),
+  })
+
+  const {
+    patternMode,
+    pdfFile,
+    pdfFileName,
+    pdfThumbnailBlob,
+    pdfThumbnailPreview,
+    renderingThumb,
+    handlePdfPick: handlePdfPickNew,
+    clearPdf: clearPdfNew,
+    switchPatternMode: switchPatternModeNew,
+  } = usePdfPattern({
+    initialMode: 'pdf',
+    existingPdfUrl: null,
+    existingThumbnailUrl: null,
+    trackRemove: false,
+    patternImagesCount: patternImages.length,
+    clearPatternImages: clearAllPatternImages,
+    validate: { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_PDF_MIME },
+    onError: msg => setError(msg),
+  })
 
   useEffect(() => {
     return () => {
@@ -2115,45 +1951,6 @@ function NytProjektModal({ user, onClose, onSaved }) {
     setForm(p => ({ ...p, yarnLines: (p.yarnLines ?? []).filter((_, idx) => idx !== i) }))
   }
 
-  function mergeDuplicateLines(lines) {
-    if (typeof window === 'undefined') return lines
-    let merged = [...lines]
-    let mergeCount = 0
-    const declined = new Set()
-    function identityKey(l) {
-      if (l.yarnItemId)     return `id:${l.yarnItemId}`
-      if (l.catalogColorId) return `cat:${l.catalogColorId}`
-      const norm = s => (s ?? '').toString().trim().toLowerCase()
-      return `bnc:${norm(l.yarnBrand)}|${norm(l.colorName)}|${norm(l.colorCode)}`
-    }
-    for (let i = 0; i < merged.length; i++) {
-      const dupIdx = findDuplicateLineIndex(merged, merged[i], i)
-      if (dupIdx === -1) continue
-      const a = merged[dupIdx]
-      const b = merged[i]
-      const aQty = Number(a.quantityUsed ?? 0) || 0
-      const bQty = Number(b.quantityUsed ?? 0) || 0
-      if (aQty === 0 || bQty === 0) continue
-      const key = identityKey(b)
-      if (declined.has(key)) continue
-      const label = [b.yarnBrand, b.yarnName].filter(Boolean).join(' · ') || 'samme garn'
-      const sum = aQty + bQty
-      const ok = window.confirm(
-        `Du har ${label} på 2 linjer (${aQty} ngl + ${bQty} ngl). Læg sammen til én linje med ${sum} ngl?`
-      )
-      if (ok) {
-        merged = merged
-          .map((l, idx) => idx === dupIdx ? { ...l, quantityUsed: sum } : l)
-          .filter((_, idx) => idx !== i)
-        mergeCount++
-        i = -1
-      } else {
-        declined.add(key)
-      }
-    }
-    return mergeCount > 0 ? merged : lines
-  }
-
   async function ensureColorsLoaded(yarnId) {
     if (!yarnId) return []
     if (colorsByYarnId.has(yarnId)) return colorsByYarnId.get(yarnId)
@@ -2164,108 +1961,6 @@ function NytProjektModal({ user, onClose, onSaved }) {
       return next
     })
     return colors
-  }
-
-  function addProjectImagesNew(files) {
-    setError(null)
-    const accepted = []
-    for (const file of files) {
-      try { validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME }) }
-      catch (e) { setError(e.message); return }
-      accepted.push({
-        url: URL.createObjectURL(file),
-        pendingFile: file,
-        isExisting: false,
-        _key: `n-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      })
-    }
-    setProjectImages(prev => [...prev, ...accepted].slice(0, MAX_PROJECT_IMAGES))
-  }
-  function removeProjectImageNew(index) {
-    setProjectImages(prev => {
-      const next = [...prev]
-      const [removed] = next.splice(index, 1)
-      if (!removed.isExisting) URL.revokeObjectURL(removed.url)
-      return next
-    })
-  }
-  function reorderProjectImageNew(from, to) {
-    setProjectImages(prev => {
-      const next = [...prev]
-      const [it] = next.splice(from, 1); next.splice(to, 0, it); return next
-    })
-  }
-  function addPatternImagesNew(files) {
-    setError(null)
-    const accepted = []
-    for (const file of files) {
-      try { validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_IMAGE_MIME }) }
-      catch (e) { setError(e.message); return }
-      accepted.push({
-        url: URL.createObjectURL(file),
-        pendingFile: file,
-        isExisting: false,
-        _key: `pn-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      })
-    }
-    setPatternImages(prev => [...prev, ...accepted].slice(0, MAX_PATTERN_IMAGES))
-  }
-  function removePatternImageNew(index) {
-    setPatternImages(prev => {
-      const next = [...prev]
-      const [removed] = next.splice(index, 1)
-      if (!removed.isExisting) URL.revokeObjectURL(removed.url)
-      return next
-    })
-  }
-  function reorderPatternImageNew(from, to) {
-    setPatternImages(prev => {
-      const next = [...prev]
-      const [it] = next.splice(from, 1); next.splice(to, 0, it); return next
-    })
-  }
-  async function handlePdfPickNew(e) {
-    const file = e.target.files[0]
-    e.target.value = ''
-    if (!file) return
-    try { validateUploadFile(file, { maxBytes: MAX_UPLOAD_BYTES, allowedMimes: ALLOWED_PDF_MIME }) }
-    catch (err) { setError(err.message); return }
-    setError(null)
-    setPdfFile(file)
-    setPdfFileName(file.name)
-    setRenderingThumb(true)
-    try {
-      const blob = await renderPdfFirstPage(file)
-      setPdfThumbnailBlob(blob)
-      if (pdfThumbnailPreview) URL.revokeObjectURL(pdfThumbnailPreview)
-      setPdfThumbnailPreview(URL.createObjectURL(blob))
-    } catch {
-      setPdfThumbnailBlob(null)
-    }
-    setRenderingThumb(false)
-  }
-  function clearPdfNew() {
-    setPdfFile(null); setPdfFileName(null); setPdfThumbnailBlob(null)
-    if (pdfThumbnailPreview) URL.revokeObjectURL(pdfThumbnailPreview)
-    setPdfThumbnailPreview(null)
-  }
-  function switchPatternModeNew(next) {
-    if (next === patternMode) return
-    const hasContent =
-      (patternMode === 'pdf' && pdfFile) ||
-      (patternMode === 'images' && patternImages.length > 0)
-    if (hasContent) {
-      const ok = typeof window === 'undefined'
-        ? true
-        : window.confirm('Skift af opskrift-format sletter den nuværende opskrift. Fortsæt?')
-      if (!ok) return
-      if (patternMode === 'pdf') clearPdfNew()
-      else {
-        for (const it of patternImages) URL.revokeObjectURL(it.url)
-        setPatternImages([])
-      }
-    }
-    setPatternMode(next)
   }
 
   async function save() {
