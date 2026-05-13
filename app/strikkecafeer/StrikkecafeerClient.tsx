@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { HeroIllustration } from '@/components/layout/HeroIllustration'
 import type { StoreBase } from '@/lib/data/stores'
 import type { DanmarksKortHandle } from '../find-forhandler/DanmarksKortClient'
+import { eventsAtLokation } from '../kalender/events'
 
 const DanmarksKort = dynamic(() => import('../find-forhandler/DanmarksKortClient'), {
   ssr: false,
@@ -353,6 +354,21 @@ function CafeCard({ cafe, onClick }: { cafe: StoreBase; onClick: () => void }) {
       : `https://${cafe.website}`
     : null
   const address = [cafe.address, cafe.postcode, cafe.city].filter(Boolean).join(', ')
+
+  // Krydsreference til kalender: find events der nævner caféens navn eller by.
+  // Match-heuristik tåler false positives (vises kun som "Næste arrangementer her" — ikke bindende).
+  const matches = [
+    ...eventsAtLokation(cafe.name, 2),
+    ...eventsAtLokation(cafe.city, 2),
+  ]
+  // Dedupliker hvis samme event matchede begge.
+  const seen = new Set<string>()
+  const events = matches.filter(ev => {
+    const key = `${ev.titel}|${ev.dato}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).slice(0, 2)
   return (
     <article
       style={{
@@ -420,6 +436,41 @@ function CafeCard({ cafe, onClick }: { cafe: StoreBase; onClick: () => void }) {
           }}
         >
           {cafe.note}
+        </div>
+      )}
+
+      {events.length > 0 && (
+        <div style={{
+          marginTop: 2,
+          padding: '8px 10px',
+          background: '#F4EDE2',
+          borderRadius: 8,
+          borderLeft: '3px solid #9B6272',
+        }}>
+          <div style={{
+            fontSize: 10.5, color: '#9B6272',
+            textTransform: 'uppercase', letterSpacing: '.06em',
+            fontWeight: 600, marginBottom: 4,
+          }}>
+            Næste arrangementer her
+          </div>
+          {events.map((ev, i) => (
+            <a
+              key={`${ev.titel}-${i}`}
+              href={ev.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'block',
+                fontSize: 12.5,
+                color: '#302218',
+                textDecoration: 'none',
+                padding: '2px 0',
+              }}
+            >
+              <strong style={{ color: ev.farve }}>{ev.dato}</strong>{' · '}{ev.titel}
+            </a>
+          ))}
         </div>
       )}
 

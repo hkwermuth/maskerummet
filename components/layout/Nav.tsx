@@ -8,15 +8,72 @@ import type { User } from '@supabase/supabase-js'
 import { buildLoginHref } from '@/lib/auth/buildLoginHref'
 import { useEscapeKey } from '@/lib/hooks/useEscapeKey'
 
-const NAV_LINKS = [
-  { href: '/',               label: 'Hjem' },
-  { href: '/garnlager',      label: 'Mit garn' },
-  { href: '/projekter',      label: 'Projekter' },
-  { href: '/garn',           label: 'Find garn' },
-  { href: '/find-forhandler',label: 'Find forhandler' },
-  { href: '/opskrifter',     label: 'Opskrifter' },
-  { href: '/faellesskabet',  label: 'Fællesskabet' },
-  { href: '/om-striq',       label: 'Om STRIQ' },
+type SubItem = {
+  href: string
+  label: string
+  comingSoon?: boolean
+}
+
+type NavLink = {
+  href: string
+  label: string
+  subitems?: SubItem[]
+}
+
+// Hver hub-side samler beslægtede undersider. subitems vises som dropdown
+// på desktop (hover) og som indrykkede links i mobile drawer.
+// Eksisterende ruter bevares — de er bare ikke topmenu-punkter længere.
+const NAV_LINKS: NavLink[] = [
+  { href: '/', label: 'Hjem' },
+  {
+    href: '/mit-striq',
+    label: 'Mit STRIQ',
+    subitems: [
+      { href: '/garnlager',        label: 'Mit garn' },
+      { href: '/projekter',        label: 'Mine projekter' },
+      { href: '/mine-favoritter',  label: 'Mine favoritter' },
+    ],
+  },
+  {
+    href: '/opskrifter-og-garn',
+    label: 'Opskrifter & garn',
+    subitems: [
+      { href: '/opskrifter',           label: 'Opskrifter' },
+      { href: '/garn',                 label: 'Find garn' },
+      { href: '/visualizer',           label: 'Prøv farven med AI' },
+      { href: '/opskrifter-og-garn',   label: 'Erstatningsmotor', comingSoon: true },
+      { href: '/opskrifter-og-garn',   label: 'Opskrift ↔ garn-match', comingSoon: true },
+    ],
+  },
+  {
+    href: '/striqipedia',
+    label: 'Striqipedia',
+    subitems: [
+      { href: '/faq',           label: 'FAQ & how-to' },
+      { href: '/strikkeskolen', label: 'Strikkeskolen' },
+      { href: '/striqipedia',   label: 'Fibre & garntyper', comingSoon: true },
+      { href: '/striqipedia',   label: 'Certificeringer', comingSoon: true },
+      { href: '/striqipedia',   label: 'Bøger, podcasts & YouTube', comingSoon: true },
+    ],
+  },
+  {
+    href: '/faellesskab',
+    label: 'Fællesskab',
+    subitems: [
+      { href: '/faellesskabet', label: 'Fællesskabet' },
+      { href: '/kalender',      label: 'Kalender' },
+      { href: '/faellesskab',   label: 'Dele strik', comingSoon: true },
+    ],
+  },
+  {
+    href: '/garnbutikker',
+    label: 'Garnbutikker & caféer',
+    subitems: [
+      { href: '/find-forhandler', label: 'Fysiske butikker' },
+      { href: '/strikkecafeer',   label: 'Garncaféer' },
+      { href: '/garnbutikker',    label: 'Online forhandlere', comingSoon: true },
+    ],
+  },
 ]
 
 export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
@@ -25,6 +82,10 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
   const [user, setUser] = useState<User | null>(null)
   const [isEditor, setIsEditor] = useState<boolean>(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  // Tracker hvilken dropdown der er åben på desktop. null = ingen.
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  // Hvilke hub-grupper er foldet ud i mobile drawer.
+  const [expandedMobileHub, setExpandedMobileHub] = useState<string | null>(null)
   const supabase = createSupabaseBrowserClient()
 
   const handleLoginClick = onRequestLogin ?? (() => router.push(buildLoginHref(pathname)))
@@ -39,7 +100,6 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
     const refreshEditor = async (u: User | null) => {
       if (!u) { setIsEditor(false); return }
       const { data, error } = await supabase.rpc('is_editor')
-      // RPC-fejl → skjul admin-link (UX, ikke sikkerhed; pages har egen guard)
       setIsEditor(error ? false : Boolean(data))
     }
     supabase.auth.getUser().then(({ data }) => { setUser(data.user); refreshEditor(data.user) })
@@ -51,18 +111,25 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
     return () => subscription.unsubscribe()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const visibleLinks = isEditor
+  const visibleLinks: NavLink[] = isEditor
     ? [...NAV_LINKS, { href: '/garn/admin', label: 'Admin' }]
     : NAV_LINKS
 
-  // Luk drawer ved navigation
-  useEffect(() => { setMenuOpen(false) }, [pathname])
+  // Luk drawer og dropdown ved navigation
+  useEffect(() => {
+    setMenuOpen(false)
+    setOpenDropdown(null)
+    setExpandedMobileHub(null)
+  }, [pathname])
 
   useEscapeKey(menuOpen, () => setMenuOpen(false))
+  useEscapeKey(Boolean(openDropdown), () => setOpenDropdown(null))
 
-  const isActive = (href: string) => {
-    if (href === '/') return pathname === '/'
-    return pathname === href || pathname.startsWith(href + '/')
+  const isActive = (link: NavLink) => {
+    if (link.href === '/') return pathname === '/'
+    if (pathname === link.href || pathname.startsWith(link.href + '/')) return true
+    // Hub-fanen lyser op når man er på en af dens undersider.
+    return Boolean(link.subitems?.some(s => !s.comingSoon && (pathname === s.href || pathname.startsWith(s.href + '/'))))
   }
 
   return (
@@ -131,6 +198,7 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
           }}
           aria-label="STRIQ — gå til forsiden"
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/brand/striq-logo-sort-rosa-beskaaret.png"
             alt="STRIQ"
@@ -138,35 +206,133 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
           />
         </Link>
 
-        {/* Nav-tabs (desktop) */}
+        {/* Nav-tabs (desktop) — hver hub med dropdown */}
         <div className="hidden md:flex" style={{ alignItems: 'center', gap: 2, flexWrap: 'nowrap' }}>
           {visibleLinks.map(link => {
-            const active = isActive(link.href)
+            const active = isActive(link)
+            const hasSub = Boolean(link.subitems && link.subitems.length > 0)
+            const isOpen = openDropdown === link.href
+
             return (
-              <Link
+              <div
                 key={link.href}
-                href={link.href}
-                style={{
-                  background:         active ? 'rgba(244, 239, 230, 0.72)' : 'transparent',
-                  backdropFilter:     active ? 'blur(10px)' : 'none',
-                  WebkitBackdropFilter: active ? 'blur(10px)' : 'none',
-                  color:              active ? '#302218' : 'rgba(48,34,24,0.72)',
-                  border:             active ? '1px solid rgba(48,34,24,0.08)' : '1px solid transparent',
-                  borderRadius:       '999px',
-                  padding:            '7px 14px',
-                  fontSize:           '13.5px',
-                  fontWeight:         active ? 500 : 400,
-                  fontFamily:         "'DM Sans', sans-serif",
-                  cursor:             'pointer',
-                  letterSpacing:      '.01em',
-                  transition:         'background .15s, color .15s',
-                  whiteSpace:         'nowrap',
-                  textDecoration:     'none',
-                  display:            'inline-block',
+                style={{ position: 'relative' }}
+                onMouseEnter={() => hasSub && setOpenDropdown(link.href)}
+                onMouseLeave={() => setOpenDropdown(prev => (prev === link.href ? null : prev))}
+                onFocusCapture={() => hasSub && setOpenDropdown(link.href)}
+                onBlur={e => {
+                  // Luk dropdown når fokus forlader hele hub-gruppen
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                    setOpenDropdown(prev => (prev === link.href ? null : prev))
+                  }
                 }}
               >
-                {link.label}
-              </Link>
+                <Link
+                  href={link.href}
+                  aria-haspopup={hasSub ? 'menu' : undefined}
+                  aria-expanded={hasSub ? isOpen : undefined}
+                  onKeyDown={e => {
+                    // Enter/Space toggles dropdown frem for at navigere, når der er subitems
+                    if (hasSub && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      setOpenDropdown(prev => (prev === link.href ? null : link.href))
+                    }
+                  }}
+                  style={{
+                    background:         active ? 'rgba(244, 239, 230, 0.72)' : 'transparent',
+                    backdropFilter:     active ? 'blur(10px)' : 'none',
+                    WebkitBackdropFilter: active ? 'blur(10px)' : 'none',
+                    color:              active ? '#302218' : 'rgba(48,34,24,0.72)',
+                    border:             active ? '1px solid rgba(48,34,24,0.08)' : '1px solid transparent',
+                    borderRadius:       '999px',
+                    padding:            '7px 14px',
+                    fontSize:           '13.5px',
+                    fontWeight:         active ? 500 : 400,
+                    fontFamily:         "'DM Sans', sans-serif",
+                    cursor:             'pointer',
+                    letterSpacing:      '.01em',
+                    transition:         'background .15s, color .15s',
+                    whiteSpace:         'nowrap',
+                    textDecoration:     'none',
+                    display:            'inline-block',
+                  }}
+                >
+                  {link.label}
+                </Link>
+
+                {/* Dropdown */}
+                {hasSub && isOpen && (
+                  <div
+                    aria-label={link.label}
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 4px)',
+                      left: 0,
+                      minWidth: 240,
+                      background: 'rgba(255, 252, 247, 0.98)',
+                      backdropFilter: 'blur(12px)',
+                      WebkitBackdropFilter: 'blur(12px)',
+                      border: '1px solid rgba(48,34,24,0.08)',
+                      borderRadius: 12,
+                      padding: 6,
+                      boxShadow: '0 6px 20px rgba(48,34,24,.12)',
+                      zIndex: 110,
+                    }}
+                  >
+                    {link.subitems!.map(sub => {
+                      const subActive = !sub.comingSoon && (pathname === sub.href || pathname.startsWith(sub.href + '/'))
+                      return (
+                        <Link
+                          key={`${sub.href}-${sub.label}`}
+                          href={sub.comingSoon ? '#' : sub.href}
+                          aria-disabled={sub.comingSoon ? true : undefined}
+                          onClick={e => {
+                            if (sub.comingSoon) { e.preventDefault(); return }
+                            setOpenDropdown(null)
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 12,
+                            padding: '9px 12px',
+                            borderRadius: 8,
+                            fontSize: 13.5,
+                            fontWeight: subActive ? 500 : 400,
+                            color: subActive ? '#302218' : 'rgba(48,34,24,0.82)',
+                            background: subActive ? 'rgba(244, 239, 230, 0.6)' : 'transparent',
+                            textDecoration: 'none',
+                            fontFamily: "'DM Sans', sans-serif",
+                            transition: 'background .12s',
+                          }}
+                          onMouseEnter={e => {
+                            if (!subActive) (e.currentTarget as HTMLAnchorElement).style.background = 'rgba(244, 239, 230, 0.45)'
+                          }}
+                          onMouseLeave={e => {
+                            if (!subActive) (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'
+                          }}
+                        >
+                          <span>{sub.label}</span>
+                          {sub.comingSoon && (
+                            <span style={{
+                              fontSize: 10,
+                              fontWeight: 600,
+                              color: '#9B6272',
+                              background: 'rgba(212, 173, 182, 0.25)',
+                              padding: '2px 8px',
+                              borderRadius: 12,
+                              letterSpacing: '.03em',
+                              flexShrink: 0,
+                            }}>
+                              Snart
+                            </span>
+                          )}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )
           })}
         </div>
@@ -244,29 +410,118 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
           >
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {visibleLinks.map(link => {
-                const active = isActive(link.href)
+                const active = isActive(link)
+                const hasSub = Boolean(link.subitems && link.subitems.length > 0)
+                const expanded = expandedMobileHub === link.href
+
                 return (
                   <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      onClick={() => setMenuOpen(false)}
-                      style={{
+                    <div style={{ display: 'flex', alignItems: 'stretch', gap: 4 }}>
+                      <Link
+                        href={link.href}
+                        onClick={() => setMenuOpen(false)}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          minHeight: 48,
+                          padding: '10px 14px',
+                          borderRadius: 10,
+                          fontSize: 15,
+                          fontFamily: "'DM Sans', sans-serif",
+                          fontWeight: active ? 500 : 400,
+                          color: active ? '#302218' : 'rgba(48,34,24,0.82)',
+                          background: active ? 'rgba(255,255,255,0.55)' : 'transparent',
+                          border: active ? '1px solid rgba(48,34,24,0.08)' : '1px solid transparent',
+                          textDecoration: 'none',
+                        }}
+                      >
+                        {link.label}
+                      </Link>
+                      {hasSub && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedMobileHub(prev => prev === link.href ? null : link.href)}
+                          aria-label={expanded ? `Skjul undermenu for ${link.label}` : `Vis undermenu for ${link.label}`}
+                          aria-expanded={expanded}
+                          style={{
+                            minWidth: 48,
+                            minHeight: 48,
+                            background: 'transparent',
+                            border: '1px solid transparent',
+                            borderRadius: 10,
+                            cursor: 'pointer',
+                            color: 'rgba(48,34,24,0.6)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
+                            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Undermenu i drawer */}
+                    {hasSub && expanded && (
+                      <ul style={{
+                        listStyle: 'none',
+                        margin: '4px 0 4px 18px',
+                        padding: 0,
                         display: 'flex',
-                        alignItems: 'center',
-                        minHeight: 48,
-                        padding: '10px 14px',
-                        borderRadius: 10,
-                        fontSize: 15,
-                        fontFamily: "'DM Sans', sans-serif",
-                        fontWeight: active ? 500 : 400,
-                        color: active ? '#302218' : 'rgba(48,34,24,0.82)',
-                        background: active ? 'rgba(255,255,255,0.55)' : 'transparent',
-                        border: active ? '1px solid rgba(48,34,24,0.08)' : '1px solid transparent',
-                        textDecoration: 'none',
-                      }}
-                    >
-                      {link.label}
-                    </Link>
+                        flexDirection: 'column',
+                        gap: 2,
+                        borderLeft: '2px solid rgba(48,34,24,0.08)',
+                      }}>
+                        {link.subitems!.map(sub => {
+                          const subActive = !sub.comingSoon && (pathname === sub.href || pathname.startsWith(sub.href + '/'))
+                          return (
+                            <li key={`${sub.href}-${sub.label}`}>
+                              <Link
+                                href={sub.comingSoon ? '#' : sub.href}
+                                aria-disabled={sub.comingSoon ? true : undefined}
+                                onClick={e => {
+                                  if (sub.comingSoon) { e.preventDefault(); return }
+                                  setMenuOpen(false)
+                                }}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: 10,
+                                  minHeight: 40,
+                                  padding: '8px 14px',
+                                  borderRadius: 8,
+                                  fontSize: 14,
+                                  fontFamily: "'DM Sans', sans-serif",
+                                  fontWeight: subActive ? 500 : 400,
+                                  color: subActive ? '#302218' : 'rgba(48,34,24,0.75)',
+                                  background: subActive ? 'rgba(255,255,255,0.5)' : 'transparent',
+                                  textDecoration: 'none',
+                                }}
+                              >
+                                <span>{sub.label}</span>
+                                {sub.comingSoon && (
+                                  <span style={{
+                                    fontSize: 10,
+                                    fontWeight: 600,
+                                    color: '#9B6272',
+                                    background: 'rgba(212, 173, 182, 0.25)',
+                                    padding: '2px 8px',
+                                    borderRadius: 12,
+                                    letterSpacing: '.03em',
+                                  }}>
+                                    Snart
+                                  </span>
+                                )}
+                              </Link>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
                   </li>
                 )
               })}
