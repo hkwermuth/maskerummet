@@ -610,7 +610,7 @@ Kør npx vitest run test/Garnlager.* og verificer grønt.
 
 **Status 2026-05-13**: Implementeret. Garnlager.jsx ned fra 1615 → 1376 linjer. GarnKort.jsx er pure præsentation (kun `yarn, onEdit` props — `onBrugNogler`/`activeProjects` ligger faktisk i edit-modalen, ikke på kortet). useGarnFilters.ts har user-namespaced localStorage med one-shot migration fra gammel global key. Tester tilføjede 56 nye unit-tests (`test/GarnKort.test.tsx` 44, `test/useGarnFilters.test.ts` 12). Garnlager-tests OOM'er stadig (Trin 1b uafhjulpet — refaktoren er strukturel, ikke leak-fix). Nice-to-haves noteret af reviewer: (1) race-condition i persist-effect ved userId-skift uden remount, (2) dup'd WEIGHTS/STATUSES mellem hook og parent, (3) `'use client'`-direktiv i GarnKort.jsx.
 
-**Trin 3 — Garnlager: GarnModal**
+**Trin 3 — Garnlager: GarnModal** *(implementeret 2026-05-13)*
 ```
 /ny-feature Udtræk GarnModal fra Garnlager.jsx.
 
@@ -621,6 +621,8 @@ ingen intern state. Garnlager.jsx forbliver state-manager.
 Kør npx vitest run test/Garnlager.* og test/Garnlager.behavior.test.tsx.
 Alle skal være grønne. Manuelt: tilføj garn, rediger, slet.
 ```
+
+**Status 2026-05-13**: Implementeret. Garnlager.jsx ned fra 1376 → 815 linjer (under mål 950). GarnModal.jsx er pure præsentation med ~32 props; state forbliver i Garnlager.jsx. YarnCatalogSearch, Field/Label/inputStyle og PROJECT_STATUS_BADGE_* flyttet med modalen (modal-lokale). `router.push` erstattet med `onOpenProject`-callback for at holde modalen Next-uafhængig. Non-Garnlager full suite: 92/93 testfiler grønne, 1341 tests passerer (+44 fra Trin 1). Garnlager-OOM persisterer som Trin 1b — strukturel refaktor fixede ikke leak'en. Nice-to-haves fra reviewer: konstant-duplikering (WEIGHTS/STATUSES/FIBER_PILLS dupliceres mellem Garnlager og GarnModal), peer-import af `isCatalogSwatchUrl` fra GarnKort, props-count på 32 i grænseland.
 
 **Trin 4 — Arkiv: hooks og helpers**
 ```
