@@ -109,7 +109,7 @@ export default function BrugNoeglerModal({
   yarn: YarnItem
   user: { id: string }
   onClose: () => void
-  onSaved: (usageRow: any, newQty: number, newStatus: string) => void
+  onSaved: (usageRow: Record<string, unknown>, newQty: number, newStatus: string) => void
 }) {
   const supabase = useSupabase()
   useEscapeKey(true, onClose)
@@ -190,10 +190,11 @@ export default function BrugNoeglerModal({
           .select('project_image_urls,pattern_image_urls,pattern_pdf_url,notes')
           .eq('id', projectId).single()
         if (pErr) throw pErr
-        existingImages = (p as any)?.project_image_urls ?? []
-        existingPatternImages = (p as any)?.pattern_image_urls ?? []
-        existingNotes = ((p as any)?.notes ?? '').toString()
-        const existingPdfUrl: string | null = (p as any)?.pattern_pdf_url ?? null
+        const pData = p as { project_image_urls?: string[]; pattern_image_urls?: string[]; notes?: string; pattern_pdf_url?: string | null }
+        existingImages = pData?.project_image_urls ?? []
+        existingPatternImages = pData?.pattern_image_urls ?? []
+        existingNotes = (pData?.notes ?? '').toString()
+        const existingPdfUrl: string | null = pData?.pattern_pdf_url ?? null
         if (imageFile && existingImages.length >= MAX_PROJECT_IMAGES) {
           throw new Error(`Projektet har allerede ${MAX_PROJECT_IMAGES} billeder. Slet et i Arkiv før du tilføjer flere.`)
         }
@@ -340,8 +341,8 @@ export default function BrugNoeglerModal({
       const newQty = Math.max(0, sourceQty - qtyNum)
       onSaved(usageRow, newQty, sourceStatus)
       onClose()
-    } catch (e: any) {
-      setError('Kunne ikke gemme: ' + e.message)
+    } catch (e: unknown) {
+      setError('Kunne ikke gemme: ' + (e instanceof Error ? e.message : String(e)))
     }
     setSaving(false)
   }

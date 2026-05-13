@@ -289,7 +289,7 @@ export default function OmStriqPage() {
             </div>
             <div>
               <p style={{ fontSize: 15, color: C.text, lineHeight: 1.75, margin: '0 0 14px' }}>
-                STRIQ er skabt af mig, Hannah Kamstrup Wermuth. Min egen strikkerejse begyndte i slutningen af 1970'erne, hvor jeg lærte at strikke af min elskede farmor. Siden har jeg strikket mig gennem årtiernes trends og teknikker: hønsestrik, skrå bluser med angora og sølvtråd, flagermusærmer, norske og islandske sweatre, tørklæder, vanter, huer, moderne bluser, nederdele – og meget mere.
+                STRIQ er skabt af mig, Hannah Kamstrup Wermuth. Min egen strikkerejse begyndte i slutningen af 1970&apos;erne, hvor jeg lærte at strikke af min elskede farmor. Siden har jeg strikket mig gennemårtiernes trends og teknikker: hønsestrik, skrå bluser med angora og sølvtråd, flagermusærmer, norske og islandske sweatre, tørklæder, vanter, huer, moderne bluser, nederdele – og meget mere.
               </p>
               <p style={{ fontSize: 15, color: C.text, lineHeight: 1.75, margin: 0 }}>
                 Jeg har altid flere projekter i gang og en vedvarende lyst til at lære nyt, prøve nye teknikker og arbejde med forskellige typer garn. STRIQ er i mange henseender en naturlig forlængelse af den nysgerrighed.

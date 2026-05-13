@@ -63,8 +63,8 @@ export default function ResetPasswordPage() {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
       setSuccess(true)
-    } catch (err: any) {
-      setError(err.message || 'Der skete en fejl. Prøv igen.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Der skete en fejl. Prøv igen.')
     } finally {
       setLoading(false)
     }

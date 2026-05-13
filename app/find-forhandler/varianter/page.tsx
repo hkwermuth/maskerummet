@@ -45,7 +45,7 @@ export default function ForhandlerVarianterPage() {
             Illustration-varianter — Find garnbutikker
           </h1>
           <p style={{ fontSize: 14.5, color: '#6B5D4F', margin: '6px 0 0', maxWidth: 720, lineHeight: 1.55 }}>
-            Fire forslag til hero-illustration til den nye "Find garnbutikker nær dig"-side.
+            Fire forslag til hero-illustration til den nye &ldquo;Find garnbutikker nær dig&rdquo;-side.
           </p>
         </div>
       </section>
