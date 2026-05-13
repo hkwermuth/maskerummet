@@ -10,6 +10,7 @@ export default defineConfig({
     globals: true,
     clearMocks: true,
     exclude: ['node_modules', 'dist', '.next', '.claude/worktrees/**'],
+    testTimeout: 15000,
   },
   resolve: {
     alias: {

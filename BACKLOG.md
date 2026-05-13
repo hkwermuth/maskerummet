@@ -536,11 +536,103 @@ Fuld rapport: `docs/kvalitetsreview/00-rapport.md` (+ 5 delrapporter). 8 blokere
 
 Disse tests dækker funktioner der ER testet andre steder (yarn-allocate har egen test-suite, FindForhandlerClient har 20+ andre tests der passerer). Det er sikker viden at skippe dem til efter launch.
 
-**8.8 Type-coverage på kerne-flow JSX** *(SKAL minimum, 2-3 dage)*
-- `components/app/Arkiv.jsx` (3013 linjer) + `Garnlager.jsx` (1615 linjer) = 4628 linjer datakritisk utyped JSX
-- Type-drift fra disse er årsagen til 8.7's test-fejl — symptom, ikke kun test-issue
-- **Minimum før launch**: skriv vitest-tests for `allocateYarnToProject`, `finalizeYarnLines`, `revertCascadedYarns`, `applyAllocationDelta` (Arkiv.jsx) + DB-mappers `toDb`/`fromDb` (Garnlager.jsx)
-- **Ideal post-launch**: konvertér begge til `.tsx`
+**8.8 Reducer store filer + worker-crashes** *(SKAL, 2-3 dage)*
+
+`components/app/Arkiv.jsx` (3013 linjer) + `Garnlager.jsx` (1615 linjer) — store utyped JSX-filer der sandsynligvis forårsager 6 worker-crashes i testsuite'n.
+
+**Plan: Niveau 1 på Arkiv + Niveau 2 på Garnlager. Kør hvert trin som /ny-feature. Commit efter hvert trin. Gå ikke videre før tests er grønne.**
+
+**Trin 0 — Adfærdstest (sikkerhedsnet)**
+```
+/ny-feature Skriv adfærdstest for Garnlager og Arkiv inden refaktorering.
+
+Opret test/Garnlager.behavior.test.tsx med 4 tests (mock useSupabase):
+1. "tilføj garn med navn og antal → vises i listen"
+2. "rediger garn → ændringer gemmes og vises i listen"
+3. "filtrer på status 'I brug' → kun matchende garn vises"
+4. "slet garn → bekræftelsesdialog → garn forsvinder fra listen"
+
+Opret test/Arkiv.behavior.test.tsx med 5 tests (mock useSupabase):
+1. "opret projekt → vises i Vil gerne-fanen"
+2. "skift status fra Vil gerne til I gang → projekt vises i I gang-fanen"
+3. "tilføj garn til projekt → yarn_items kald sker"
+4. "slet projekt → bekræftelsesdialog → projekt forsvinder"
+5. "arkivér projekt → garn returneres (returnYarnLinesToStash kaldes)"
+
+Alle tests skal være grønne inden vi fortsætter.
+```
+
+**Status 2026-05-13**: Trin 0 *delvist verificeret*. `test/Arkiv.behavior.test.tsx` (5/5) grøn i isoleret + fuld Arkiv-suite (69 tests). `test/Garnlager.behavior.test.tsx` (4 tests) skrevet og review-godkendt, men kan ikke køres lokalt pga. heap OOM — samme failure-mode som de 6 eksisterende Garnlager-testfiler. Verificeres efter Trin 1 lukker worker-OOM. `vitest.config.ts` har fået `testTimeout: 15000`.
+
+**Trin 1 — Vitest worker-crash-fix**
+```
+/ny-feature Fix Vitest worker-crashes i maskerummet.
+
+6 workers crasher med "Worker exited unexpectedly" — sandsynligvis OOM fra
+store JSX-filer. Tilføj til vitest.config.ts:
+  pool: 'threads'
+  poolOptions: { threads: { maxWorkers: 2 } }
+
+Kør npm run test:run og verificer at worker-crash-antal er reduceret.
+```
+
+**Trin 2 — Garnlager: GarnKort + useGarnFilters**
+```
+/ny-feature Udtræk GarnKort og useGarnFilters fra Garnlager.jsx.
+
+1. Opret components/app/GarnKort.jsx med kode fra linje 987-1163 i
+   Garnlager.jsx. Props: yarn, onEdit, onBrugNogler, activeProjects.
+
+2. Opret lib/hooks/useGarnFilters.ts med localStorage-logik fra
+   linje 337-348 + 385-412 i Garnlager.jsx.
+   Tilføj user-namespace til STASH_FILTERS_KEY:
+   'striq.garnlager.filters.v1.' + userId
+
+3. Opdatér Garnlager.jsx til at importere begge.
+
+Kør npx vitest run test/Garnlager.* og verificer grønt.
+```
+
+**Trin 3 — Garnlager: GarnModal**
+```
+/ny-feature Udtræk GarnModal fra Garnlager.jsx.
+
+Opret components/app/GarnModal.jsx med al modal-JSX fra linje 1167-1610
+i Garnlager.jsx. Komponenten modtager al state og callbacks som props —
+ingen intern state. Garnlager.jsx forbliver state-manager.
+
+Kør npx vitest run test/Garnlager.* og test/Garnlager.behavior.test.tsx.
+Alle skal være grønne. Manuelt: tilføj garn, rediger, slet.
+```
+
+**Trin 4 — Arkiv: hooks og helpers**
+```
+/ny-feature Ryd op i Arkiv.jsx — fjern duplikeret kode.
+
+1. Opret lib/hooks/useProjectImages.ts — samler addProjectImages,
+   removeProjectImage, reorderProjectImage (duplikeret i linje 834-912
+   og 2169-2250 i Arkiv.jsx).
+
+2. Opret lib/hooks/usePdfPattern.ts — samler handlePdfPick, clearPdf,
+   switchPatternMode (duplikeret i linje 914-976 og 2227-2269).
+
+3. Opret lib/project-form-helpers.ts — mergeDuplicateLines (duplikeret
+   i 762-806 og 2118-2155), findDuplicateLineIndex, patchTouchesIdentity,
+   pathFromUrl, safeExt, makeImagePath.
+
+4. Opdatér Arkiv.jsx til at importere og bruge de nye hooks/helpers.
+
+Kør npx vitest run test/Arkiv.* og test/Arkiv.behavior.test.tsx.
+```
+
+**Trin 5 — Verificer**
+```
+npm run test:run
+```
+Forventet: 0 fejlende, max 8 skippede (FindForhandlerClient), 0-2 worker-crashes.
+Manuelt: garnlager-flow + arkiv-flow på mobil.
+
+- **Post-launch ideal**: konvertér begge til `.tsx`
 
 ### 8.9 BØR-FIXES inden launch (bonus hvis tid tillader)
 - **user_profiles mangler create-migration** — DB kan ikke recreates from-scratch; tilføj `supabase/migrations/2026….sql` med tabel-definition + RLS (~30 min)
