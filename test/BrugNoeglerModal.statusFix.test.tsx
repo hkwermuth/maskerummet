@@ -464,9 +464,7 @@ describe('AC-3 – ny projekt fra modalen oprettes med status=i_gang', () => {
 // ── AC-4 (NY): merge til eksisterende I-brug-række ───────────────────────────
 
 describe('AC-4 (NY POST-FIX) – allokering merger til eksisterende I-brug-række', () => {
-  // SKIP: vi.fn()-mock kaldes ikke som forventet pga. ændring i allocate-flow.
-  // Dækket af 8.7-skip-listen i BACKLOG — genoptag efter 19/5-launch.
-  it.skip('Når der findes en matchende "I brug"-række via brand+name+code, merges quantity i stedet for at oprette ny række', async () => {
+  it('Når der findes en matchende "I brug"-række via brand+name+code, merges quantity i stedet for at oprette ny række', async () => {
     const user = userEvent.setup()
 
     const yarnItemsCalls: Array<{ method: string; args?: unknown }> = []
@@ -524,14 +522,23 @@ describe('AC-4 (NY POST-FIX) – allokering merger til eksisterende I-brug-rækk
               }),
             }
           }
-          // Merge-update: quantity 3 → 5.5
+          // call 4: Merge-update: quantity 3 → 5.5
+          if (yarnItemsCallCount === 4) {
+            return {
+              update: vi.fn((p: unknown) => {
+                yarnItemsCalls.push({ method: 'update-merge', args: p })
+                return { eq: vi.fn(() => ({ eq: vi.fn(() => ({
+                  select: vi.fn().mockResolvedValue({ data: [{ id: 'y-existing-inuse' }], error: null }),
+                })) })) }
+              }),
+            }
+          }
+          // call 5+6: backfillMetadataFromSource laver 2 parallelle selects
+          // (source-row og target-row). Returnér null → ingen backfill nødvendig.
           return {
-            update: vi.fn((p: unknown) => {
-              yarnItemsCalls.push({ method: 'update-merge', args: p })
-              return { eq: vi.fn(() => ({ eq: vi.fn(() => ({
-                select: vi.fn().mockResolvedValue({ data: [{ id: 'y-existing-inuse' }], error: null }),
-              })) })) }
-            }),
+            select: vi.fn().mockReturnThis(),
+            eq:     vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
           }
         }
         if (table === 'yarn_usage') {

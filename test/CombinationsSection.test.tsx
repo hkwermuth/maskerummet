@@ -162,9 +162,7 @@ describe('CombinationsSection', () => {
     expect(screen.getByText(/10 cm/)).toBeInTheDocument()
   })
 
-  // SKIP: testen fejler fordi thickness-label-renderingen er ændret i komponenten.
-  // Dækket af 8.7-skip-listen i BACKLOG — genoptag efter 19/5-launch.
-  it.skip('shows thickness label in combinedSpecs when thickness is set', () => {
+  it('shows thickness label in combinedSpecs when thickness is set', () => {
     render(
       <CombinationsSection
         {...targetProps}
@@ -175,8 +173,8 @@ describe('CombinationsSection', () => {
         ]}
       />,
     )
-    // labelThickness('dk') → 'DK (medium)'
-    expect(screen.getByText(/DK \(medium\)/)).toBeInTheDocument()
+    // labelThickness('dk') → 'DK (= Double Knitting — medium-let garn)'
+    expect(screen.getByText(/DK.*Double Knitting/)).toBeInTheDocument()
   })
 
   it('does NOT render combinedSpecs section when all spec fields are null', () => {
