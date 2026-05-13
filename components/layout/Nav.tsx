@@ -219,11 +219,25 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
                 style={{ position: 'relative' }}
                 onMouseEnter={() => hasSub && setOpenDropdown(link.href)}
                 onMouseLeave={() => setOpenDropdown(prev => (prev === link.href ? null : prev))}
+                onFocusCapture={() => hasSub && setOpenDropdown(link.href)}
+                onBlur={e => {
+                  // Luk dropdown når fokus forlader hele hub-gruppen
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                    setOpenDropdown(prev => (prev === link.href ? null : prev))
+                  }
+                }}
               >
                 <Link
                   href={link.href}
                   aria-haspopup={hasSub ? 'menu' : undefined}
                   aria-expanded={hasSub ? isOpen : undefined}
+                  onKeyDown={e => {
+                    // Enter/Space toggles dropdown frem for at navigere, når der er subitems
+                    if (hasSub && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault()
+                      setOpenDropdown(prev => (prev === link.href ? null : link.href))
+                    }
+                  }}
                   style={{
                     background:         active ? 'rgba(244, 239, 230, 0.72)' : 'transparent',
                     backdropFilter:     active ? 'blur(10px)' : 'none',
@@ -249,7 +263,6 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
                 {/* Dropdown */}
                 {hasSub && isOpen && (
                   <div
-                    role="menu"
                     aria-label={link.label}
                     style={{
                       position: 'absolute',
@@ -271,9 +284,12 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
                       return (
                         <Link
                           key={`${sub.href}-${sub.label}`}
-                          href={sub.href}
-                          role="menuitem"
-                          onClick={() => setOpenDropdown(null)}
+                          href={sub.comingSoon ? '#' : sub.href}
+                          aria-disabled={sub.comingSoon ? true : undefined}
+                          onClick={e => {
+                            if (sub.comingSoon) { e.preventDefault(); return }
+                            setOpenDropdown(null)
+                          }}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -464,8 +480,12 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
                           return (
                             <li key={`${sub.href}-${sub.label}`}>
                               <Link
-                                href={sub.href}
-                                onClick={() => setMenuOpen(false)}
+                                href={sub.comingSoon ? '#' : sub.href}
+                                aria-disabled={sub.comingSoon ? true : undefined}
+                                onClick={e => {
+                                  if (sub.comingSoon) { e.preventDefault(); return }
+                                  setMenuOpen(false)
+                                }}
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
