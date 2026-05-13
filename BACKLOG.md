@@ -591,7 +591,7 @@ Realistisk fix: **udfør Trin 2-3 først** (split Garnlager.jsx i mindre filer) 
 
 
 
-**Trin 2 — Garnlager: GarnKort + useGarnFilters**
+**Trin 2 — Garnlager: GarnKort + useGarnFilters** *(implementeret 2026-05-13)*
 ```
 /ny-feature Udtræk GarnKort og useGarnFilters fra Garnlager.jsx.
 
@@ -607,6 +607,8 @@ Realistisk fix: **udfør Trin 2-3 først** (split Garnlager.jsx i mindre filer) 
 
 Kør npx vitest run test/Garnlager.* og verificer grønt.
 ```
+
+**Status 2026-05-13**: Implementeret. Garnlager.jsx ned fra 1615 → 1376 linjer. GarnKort.jsx er pure præsentation (kun `yarn, onEdit` props — `onBrugNogler`/`activeProjects` ligger faktisk i edit-modalen, ikke på kortet). useGarnFilters.ts har user-namespaced localStorage med one-shot migration fra gammel global key. Tester tilføjede 56 nye unit-tests (`test/GarnKort.test.tsx` 44, `test/useGarnFilters.test.ts` 12). Garnlager-tests OOM'er stadig (Trin 1b uafhjulpet — refaktoren er strukturel, ikke leak-fix). Nice-to-haves noteret af reviewer: (1) race-condition i persist-effect ved userId-skift uden remount, (2) dup'd WEIGHTS/STATUSES mellem hook og parent, (3) `'use client'`-direktiv i GarnKort.jsx.
 
 **Trin 3 — Garnlager: GarnModal**
 ```
