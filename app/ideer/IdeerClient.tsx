@@ -175,7 +175,7 @@ function IdeerBoard({ userId, isAdmin }: { userId: string; isAdmin: boolean }) {
           <div style={{ background: '#FFFCF7', borderRadius: 12, width: 360, maxWidth: '100%', boxShadow: '0 20px 60px rgba(0,0,0,.3)', overflow: 'hidden' }}>
             <div style={{ background: COLS.find(c => c.id === editing.colId)?.hdr ?? '#1A3028', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 13, fontWeight: 500, color: '#C8D8CC' }}>Rediger idé</span>
-              <button onClick={() => setEditing(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.5)', fontSize: 16, cursor: 'pointer', padding: 0 }}>✕</button>
+              <button onClick={() => setEditing(null)} aria-label="Luk" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.5)', fontSize: 16, cursor: 'pointer', padding: 0 }}>✕</button>
             </div>
             <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div>
@@ -227,6 +227,15 @@ function IdeerBoard({ userId, isAdmin }: { userId: string; isAdmin: boolean }) {
         <span style={{ fontSize: 12, color: '#4A7A62' }}>{total} ideer i alt</span>
       </div>
 
+      {/* Empty state */}
+      {total === 0 && (
+        <div style={{ padding: '40px 24px 24px', textAlign: 'center', color: '#A8C0B4', fontFamily: "'DM Sans', sans-serif" }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>💡</div>
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 600, color: '#C8D8CC', marginBottom: 6 }}>Ingen idéer endnu</div>
+          <div style={{ fontSize: 13, color: '#7A9088' }}>Vi samler ideer til kommende funktioner her — kom tilbage senere.</div>
+        </div>
+      )}
+
       {/* Board */}
       <div style={{ display: 'flex', gap: 14, padding: '20px 20px 32px', overflowX: 'auto', alignItems: 'flex-start' }}>
         {COLS.map(col => {
@@ -264,7 +273,7 @@ function IdeerBoard({ userId, isAdmin }: { userId: string; isAdmin: boolean }) {
                         placeholder="Beskrivelse (valgfri)..." style={{ ...inputStyle, marginBottom: 8 }} />
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => addCard(col.id)} style={{ flex: 1, background: col.ac, color: '#fff', border: 'none', borderRadius: 5, padding: 6, fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Tilføj</button>
-                        <button onClick={() => { setAdding(null); setTitle(''); setDesc('') }} style={{ background: 'none', border: '1px solid #D0C8BA', borderRadius: 5, padding: '6px 10px', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: '#8C7E74' }}>✕</button>
+                        <button onClick={() => { setAdding(null); setTitle(''); setDesc('') }} aria-label="Annuller" style={{ background: 'none', border: '1px solid #D0C8BA', borderRadius: 5, padding: '6px 10px', fontSize: 12, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: '#8C7E74' }}>✕</button>
                       </div>
                     </div>
                   ) : (

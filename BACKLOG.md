@@ -665,16 +665,21 @@ Manuelt: garnlager-flow + arkiv-flow på mobil.
 - **Post-launch ideal**: konvertér begge til `.tsx`
 
 ### 8.9 BØR-FIXES inden launch (bonus hvis tid tillader)
-- **user_profiles mangler create-migration** — DB kan ikke recreates from-scratch; tilføj `supabase/migrations/2026….sql` med tabel-definition + RLS (~30 min)
-- **Password-min 6 tegn → 8-10** — `app/signup/page.tsx:38`, `app/auth/reset-password/page.tsx:53` (~15 min)
-- **Reset-password forenkles til PKCE-only** — `app/auth/reset-password/page.tsx:23-36` fjern hash-token-parsing (~2t)
-- **Edge function logger brugerprompts** — `supabase/functions/visualize/index.ts:97` fjern eller redaktér (~15 min)
-- **`app/Logoer/Creme_logo_med_hvid_tråd_files/` slettes** — fremmed Vite-template-fil i source (~5 min)
-- **`app/find-forhandler/varianter/page.tsx` slettes** — design-eksplorations-side; allerede flagget i Fase 5 (~5 min)
-- **9 `any` i source → konkrete typer** — `app/kontakt-status/page.tsx`, `app/ideer/page.tsx`, `components/app/BrugNoeglerModal.tsx` (~3t)
-- **Nominatim User-Agent + kontakt-email** — `app/find-forhandler/FindForhandlerClient.tsx:103` (~15 min)
-- **`npm audit fix`** — fixer PostCSS XSS (~5 min)
-- **A11y stikprøve**: `aria-label` på ikon-knapper i `Garnlager.jsx`/`Arkiv.jsx`/`BarcodeScanner.jsx`; tomme tilstande på `/garnlager`/`/projekter`/`/ideer`/`/opskrifter`/`/faellesskabet` (~1 dag)
+- ~~**user_profiles mangler create-migration**~~ — **shippet** (commit `cf7b088`, bootstrap-migration tilføjet)
+- ~~**Password-min 6 tegn → 8-10**~~ — **shippet** (commit `68702a5`, sat til 8 tegn)
+- ~~**Reset-password forenkles til PKCE-only**~~ — **shippet 2026-05-14**: hash-token-parsing fjernet fra `establishSession`; kun PKCE (`?code=…` → `exchangeCodeForSession`) + getSession-fast-path + onAuthStateChange-listener bevares. Reducerer angrebsflade (tokens ud af URL-history). Test-fil `test/reset-password.test.tsx` med 6 tests grønne.
+- ~~**Edge function logger brugerprompts**~~ — **shippet** (commit `68702a5`)
+- ~~**`app/Logoer/Creme_logo_med_hvid_tråd_files/` slettes**~~ — **slettet** i tidligere oprydning
+- ~~**`app/find-forhandler/varianter/page.tsx` slettes**~~ — **slettet** i tidligere oprydning
+- ~~**9 `any` i source → konkrete typer**~~ — **shippet** (commit `f4b93be`, 5 steder i BrugNoeglerModal + reset-password catch-blok)
+- ~~**Nominatim User-Agent + kontakt-email**~~ — **shippet** (commit `68702a5`)
+- ~~**`npm audit fix`**~~ — **shippet** (commit `68702a5`)
+- ~~**A11y stikprøve**~~ — **delvist shippet**:
+  - Luk-knapper på 3 modaler (commit `3f98e6f`)
+  - 2026-05-14: Stikprøve gennemført på `Garnlager.jsx`/`Arkiv.jsx`/`BarcodeScanner.jsx`/`GarnKort.jsx`/`GarnModal.jsx` — fundet compliant (eksisterende aria-labels eller tekst på alle ikon-knapper).
+  - 2026-05-14: `IdeerClient.tsx` — ✕ annuller-knap (linje 276) og ✕ luk-rediger-modal (linje 178) fik `aria-label`. Empty state ved 0 idéer tilføjet. Dekorativt `▾`-span på Garnlager.jsx:661 fik `aria-hidden="true"`.
+  - Tomme tilstande verificeret på `/garnlager`/`/projekter`/`/opskrifter`/`/faellesskabet` (allerede på plads); `/ideer` fik ny empty state.
+  - Ny test `test/IdeerClient.test.tsx` (3 tests grønne).
 
 ### Komprimeret 7-dages launch-plan (mål: 2026-05-19)
 

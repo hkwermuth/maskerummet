@@ -658,7 +658,7 @@ export default function Garnlager({ user, onRequestLogin }) {
           onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(48,34,24,.10)' }}
           onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(48,34,24,.06)' }}
         >
-          <span style={{ fontSize: 10, lineHeight: 1 }}>▾</span>
+          <span aria-hidden="true" style={{ fontSize: 10, lineHeight: 1 }}>▾</span>
           Kom godt i gang med din garnsamling
         </button>
       </div>
