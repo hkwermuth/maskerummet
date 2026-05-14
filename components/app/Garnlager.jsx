@@ -588,6 +588,8 @@ export default function Garnlager({ user, onRequestLogin }) {
     </div>
   )
 
+  const inputStyle = { padding: '8px 12px', border: '1px solid #D0C8BA', borderRadius: '6px', fontSize: '13px', background: '#FFFCF7', color: '#2C2018', fontFamily: "'DM Sans', sans-serif", outline: 'none' }
+
   return (
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: 'transparent', minHeight: '100vh' }}>
 
