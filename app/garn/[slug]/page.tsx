@@ -16,6 +16,7 @@ import {
 } from '@/lib/labels'
 import { YarnHeroImage } from '@/components/catalog/YarnHeroImage'
 import { KeyFact } from '@/components/catalog/KeyFact'
+import { YarnFavoriteButton } from '@/components/catalog/YarnFavoriteButton'
 
 export const revalidate = 3600
 export const dynamicParams = true
@@ -171,7 +172,10 @@ export default async function YarnDetailPage(
 
         <div className="flex flex-col">
           <div className="text-xs uppercase tracking-wider text-striq-link">{yarn.producer}</div>
-          <h1 className="font-serif text-3xl sm:text-4xl text-striq-sage mt-1">{yarn.name}</h1>
+          <div className="mt-1 flex items-start gap-3">
+            <h1 className="flex-1 font-serif text-3xl sm:text-4xl text-striq-sage">{yarn.name}</h1>
+            <YarnFavoriteButton yarnId={yarn.id} />
+          </div>
           {yarn.series && <div className="text-striq-muted italic mt-1">{yarn.series}</div>}
 
           <dl className="mt-5 space-y-2.5 text-sm">
