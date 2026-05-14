@@ -50,7 +50,7 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     setError(null)
     if (password !== passwordConfirm) { setError('Adgangskoderne stemmer ikke overens.'); return }
-    if (password.length < 6) { setError('Adgangskoden skal være mindst 6 tegn.'); return }
+    if (password.length < 8) { setError('Adgangskoden skal være mindst 8 tegn.'); return }
     if (!sessionReady) {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) { setSessionReady(true) } else {

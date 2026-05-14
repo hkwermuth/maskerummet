@@ -94,7 +94,9 @@ Deno.serve(async (req) => {
     }
 
     const prompt = buildPrompt(yarn.colors)
-    console.log("Prompt:", prompt)
+    // Promptet indeholder farver brugeren har valgt — ikke fortroligt, men ingen
+    // grund til at logge det i prod. Log kun antal farver for fejlfinding.
+    console.log(`Generating with ${yarn.colors.length} colors`)
 
     const imageBytes = Uint8Array.from(atob(image), (c) => c.charCodeAt(0))
     const imageBlob = new Blob([imageBytes], { type: "image/png" })

@@ -101,7 +101,14 @@ export function FindForhandlerClient({
 
   async function geocodeCity(name: string) {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&countrycodes=dk&limit=1`
-    const res = await fetch(url, { headers: { 'Accept-Language': 'da' } })
+    // Nominatim's usage-policy kræver identificerbar User-Agent med kontakt-email
+    // så de kan kontakte os hvis vi laver for mange kald. https://operations.osmfoundation.org/policies/nominatim/
+    const res = await fetch(url, {
+      headers: {
+        'Accept-Language': 'da',
+        'User-Agent': 'STRIQ (kontakt@striq.dk) — garn-app find-forhandler',
+      },
+    })
     const data = await res.json()
     if (!data.length) throw new Error(`Kunne ikke finde "${name}" i Danmark`)
     return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }

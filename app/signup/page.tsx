@@ -35,8 +35,8 @@ function SignupPageInner() {
     e.preventDefault()
     setError(null)
 
-    if (password.length < 6) {
-      setError('Adgangskoden skal være mindst 6 tegn.')
+    if (password.length < 8) {
+      setError('Adgangskoden skal være mindst 8 tegn.')
       return
     }
     if (password !== confirmPassword) {
@@ -118,7 +118,7 @@ function SignupPageInner() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <label style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.1em', color: '#8C7E74' }}>Adgangskode</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mindst 6 tegn" required autoComplete="new-password" style={inputStyle} />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mindst 8 tegn" required autoComplete="new-password" style={inputStyle} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <label style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: '.1em', color: '#8C7E74' }}>Bekræft adgangskode</label>
