@@ -354,7 +354,7 @@ export default function BrugNoeglerModal({
       <div style={{ background: '#FFFCF7', borderRadius: 14, width: 480, maxWidth: '100%', boxShadow: '0 24px 60px rgba(48,34,24,.25)', margin: 'auto', overflow: 'hidden' }}>
         {/* Header */}
         <div style={{ background: '#61846D', padding: '20px 24px', position: 'relative' }}>
-          <button onClick={onClose} style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', color: 'rgba(255,255,255,.6)', fontSize: 18, cursor: 'pointer' }}>✕</button>
+          <button onClick={onClose} aria-label="Luk Brug nøgler-modal" style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', color: 'rgba(255,255,255,.6)', fontSize: 18, cursor: 'pointer' }}>✕</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 40, height: 40, borderRadius: 8, background: yarn.hex || '#A8C4C4', border: '2px solid rgba(255,255,255,.3)', flexShrink: 0 }} />
             <div>

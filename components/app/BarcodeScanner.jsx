@@ -227,6 +227,7 @@ export default function BarcodeScanner({ onClose, onAddToLager, onSelectYarn }) 
           </div>
           <button
             onClick={onClose}
+            aria-label="Luk barcode-scanner"
             style={{
               background: 'none', border: 'none', color: 'rgba(255,255,255,.6)',
               fontSize: '20px', cursor: 'pointer', lineHeight: 1, padding: '4px',
