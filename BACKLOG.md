@@ -664,6 +664,12 @@ Manuelt: garnlager-flow + arkiv-flow på mobil.
 
 - **Post-launch ideal**: konvertér begge til `.tsx`
 
+### 8.10 Topnavigation virker ikke på laptop i Edge og Chrome — BLOKERENDE (2026-05-14, fra Hannah)
+Dropdown-menuer i topnavigationen (`components/layout/Nav.tsx`) virker ikke korrekt på laptop i Edge og Chrome — kun det øverste menupunkt kan vælges. Sandsynligvis en CSS hover/pointer-events-fejl der ikke rammer mobil (touch). Skal reproduceres og fixes inden launch da desktop er primær platform for testbrugerne. Kør med: `/ny-feature Fix topnavigation dropdown på laptop (Edge + Chrome)`
+
+### 8.11 Login sender altid til /garnlager — skal sende tilbage til siden man kom fra (2026-05-14, fra Hannah)
+`resolveNext()`-infrastrukturen og `?next=`-parameteren eksisterer allerede, men login-knapper og LoginGate sender ikke altid den aktuelle URL med som `?next=`. Resultat: login sender altid til `/garnlager` uanset hvilken side brugeren stod på. Forventet opførsel: hvis bruger besøger `/opskrifter` og trykker "Log ind", skal de returneres til `/opskrifter` efter login. Kræver at `Nav.tsx`'s login-link og evt. `LoginGate` sætter `?next=<aktuel-sti>` korrekt — og at whitelisten i `ALLOWED_NEXT_PATHS` (`lib/auth/resolveNext.ts`) udvides til at dække alle relevante sider (pt. mangler fx `/opskrifter`, `/find-forhandler`, `/faq`, `/faellesskabet`). Kør med: `/ny-feature Login redirect til siden man kom fra`
+
 ### 8.9 BØR-FIXES inden launch (bonus hvis tid tillader)
 - ~~**user_profiles mangler create-migration**~~ — **shippet** (commit `cf7b088`, bootstrap-migration tilføjet)
 - ~~**Password-min 6 tegn → 8-10**~~ — **shippet** (commit `68702a5`, sat til 8 tegn)
