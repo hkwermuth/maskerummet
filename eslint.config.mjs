@@ -20,6 +20,16 @@ const eslintConfig = [
       "Logoer/**",   // designfiler, ikke kildekode
     ],
   },
+  {
+    rules: {
+      // Standard TypeScript-konvention: _-prefixede parametre må gerne være ubrugte
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+      }],
+    },
+  },
 ];
 
 export default eslintConfig;
