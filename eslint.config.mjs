@@ -16,6 +16,8 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "public/**",   // minified vendor bundles (pdf.worker, etc.)
+      "Logoer/**",   // designfiler, ikke kildekode
     ],
   },
 ];

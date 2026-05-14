@@ -6,7 +6,7 @@ import { useSupabase } from '@/lib/supabase/client'
 import { HeroIllustration } from '@/components/layout/HeroIllustration'
 import { searchStoresNear, type StoreBase, type StoreResult } from '@/lib/data/stores'
 import type { Brand, OnlineRetailer } from '@/lib/data/retailers'
-import type { DanmarksKortHandle, UserLocation } from './DanmarksKortClient'
+import type { DanmarksKortHandle } from './DanmarksKortClient'
 import { FilterChip, HIDDEN_BRAND_SLUGS, OnlineRetailersSection, orderBrands } from './OnlineRetailersSection'
 
 const DanmarksKort = dynamic(() => import('./DanmarksKortClient'), {

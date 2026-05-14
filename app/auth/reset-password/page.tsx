@@ -35,7 +35,7 @@ export default function ResetPasswordPage() {
       }
     })
     return () => subscription.unsubscribe()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleReset(e: React.FormEvent) {
     e.preventDefault()

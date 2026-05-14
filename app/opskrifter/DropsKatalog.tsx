@@ -108,7 +108,6 @@ export default function DropsKatalog({ recipes, initialSavedKeys, userId }: Prop
           ? 'Kunne ikke fjerne favorit. Prøv igen.'
           : 'Kunne ikke gemme favorit. Prøv igen.'
       )
-      // eslint-disable-next-line no-console
       console.error('[DropsKatalog] favorit-fejl:', err)
     }
   }

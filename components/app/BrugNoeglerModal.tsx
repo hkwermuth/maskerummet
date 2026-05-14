@@ -148,7 +148,7 @@ export default function BrugNoeglerModal({
       }
     }
     loadProjects()
-  }, [user.id])
+  }, [user.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]

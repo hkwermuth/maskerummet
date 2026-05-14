@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 
 type FaqEntry = { slug: string; title: string }
@@ -90,24 +90,25 @@ export function FaqClient({ questions }: { questions: FaqEntry[] }) {
               <div style={{ color: '#302218', lineHeight: 1.75, fontSize: 14 }}>
                 <ReactMarkdown
                   components={{
-                    h1: ({ node, ...props }) => (
+                    h1: ({ ...props }) => (
                       <h2 {...props} style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 26, fontWeight: 600, color: '#61846D', margin: '0 0 10px' }} />
                     ),
-                    h2: ({ node, ...props }) => (
+                    h2: ({ ...props }) => (
                       <h3 {...props} style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 18, fontWeight: 600, color: '#61846D', margin: '18px 0 8px' }} />
                     ),
-                    a: ({ node, ...props }) => (
+                    a: ({ ...props }) => (
                       <a {...props} target="_blank" rel="noopener noreferrer" style={{ color: '#9B6272', textDecoration: 'underline' }} />
                     ),
-                    img: ({ node, ...props }) => (
+                    img: ({ ...props }) => (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img {...props} alt={props.alt ?? ''} style={{ width: '100%', borderRadius: 14, border: '1px solid #E5DDD9', background: '#FFF', margin: '14px 0' }} />
                     ),
-                    hr: ({ node, ...props }) => (
+                    hr: ({ ...props }) => (
                       <hr {...props} style={{ border: 0, borderTop: '1px solid #E5DDD9', margin: '18px 0' }} />
                     ),
-                    ul: ({ node, ...props }) => <ul {...props} style={{ paddingLeft: 18, margin: '8px 0' }} />,
-                    li: ({ node, ...props }) => <li {...props} style={{ margin: '6px 0' }} />,
-                    p: ({ node, ...props }) => <p {...props} style={{ margin: '10px 0' }} />,
+                    ul: ({ ...props }) => <ul {...props} style={{ paddingLeft: 18, margin: '8px 0' }} />,
+                    li: ({ ...props }) => <li {...props} style={{ margin: '6px 0' }} />,
+                    p: ({ ...props }) => <p {...props} style={{ margin: '10px 0' }} />,
                   }}
                 >
                   {md}

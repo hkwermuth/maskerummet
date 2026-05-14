@@ -213,13 +213,6 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
 
   useEffect(() => { void loadAll() }, [yarnId, candidateIds.join('|')]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function summaryFor(candidateId: string): VoteSummary {
-    const rows = votesByCandidate[candidateId] ?? []
-    const sum = emptySummary()
-    for (const r of rows) { sum[r.verdict] = (sum[r.verdict] ?? 0) + 1 }
-    return sum
-  }
-
   function commentsFor(candidateId: string) {
     return (votesByCandidate[candidateId] ?? [])
       .filter((v) => (v.comment ?? '').trim().length > 0)
@@ -231,13 +224,13 @@ export function SubstitutionsSection({ yarnId, substitutions }: Props) {
   const modalSavedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    // Capture the Map reference (stable object) so the cleanup rule is satisfied.
+    // The Map's entries will reflect all timers added during the component's lifetime.
+    const timers = savedTimers.current
     return () => {
-      for (const t of savedTimers.current.values()) clearTimeout(t)
-      savedTimers.current.clear()
-      if (modalSavedTimer.current) {
-        clearTimeout(modalSavedTimer.current)
-        modalSavedTimer.current = null
-      }
+      for (const t of timers.values()) clearTimeout(t)
+      timers.clear()
+      if (modalSavedTimer.current) clearTimeout(modalSavedTimer.current)
     }
   }, [])
 

@@ -179,7 +179,6 @@ export function SharedProjectDetailModal({ project, onClose }: Props) {
               display: 'flex', gap: 12, alignItems: 'flex-start',
             }}>
               {coverUrl && (
-                // eslint-disable-next-line @next/next/no-img-element
                 <a
                   href={coverUrl}
                   target="_blank"

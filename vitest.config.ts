@@ -20,7 +20,6 @@ export default defineConfig({
     // Garnlager.jsx-loadingen lækker ~33 MB/s og rammer ellers Node-default på ~4 GB.
     pool: 'forks',
     maxWorkers: 2,
-    minWorkers: 1,
     isolate: true,
   },
   resolve: {

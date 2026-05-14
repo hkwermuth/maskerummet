@@ -53,7 +53,7 @@ export default function ColorNumberOcr({ initialYarn, onMatched, onCancel }: Pro
   const [yarnQuery, setYarnQuery] = useState(initialYarn ? displayYarnName(initialYarn) : '')
   const [yarnResults, setYarnResults] = useState<YarnRow[]>([])
   const [colors, setColors] = useState<ColorRow[]>([])
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [, setPhotoFile] = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [ocrProgress, setOcrProgress] = useState<number | null>(null)
   const [ocrError, setOcrError] = useState<string | null>(null)
