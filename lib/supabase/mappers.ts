@@ -81,7 +81,6 @@ export function fromDb(row: Record<string, any>) {
 // (2026-05-05): quantity bevares (rører den ikke) så det forbrugte antal er
 // synligt i Mit Garn. Returnerer den opdaterede række eller kaster fejl.
 //
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function markYarnAsBrugtOp(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,

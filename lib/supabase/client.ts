@@ -11,6 +11,5 @@ export function createSupabaseBrowserClient() {
 
 /** Convenience hook — returnerer en memoized browser-klient. */
 export function useSupabase() {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => createSupabaseBrowserClient(), [])
 }
