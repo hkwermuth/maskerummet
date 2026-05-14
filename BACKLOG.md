@@ -646,12 +646,21 @@ Kør npx vitest run test/Arkiv.* og test/Arkiv.behavior.test.tsx.
 
 **Status 2026-05-13**: Implementeret. Arkiv.jsx ned fra 3013 → 2722 linjer (291 færre, i mål). 3 nye filer: project-form-helpers.ts (6 pure helpers), useProjectImages.ts (billede-grid med trackRemoved + atomar clearAll), usePdfPattern.ts (PDF + pattern-mode-state med trackRemove). Tester tilføjede 60 nye unit-tests (project-form-helpers + useProjectImages + usePdfPattern). Reviewer fandt og fik fixet en orphan-storage-regression: pattern-images i Storage blev ikke deleteret ved mode-switch images→pdf. Fix: `clearAll()` på useProjectImages der atomart pusher existing URLs til removedUrls (respekterer trackRemoved). Full non-Garnlager suite: 92/93 testfiler, 1341 tests grønne + 8 skipped. Garnlager-OOM persisterer som Trin 1b.
 
-**Trin 5 — Verificer**
+**Trin 5 — Verificer** *(udført 2026-05-14)*
 ```
 npm run test:run
 ```
 Forventet: 0 fejlende, max 8 skippede (FindForhandlerClient), 0-2 worker-crashes.
 Manuelt: garnlager-flow + arkiv-flow på mobil.
+
+**Status 2026-05-14**: Fuld suite kørt. 96/103 testfiler grønne, **1416 tests passerer + 8 skipped**. **0 fejlende tests** ✅. **7 worker-crashes** (alle 7 Garnlager-testfiler — Trin 1b er stadig åben). BACKLOG-mål om "0-2 worker-crashes" er ikke opfyldt; det afhænger af Trin 1b's løsning. Manuel mobil-test står tilbage (ikke udført — er bruger-ansvar når Trin 1b er afhjulpet).
+
+**8.8 lukket som strukturel succes — Trin 1b bibeholdt som åben blocker**. Cumulative resultat:
+- Garnlager.jsx: 1615 → 815 linjer (-50%)
+- Arkiv.jsx: 3013 → 2722 linjer (-10%)
+- +116 nye unit-tests (44 GarnKort + 12 useGarnFilters + 60 hook/helper)
+- Vitest 4-korrekt config + 8 GB heap (cross-env devDep)
+- Adfærdstest fra Trin 0 (Arkiv 5/5, Garnlager 4 skrevet men ikke verificeret pga. 1b)
 
 - **Post-launch ideal**: konvertér begge til `.tsx`
 
