@@ -36,9 +36,9 @@ describe('buildLoginHref', () => {
     expect(buildLoginHref('/admin')).toBe('/login')
   })
 
-  // AC7: Ikke-whitelistet sti /om-striq → /login
-  it('AC7: /om-striq returnerer /login (ikke whitelistet)', () => {
-    expect(buildLoginHref('/om-striq')).toBe('/login')
+  // AC7: /om-striq er nu whitelisted (tilføjet i 8.11) → /login?next=...
+  it('AC7: /om-striq returnerer /login?next=%2Fom-striq (whitelistet i 8.11)', () => {
+    expect(buildLoginHref('/om-striq')).toBe('/login?next=%2Fom-striq')
   })
 
   // AC8: Protocol-relative //evil.com → /login
@@ -68,5 +68,33 @@ describe('buildLoginHref', () => {
   // AC12: Backslash-injection /\evil.com → /login
   it('AC12: /\\evil.com returnerer /login (backslash-injection afvises)', () => {
     expect(buildLoginHref('/\\evil.com')).toBe('/login')
+  })
+
+  // AC13–AC15: nye stier tilføjet i 8.11-udvidelsen
+  it('AC13: /faq returnerer /login?next=%2Ffaq (ny whitelistet sti)', () => {
+    expect(buildLoginHref('/faq')).toBe('/login?next=%2Ffaq')
+  })
+
+  it.each([
+    ['/', '/login?next=%2F'],
+    ['/mit-striq', '/login?next=%2Fmit-striq'],
+    ['/opskrifter-og-garn', '/login?next=%2Fopskrifter-og-garn'],
+    ['/striqipedia', '/login?next=%2Fstriqipedia'],
+    ['/faellesskab', '/login?next=%2Ffaellesskab'],
+    ['/garnbutikker', '/login?next=%2Fgarnbutikker'],
+    ['/mine-favoritter', '/login?next=%2Fmine-favoritter'],
+    ['/garn', '/login?next=%2Fgarn'],
+    ['/faq', '/login?next=%2Ffaq'],
+    ['/faellesskabet', '/login?next=%2Ffaellesskabet'],
+    ['/strikkecafeer', '/login?next=%2Fstrikkecafeer'],
+    ['/om-striq', '/login?next=%2Fom-striq'],
+    ['/privatlivspolitik', '/login?next=%2Fprivatlivspolitik'],
+    ['/min-konto', '/login?next=%2Fmin-konto'],
+  ])('AC14: %s giver korrekt ?next=-URL', (sti, forventet) => {
+    expect(buildLoginHref(sti)).toBe(forventet)
+  })
+
+  it('AC15: /admin returnerer /login (bevidst udeladt fra whitelist)', () => {
+    expect(buildLoginHref('/admin')).toBe('/login')
   })
 })

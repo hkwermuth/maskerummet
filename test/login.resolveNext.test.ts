@@ -54,4 +54,41 @@ describe('resolveNext — open-redirect whitelist', () => {
   it('AC7: /\\\\evil.com med dobbelt-backslash → /garnlager', () => {
     expect(resolveNext('/\\\\evil.com')).toBe('/garnlager')
   })
+
+  // AC8–AC10: nye stier tilføjet i 8.11-udvidelsen
+  it('AC8: /faq er whitelisted og returneres uændret', () => {
+    expect(resolveNext('/faq')).toBe('/faq')
+  })
+
+  it('AC9: / (forside) er whitelisted og returneres uændret', () => {
+    expect(resolveNext('/')).toBe('/')
+  })
+
+  it.each([
+    '/',
+    '/mit-striq',
+    '/opskrifter-og-garn',
+    '/striqipedia',
+    '/faellesskab',
+    '/garnbutikker',
+    '/mine-favoritter',
+    '/garn',
+    '/faq',
+    '/faellesskabet',
+    '/strikkecafeer',
+    '/om-striq',
+    '/privatlivspolitik',
+    '/min-konto',
+  ])('AC10: %s er ny whitelistet sti og returneres uændret', (sti) => {
+    expect(resolveNext(sti)).toBe(sti)
+  })
+
+  // AC11–AC12: bevidst udeladte stier afvises stadig
+  it('AC11: /admin er bevidst udeladt → /garnlager', () => {
+    expect(resolveNext('/admin')).toBe('/garnlager')
+  })
+
+  it('AC12: /login er bevidst udeladt → /garnlager', () => {
+    expect(resolveNext('/login')).toBe('/garnlager')
+  })
 })

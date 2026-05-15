@@ -1,8 +1,21 @@
 // Whitelist af interne stier der må bruges som ?next= efter login.
 // Sikkerhedskritisk: beskytter mod open-redirect-phishing.
 export const ALLOWED_NEXT_PATHS = new Set([
-  '/garnlager', '/projekter', '/visualizer', '/kalender',
-  '/ideer', '/opskrifter', '/strikkeskolen', '/find-forhandler',
+  // Forside og hub-sider (topnav)
+  '/', '/mit-striq', '/opskrifter-og-garn', '/striqipedia',
+  '/faellesskab', '/garnbutikker',
+  // Mit STRIQ
+  '/garnlager', '/projekter', '/mine-favoritter',
+  // Opskrifter & garn
+  '/opskrifter', '/garn', '/visualizer',
+  // Striqipedia
+  '/faq', '/strikkeskolen',
+  // Fællesskab
+  '/faellesskabet', '/kalender', '/ideer',
+  // Garnbutikker & caféer
+  '/find-forhandler', '/strikkecafeer',
+  // Øvrige offentlige sider
+  '/om-striq', '/privatlivspolitik', '/min-konto',
 ])
 
 export function resolveNext(raw: string | null): string {
