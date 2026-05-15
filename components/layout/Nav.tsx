@@ -266,7 +266,9 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
                     aria-label={link.label}
                     style={{
                       position: 'absolute',
-                      top: 'calc(100% + 4px)',
+                      // Bro hen til hub-knappen: top: 100% + paddingTop fylder gap'et,
+                      // så musen ikke krydser en tom zone og udløser onMouseLeave.
+                      top: '100%',
                       left: 0,
                       minWidth: 240,
                       background: 'rgba(255, 252, 247, 0.98)',
@@ -275,6 +277,7 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
                       border: '1px solid rgba(48,34,24,0.08)',
                       borderRadius: 12,
                       padding: 6,
+                      paddingTop: 10,
                       boxShadow: '0 6px 20px rgba(48,34,24,.12)',
                       zIndex: 110,
                     }}
