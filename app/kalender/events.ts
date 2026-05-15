@@ -28,32 +28,12 @@ export const EVENTS: Event[] = [
   // ── MAJ ──
   {
     maaned: 'Maj 2026',
-    dato: '8.–10. maj', ugedag: 'Fre',
-    titel: 'Seyfarth Knitting Retreat',
-    sted: 'Fanø Krogård · Fanø',
-    type: 'Retreat', farve: FARVE.Retreat,
-    beskrivelse: 'Eksklusivt Fair Isle-retreat med Christel Seyfarth. 6-retters middag, modeopvisning og øtur.',
-    url: 'https://www.christel-seyfarth.com/product-page/seyfarth-knitting-retreat-fan%C3%B8-limited-edition',
-    billetter: 'Billetter', ikon: 'garn',
-  },
-  {
-    maaned: 'Maj 2026',
-    dato: '9.–10. maj', ugedag: 'Lør',
-    titel: 'Saltum Ulddage',
-    sted: 'Saltum · Nordjylland',
-    type: 'Festival', farve: FARVE.Festival,
-    beskrivelse: 'Garnstande, workshops og foredrag i Saltum. Lokal hyggefestival.',
-    url: 'https://www.saltumfestdage.dk/',
-    billetter: 'Billetter', ikon: 'faar',
-  },
-  {
-    maaned: 'Maj 2026',
     dato: '30.–31. maj', ugedag: 'Lør',
     titel: 'Garnstafet Aarhus',
     sted: '7 garnbutikker · Aarhus',
     type: 'Festival', farve: FARVE.Festival,
     beskrivelse: 'Stafet rundt mellem 7 garnbutikker i Aarhus med konkurrencer, smagsprøver og fællesskab.',
-    url: 'https://garnoteket.dk/products/aarhus-garnstafet',
+    url: 'https://www.garnstafet.dk/',
     billetter: 'Billetter', ikon: 'garn',
   },
 
@@ -67,6 +47,26 @@ export const EVENTS: Event[] = [
     beskrivelse: 'Prjónagleði — Islands årlige strikkefestival. Workshops, foredrag og masser af islandsk uld.',
     url: 'https://www.textilmidstod.is/en/store/about-the-iceland-knit-fest',
     billetter: 'Billetter', ikon: 'globus',
+  },
+  {
+    maaned: 'Juni 2026',
+    dato: '6. juni', ugedag: 'Lør',
+    titel: 'Strik i Danmarks Hjerte',
+    sted: 'Bastionen · Nyborg',
+    type: 'Festival', farve: FARVE.Festival,
+    beskrivelse: 'Hyggelig strikkefestival i historisk kulturhus med workshops, foredrag og strikkecaféer. Første lørdag i juni.',
+    url: 'https://bastionen-nyborg.dk/event/strik-i-danmarks-hjerte-2026/',
+    billetter: 'Billetter', ikon: 'garn',
+  },
+  {
+    maaned: 'Juni 2026',
+    dato: '7. juni', ugedag: 'Søn',
+    titel: 'Garn i Gaarden',
+    sted: 'Huset · Aalborg',
+    type: 'Festival', farve: FARVE.Festival,
+    beskrivelse: 'Endags-festival kl. 10–15:30 med workshops, strikkekoncert (Albert Reinholdt Østergaard), Garn & Glimmer-workshop og foredrag om håndværkspsykologi. 200 kr.',
+    url: 'https://huset.dk/event/garn-i-gaarden-en-dag-med-strik-og-garn-4872',
+    billetter: 'Billetter', ikon: 'garn',
   },
   {
     maaned: 'Juni 2026',
@@ -127,7 +127,7 @@ export const EVENTS: Event[] = [
     sted: 'Oslo · Norge',
     type: 'Internationalt', farve: FARVE.Internationalt,
     beskrivelse: 'Stort nordisk strikkesymposium — workshops, foredrag og udstillinger over fem dage.',
-    url: 'https://www.nordiskstrikkesymposium.no/',
+    url: 'https://www.gavstrik.dk/beskrivelse/',
     billetter: 'Billetter', ikon: 'globus',
   },
 
@@ -284,8 +284,38 @@ export const EVENTS: Event[] = [
     url: 'https://nordsoeposten.dk/strikkefestival-2026-arrangeres-igen-af-loerslev-cafe-kulturhus/',
     billetter: 'Sælger hurtigt ud', ikon: 'garn',
   },
+  {
+    maaned: 'September 2026',
+    dato: '27. sept.–3. okt.', ugedag: 'Søn',
+    titel: 'Icelandic Wool Week (Ullarvikan)',
+    sted: 'Selfoss / Þingborg · Sydisland',
+    type: 'Internationalt', farve: FARVE.Internationalt,
+    beskrivelse: 'Uld-uge i Sydisland med fåreklipning, strikkecaféer, udstillinger, foredrag og workshops i strik, design, spinding, vævning, filtning og uldfarvning. Mange events gratis.',
+    url: 'https://www.textilmidstod.is/en/calendar/wool-week-in-south-iceland',
+    billetter: 'Billetter', ikon: 'globus',
+  },
 
   // ── OKTOBER ──
+  {
+    maaned: 'Oktober 2026',
+    dato: '3.–4. oktober', ugedag: 'Lør',
+    titel: 'Jegindø Strikkefestival',
+    sted: 'Jegindø · Thyholm',
+    type: 'Festival', farve: FARVE.Festival,
+    beskrivelse: 'Årlig strikkefestival på Jegindø kl. 9–16 begge dage. Workshops, udstillere, undervisere og strikkefællesskab.',
+    url: 'https://strikkefestival.net/',
+    billetter: 'Billetter', ikon: 'bolge',
+  },
+  {
+    maaned: 'Oktober 2026',
+    dato: '9. oktober', ugedag: 'Fre',
+    titel: 'Strik & Drik – dinnershow',
+    sted: 'Marienlyst Strandhotel · Helsingør',
+    type: 'Liveshow', farve: FARVE.Liveshow,
+    beskrivelse: 'Christine Feldthaus & Lærke Bagger med "STØRRE, VILDERE, SJOVERE"-version af Strik & Drik som dinnershow. Kl. 19:00.',
+    url: 'https://www.ticketmaster.dk/artist/strik-drik-billetter/1114183',
+    billetter: 'Billetter', ikon: 'mikrofon',
+  },
   {
     maaned: 'Oktober 2026',
     dato: '23.–25. oktober', ugedag: 'Fre',
@@ -341,6 +371,16 @@ export const EVENTS: Event[] = [
     billetter: 'Få pladser', ikon: 'globus',
   },
   {
+    maaned: 'Februar 2027',
+    dato: '6. februar', ugedag: 'Lør',
+    titel: 'Strik & Drik – Middelfart',
+    sted: 'Tråden · Middelfart',
+    type: 'Liveshow', farve: FARVE.Liveshow,
+    beskrivelse: 'Christine Feldthaus & Lærke Bagger på turné med nyt Strik & Drik-show. Kl. 19:00.',
+    url: 'https://www.ticketmaster.dk/artist/strik-drik-billetter/1114183',
+    billetter: 'Billetter', ikon: 'mikrofon',
+  },
+  {
     maaned: 'Marts 2027',
     dato: '3.–10. marts', ugedag: 'Ons',
     titel: 'Strikkerejse i Andalusien (Helene Jensen)',
@@ -365,7 +405,7 @@ export const EVENTS: Event[] = [
 
 export const KATEGORIER = ['Alle', 'Festival', 'Liveshow', 'Retreat', 'Workshop', 'Internationalt']
 
-export const MAANED_RAEKKEFOLGE = ['Maj 2026', 'Juni 2026', 'Juli 2026', 'August 2026', 'September 2026', 'Oktober 2026', 'November 2026', 'Marts 2027', 'Maj 2027']
+export const MAANED_RAEKKEFOLGE = ['Maj 2026', 'Juni 2026', 'Juli 2026', 'August 2026', 'September 2026', 'Oktober 2026', 'November 2026', 'Februar 2027', 'Marts 2027', 'Maj 2027']
 
 /**
  * Returnerer de første N events fra EVENTS-arrayet (kronologisk ordnet i kilde-dataen).
