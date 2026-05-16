@@ -46,6 +46,15 @@ const NAV_LINKS: NavLink[] = [
     ],
   },
   {
+    href: '/faellesskab',
+    label: 'Mød andre',
+    subitems: [
+      { href: '/faellesskabet', label: 'Fællesskabet' },
+      { href: '/kalender',      label: 'Kalender' },
+      { href: '/faellesskab',   label: 'Dele strik', comingSoon: true },
+    ],
+  },
+  {
     href: '/striqipedia',
     label: 'Striqipedia',
     subitems: [
@@ -54,15 +63,6 @@ const NAV_LINKS: NavLink[] = [
       { href: '/striqipedia',   label: 'Fibre & garntyper', comingSoon: true },
       { href: '/striqipedia',   label: 'Certificeringer', comingSoon: true },
       { href: '/striqipedia',   label: 'Bøger, podcasts & YouTube', comingSoon: true },
-    ],
-  },
-  {
-    href: '/faellesskab',
-    label: 'Fællesskab',
-    subitems: [
-      { href: '/faellesskabet', label: 'Fællesskabet' },
-      { href: '/kalender',      label: 'Kalender' },
-      { href: '/faellesskab',   label: 'Dele strik', comingSoon: true },
     ],
   },
   {
