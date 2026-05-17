@@ -13,7 +13,7 @@ export const ALLOWED_NEXT_PATHS = new Set([
   // Fællesskab
   '/faellesskabet', '/kalender', '/ideer',
   // Garnbutikker & caféer
-  '/find-forhandler', '/strikkecafeer',
+  '/find-forhandler', '/strikkecafeer', '/online-forhandlere',
   // Øvrige offentlige sider
   '/om-striq', '/privatlivspolitik', '/min-konto',
 ])

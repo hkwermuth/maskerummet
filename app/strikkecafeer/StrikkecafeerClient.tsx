@@ -160,7 +160,7 @@ export function StrikkecafeerClient({ initialCafes }: Props) {
             </p>
           </div>
           <div className="cafe-hero-art" style={{ flexShrink: 0, width: 220, maxWidth: '100%' }}>
-            <HeroIllustration variant="forhandler-butik-facade" />
+            <HeroIllustration variant="cafe-kop-strik" />
           </div>
         </div>
         <style>{`

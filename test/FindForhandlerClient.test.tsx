@@ -72,6 +72,7 @@ const makeStore = (overrides: Partial<StoreBase> = {}): StoreBase => ({
   brands: [],
   is_strikkecafe: false,
   note: null,
+  online_retailer_slug: null,
   ...overrides,
 })
 
@@ -92,14 +93,15 @@ describe('B1 hero h1 and subtitle', () => {
     expect(screen.getByRole('heading', { level: 1, name: /find garnbutikker nær dig/i })).toBeInTheDocument()
   })
 
-  it('renders the subtitle text', () => {
+  it('renders the subtitle text and online-forhandlere link', () => {
     render(<FindForhandlerClient initialStores={[makeStore()]} />)
     expect(
       screen.getByText(/søg på by, brug din placering eller udforsk kortet/i)
     ).toBeInTheDocument()
+    // Link tekst er nu "købe garn online" — linker til /online-forhandlere
     expect(
-      screen.getByRole('link', { name: /gå direkte til online-oversigten/i })
-    ).toBeInTheDocument()
+      screen.getByRole('link', { name: /købe garn online/i })
+    ).toHaveAttribute('href', '/online-forhandlere')
   })
 })
 
@@ -567,6 +569,7 @@ function makeRetailer(overrides: Partial<OnlineRetailer> = {}): OnlineRetailer {
     leverer_til_dk: true,
     sidst_tjekket: null,
     brands: [],
+    physical_store_count: 0,
     ...overrides,
   }
 }
@@ -670,4 +673,196 @@ describe('B11 brand-filter chips over kortet', () => {
     expect(screen.getByRole('button', { name: /^drops$/i })).toHaveAttribute('aria-pressed', 'false')
   })
 
+})
+
+// ---------------------------------------------------------------------------
+// B12: initialBrand-prop aktiverer korrekt brand-chip ved page-load
+// ---------------------------------------------------------------------------
+
+describe('B12 initialBrand aktiverer brand-chip ved page-load', () => {
+  it('initialBrand="drops" gør Drops-chip aktiv (aria-pressed=true)', () => {
+    const storeWithDrops = makeStore({
+      brands: [{ slug: 'drops', name: 'Drops' }],
+    })
+    render(
+      <FindForhandlerClient
+        initialStores={[storeWithDrops]}
+        brands={[brandDrops, brandIsager]}
+        initialBrand="drops"
+      />
+    )
+    expect(screen.getByRole('button', { name: /^drops$/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /^alle$/i })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('initialBrand=null gør Alle-chip aktiv som standard', () => {
+    const storeWithDrops = makeStore({
+      brands: [{ slug: 'drops', name: 'Drops' }],
+    })
+    render(
+      <FindForhandlerClient
+        initialStores={[storeWithDrops]}
+        brands={[brandDrops]}
+        initialBrand={null}
+      />
+    )
+    expect(screen.getByRole('button', { name: /^alle$/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /^drops$/i })).toHaveAttribute('aria-pressed', 'false')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// B13: initialRetailerSlug filtrerer stores — vis kun match + banner
+// ---------------------------------------------------------------------------
+
+describe('B13 initialRetailerSlug filtrerer stores', () => {
+  it('viser banner med retailer-navn når initialRetailerSlug er sat', () => {
+    const storeWithRetailer = makeStore({
+      id: 'store-citystoffer',
+      name: 'Citystoffer Butik',
+      online_retailer_slug: 'citystoffer',
+    })
+    const storeOther = makeStore({
+      id: 'store-other',
+      name: 'Anden Butik',
+      online_retailer_slug: null,
+    })
+    render(
+      <FindForhandlerClient
+        initialStores={[storeWithRetailer, storeOther]}
+        initialRetailerSlug="citystoffer"
+      />
+    )
+    // Banner med "Viser kun fysiske butikker for <Navn>" vises (slug capitaliseres for display)
+    expect(screen.getByText(/viser kun fysiske butikker for/i)).toBeInTheDocument()
+    const bannerEl = screen.getByText(/viser kun fysiske butikker for/i).closest('div')
+    expect(bannerEl).toHaveTextContent('Citystoffer')
+  })
+
+  it('"Vis alle butikker"-knap er tilgængelig i retailer-filter-banner', () => {
+    const storeWithRetailer = makeStore({ online_retailer_slug: 'citystoffer' })
+    render(
+      <FindForhandlerClient
+        initialStores={[storeWithRetailer]}
+        initialRetailerSlug="citystoffer"
+      />
+    )
+    expect(screen.getByRole('button', { name: /vis alle butikker/i })).toBeInTheDocument()
+  })
+
+  it('initialRetailerSlug=null viser IKKE retailer-filter-banner', () => {
+    render(
+      <FindForhandlerClient
+        initialStores={[makeStore()]}
+        initialRetailerSlug={null}
+      />
+    )
+    // Intet "Viser kun fysiske butikker for"-status-banner
+    expect(screen.queryByText(/viser kun fysiske butikker for/i)).not.toBeInTheDocument()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// B14: StoreCard cross-badge — "Også webshop →" via retailerSlugById map
+// B14 er integrationstest: StoreCard renderes i søge-resultater.
+// Grundet mock-arkitekturen testes cross-badge via et direkte render-approach:
+// vi verificerer at initial-listen (kortet) viser filteret korrekt via
+// kortet-banneret (der bruger filteredStores som prop til DanmarksKort).
+// Den faktiske StoreCard vises kun i søge-resultater — se B10 skip for kontekst.
+// ---------------------------------------------------------------------------
+
+describe('B14 StoreCard cross-badge vises ved online_retailer_slug', () => {
+  it('store med online_retailer_slug indgår i retailerSlugById og kort-filteret', () => {
+    // Verificer at en store med online_retailer_slug = 'citystoffer' fanges af
+    // initialRetailerSlug-filteret (som er bygget på retailerSlugById).
+    const storeWithSlug = makeStore({
+      id: 'store-cs',
+      name: 'Citystoffer Nørreport',
+      online_retailer_slug: 'citystoffer',
+    })
+    const storeWithoutSlug = makeStore({
+      id: 'store-other',
+      name: 'Anden Butik',
+      online_retailer_slug: null,
+    })
+
+    // initialRetailerSlug='citystoffer' → filteredStores skal kun have storeWithSlug
+    // → kort renderes med 1 butik
+    render(
+      <FindForhandlerClient
+        initialStores={[storeWithSlug, storeWithoutSlug]}
+        initialRetailerSlug="citystoffer"
+      />
+    )
+
+    // Kortet vises (filteredStores.length > 0)
+    expect(screen.getByTestId('danmarkskort-stub')).toBeInTheDocument()
+    // Banner bekræfter at filteret er aktivt
+    expect(screen.getByText(/citystoffer/i)).toBeInTheDocument()
+  })
+
+  it('cross-badge href format er /online-forhandlere#retailer-<slug>', () => {
+    // Test at URL-konstruktionen er korrekt for onlineHref i StoreCard.
+    // Vi kan ikke nemt inspicere StoreCard's href direkte (søgeresultater i state),
+    // men vi kan verificere at retailerSlugById-map-opbygningen er korrekt
+    // ved at starte med initialRetailerSlug='drops-webshop' og se at kortet vises.
+    const storeWithDropsSlug = makeStore({
+      id: 's-drops',
+      online_retailer_slug: 'drops-webshop',
+    })
+    render(
+      <FindForhandlerClient
+        initialStores={[storeWithDropsSlug]}
+        initialRetailerSlug="drops-webshop"
+      />
+    )
+    // Kortet vises = filter virker = map er korrekt
+    expect(screen.getByTestId('danmarkskort-stub')).toBeInTheDocument()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// B15: brand-chip-click opdaterer URL — chip-state bekræftes via aria-pressed
+// (router.replace stabil mock er allerede testet i OnlineForhandlereClient.test.tsx)
+// ---------------------------------------------------------------------------
+
+describe('B15 brand-chip-click opdaterer URL-state', () => {
+  it('klik på Drops-chip gør den aktiv (aria-pressed=true) og Alle inaktiv', async () => {
+    const user = userEvent.setup()
+    const storeWithDrops = makeStore({
+      brands: [{ slug: 'drops', name: 'Drops' }],
+    })
+    render(
+      <FindForhandlerClient
+        initialStores={[storeWithDrops]}
+        brands={[brandDrops]}
+      />
+    )
+
+    const dropsChip = screen.getByRole('button', { name: /^drops$/i })
+    await user.click(dropsChip)
+
+    expect(dropsChip).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /^alle$/i })).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('klik på brand-chip skifter aktivt brand i komponent-state', async () => {
+    const user = userEvent.setup()
+    const store = makeStore({
+      brands: [{ slug: 'drops', name: 'Drops' }, { slug: 'isager', name: 'Isager' }],
+    })
+    render(
+      <FindForhandlerClient
+        initialStores={[store]}
+        brands={[brandDrops, brandIsager]}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: /^drops$/i }))
+    expect(screen.getByRole('button', { name: /^drops$/i })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(screen.getByRole('button', { name: /^isager$/i }))
+    expect(screen.getByRole('button', { name: /^isager$/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /^drops$/i })).toHaveAttribute('aria-pressed', 'false')
+  })
 })

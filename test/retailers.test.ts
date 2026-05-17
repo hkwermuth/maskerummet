@@ -3,18 +3,40 @@ import { fetchOnlineRetailers, fetchBrands } from '@/lib/data/retailers'
 import type { Brand } from '@/lib/data/retailers'
 
 // ---------------------------------------------------------------------------
-// Hjælper til at bygge en fleksibel Supabase-mock-kæde
+// Hjælper til at bygge en fleksibel Supabase-mock-kæde.
+//
+// fetchOnlineRetailers laver 2 queries:
+//   1. from('online_retailers').select(...).eq(...).order(...)
+//   2. from('stores').select('online_retailer_id').not(...).is(...)
+// Første kald til from() returnerer retailers-kæden, andet kald stores-kæden.
 // ---------------------------------------------------------------------------
 
-function makeSelectChain(resolveWith: { data: unknown; error: unknown }) {
-  const terminal = {
+function makeSelectChain(
+  retailersResult: { data: unknown; error: unknown },
+  storesResult: { data: unknown[]; error: unknown } = { data: [], error: null },
+) {
+  // Stores-kæde: .select().not().is() — resolves med storesResult
+  const storesTerminal = Promise.resolve(storesResult)
+  const storesNotMock = vi.fn(() => storesTerminal)
+  const storesSelectMock = vi.fn(() => ({ not: storesNotMock }))
+  const storesChain = { select: storesSelectMock }
+
+  // Retailers-kæde: .select().eq().order() — resolves med retailersResult
+  const retailersTerminal = {
     then: (resolve: (v: unknown) => unknown) =>
-      Promise.resolve(resolveWith).then(resolve),
+      Promise.resolve(retailersResult).then(resolve),
   }
-  const orderMock = vi.fn(() => terminal)
+  const orderMock = vi.fn(() => retailersTerminal)
   const eqMock = vi.fn(() => ({ order: orderMock }))
   const selectMock = vi.fn(() => ({ eq: eqMock, order: orderMock }))
-  const fromMock = vi.fn(() => ({ select: selectMock }))
+  const retailersChain = { select: selectMock }
+
+  // from() returnerer retailers-kæde ved første kald, stores-kæde ved andet.
+  let callCount = 0
+  const fromMock = vi.fn(() => {
+    callCount++
+    return callCount === 1 ? retailersChain : storesChain
+  })
   return { fromMock, selectMock, eqMock, orderMock }
 }
 

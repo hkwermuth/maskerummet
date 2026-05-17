@@ -20,9 +20,12 @@ export type StoreBase = {
   // Note vises KUN på café-listningen — ikke på almindelig storefinder.
   // Hannahs krav: "Det skal lige nu kun vises når strikkebutikken har en garncafe."
   note: string | null
+  // Slug på tilknyttet online_retailer (hvis butikken også har webshop).
+  // Bruges til "Også webshop"-cross-badge på /find-forhandler.
+  online_retailer_slug: string | null
 }
 
-export type StoreResult = Omit<StoreBase, 'brands'> & {
+export type StoreResult = Omit<StoreBase, 'brands' | 'online_retailer_slug'> & {
   distance_km: number
   // find_stores_near returnerer brands som string[] (array af slugs).
   brands: string[]
@@ -43,12 +46,16 @@ type StoreRow = {
   store_brands: {
     brands: StoreBrandTag | null
   }[] | null
+  online_retailers: {
+    slug: string
+  } | null
 }
 
 const STORE_SELECT = `
   id, name, address, postcode, city, phone, website, lat, lng,
   is_strikkecafe, note,
-  store_brands ( brands ( slug, name ) )
+  store_brands ( brands ( slug, name ) ),
+  online_retailers ( slug )
 `
 
 function mapRow(r: StoreRow): StoreBase {
@@ -64,6 +71,7 @@ function mapRow(r: StoreRow): StoreBase {
     lng: r.lng,
     is_strikkecafe: r.is_strikkecafe ?? false,
     note: r.note,
+    online_retailer_slug: r.online_retailers?.slug ?? null,
     brands: (r.store_brands ?? [])
       .map(sb => sb.brands)
       .filter((b): b is StoreBrandTag => b !== null)

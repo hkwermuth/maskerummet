@@ -76,13 +76,14 @@ describe('A2 fetchAllStores filters lat/lng and sorts by name', () => {
   })
 
   it('returns the data array from supabase when no error', async () => {
-    // StoreRow format inkluderer nu store_brands join — fetchAllStores mapper det til brands: []
+    // StoreRow format inkluderer store_brands + online_retailers join
     const mockRows = [
       {
         id: '1', name: 'Alpaka', address: 'Vejen 1', postcode: '1000',
         city: 'Kbh', phone: null, website: null, lat: 55.7, lng: 12.5,
         is_strikkecafe: false, note: null,
         store_brands: [],
+        online_retailers: null,
       },
     ]
     const supabase = makeSupabase({ data: mockRows, error: null })
@@ -93,6 +94,7 @@ describe('A2 fetchAllStores filters lat/lng and sorts by name', () => {
         city: 'Kbh', phone: null, website: null, lat: 55.7, lng: 12.5,
         is_strikkecafe: false, note: null,
         brands: [],
+        online_retailer_slug: null,
       },
     ])
   })

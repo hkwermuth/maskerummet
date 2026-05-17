@@ -12,6 +12,8 @@ export type Variant =
   | 'forhandler-lup-dk'
   | 'forhandler-pin-nogle'
   | 'forhandler-lille-butik'
+  | 'online-pakke-laptop'
+  | 'cafe-kop-strik'
   | 'projekter-tre-stadier'
   | 'garn-noegle-trio'
   | 'garn-streng'
@@ -70,6 +72,8 @@ function renderVariant(variant: Variant) {
     case 'forhandler-lup-dk':       return <ForhandlerLupDk />
     case 'forhandler-pin-nogle':    return <ForhandlerPinNogle />
     case 'forhandler-lille-butik':  return <ForhandlerLilleButik />
+    case 'online-pakke-laptop':     return <OnlinePakkeLaptop />
+    case 'cafe-kop-strik':          return <CafeKopStrik />
     case 'projekter-tre-stadier':   return <ProjekterTreStadier />
     case 'garn-noegle-trio':        return <GarnNoegleTrio />
     case 'garn-streng':             return <GarnStreng />
@@ -383,6 +387,154 @@ function ForhandlerLilleButik() {
       <circle cx="204" cy="192" r="3" fill="#88A798" />
       <circle cx="210" cy="192" r="3" fill="#88A798" />
       <circle cx="207" cy="188" r="3" fill="#88A798" />
+    </>
+  )
+}
+
+/* ── Online forhandler: Laptop med garnnøgle på skærmen + lille pakke ───── */
+
+function OnlinePakkeLaptop() {
+  return (
+    <>
+      <ellipse cx="140" cy="222" rx="106" ry="5" fill="#302218" fillOpacity="0.07" />
+
+      {/* Laptop-base (fortil) */}
+      <path d="M52 196 L228 196 L240 210 L40 210 Z" fill="#C9B6A4" filter="url(#heroSoftShadow)" />
+      <line x1="60" y1="196" x2="220" y2="196" stroke="#8C7E74" strokeWidth="0.8" opacity="0.5" />
+
+      {/* Laptop-skærm (bagside) */}
+      <path d="M60 196 L60 90 Q60 82 68 82 L212 82 Q220 82 220 90 L220 196 Z" fill="#EDD9D1" filter="url(#heroSoftShadow)" />
+
+      {/* Skærm-viewport (browser) */}
+      <rect x="70" y="94" width="140" height="92" rx="3" fill="#F9F3E9" />
+
+      {/* Browser top-bar */}
+      <rect x="70" y="94" width="140" height="11" fill="#E5DDD9" />
+      <rect x="70" y="94" width="140" height="11" rx="3" fill="#E5DDD9" />
+      <circle cx="76" cy="99" r="1.6" fill="#9B6272" opacity="0.7" />
+      <circle cx="83" cy="99" r="1.6" fill="#C5A572" opacity="0.7" />
+      <circle cx="90" cy="99" r="1.6" fill="#88A798" opacity="0.7" />
+      {/* URL-felt */}
+      <rect x="100" y="96" width="100" height="7" rx="2" fill="#F9F3E9" />
+
+      {/* Garnnøgle på skærmen */}
+      <g transform="translate(110 144)">
+        <circle r="22" fill="#D4ADB6" filter="url(#heroSoftShadow)" />
+        <path d="M-16 -6 Q-6 -14 16 -10" stroke="#FFFCF7" strokeWidth="1.1" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M-18 0 Q-4 -8 18 -4" stroke="#FFFCF7" strokeWidth="1.1" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M-16 6 Q0 0 18 6" stroke="#FFFCF7" strokeWidth="1.1" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        <path d="M-12 14 Q0 10 14 14" stroke="#FFFCF7" strokeWidth="1.1" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        {/* Tråd ned mod knappen */}
+        <path d="M18 10 Q26 22 30 32" stroke="#D4ADB6" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      </g>
+
+      {/* Pris-tag */}
+      <rect x="148" y="124" width="50" height="11" rx="2" fill="#FFFCF7" />
+      <line x1="154" y1="129" x2="172" y2="129" stroke="#9B6272" strokeWidth="1" />
+      <line x1="174" y1="129" x2="192" y2="129" stroke="#8C7E74" strokeWidth="0.8" opacity="0.5" />
+
+      {/* "KØB" CTA-knap på skærmen */}
+      <rect x="148" y="158" width="50" height="16" rx="3" fill="#61846D" />
+      <text
+        x="173"
+        y="170"
+        textAnchor="middle"
+        fontFamily="'DM Sans', sans-serif"
+        fontSize="8"
+        fontWeight="600"
+        fill="#FFFCF7"
+        letterSpacing="0.5"
+      >
+        LÆG I KURV
+      </text>
+
+      {/* Pakke (foran laptop til højre) */}
+      <g transform="translate(218 196)">
+        {/* Box-krop */}
+        <path d="M-20 -2 L20 -2 L20 24 L-20 24 Z" fill="#EDD9D1" filter="url(#heroSoftShadow)" />
+        {/* Box-top */}
+        <path d="M-20 -2 L0 -10 L20 -2 Z" fill="#D9BFC3" />
+        {/* Tape */}
+        <line x1="0" y1="-8" x2="0" y2="24" stroke="#9B6272" strokeWidth="1.6" opacity="0.7" />
+        {/* Label */}
+        <rect x="-13" y="6" width="22" height="12" rx="1.5" fill="#FFFCF7" />
+        <line x1="-9" y1="10" x2="5" y2="10" stroke="#9B6272" strokeWidth="0.9" />
+        <line x1="-9" y1="14" x2="3" y2="14" stroke="#8C7E74" strokeWidth="0.7" opacity="0.55" />
+      </g>
+
+      {/* WiFi-bue oppe over skærmen (subtil) */}
+      <g transform="translate(140 70)" opacity="0.55">
+        <path d="M-10 0 Q0 -8 10 0" stroke="#88A798" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+        <path d="M-6 4 Q0 -1 6 4" stroke="#88A798" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+        <circle cx="0" cy="8" r="1.6" fill="#88A798" />
+      </g>
+    </>
+  )
+}
+
+/* ── Garncafé: Kop med damp + strikketøj + lille kage ─────────────────── */
+
+function CafeKopStrik() {
+  return (
+    <>
+      <ellipse cx="140" cy="222" rx="104" ry="5" fill="#302218" fillOpacity="0.07" />
+
+      {/* Bord-streg (subtil) */}
+      <line x1="38" y1="202" x2="242" y2="202" stroke="#C9B6A4" strokeWidth="1.2" opacity="0.45" />
+
+      {/* Kaffekop (venstre) */}
+      <g transform="translate(82 156)">
+        {/* Krop */}
+        <path d="M-26 -14 L-26 28 Q-26 38 -16 38 L18 38 Q28 38 28 28 L28 -14 Z" fill="#9B6272" filter="url(#heroSoftShadow)" />
+        {/* Kaffe-overflade */}
+        <ellipse cx="1" cy="-14" rx="27" ry="5" fill="#5C3C45" />
+        <ellipse cx="1" cy="-14" rx="22" ry="3.2" fill="#4A2E36" />
+        {/* Hank */}
+        <path d="M28 -2 Q42 6 36 22 Q32 30 28 26" stroke="#9B6272" strokeWidth="5" fill="none" strokeLinecap="round" />
+        {/* Damp */}
+        <path d="M-14 -24 Q-16 -34 -10 -40 Q-4 -44 -8 -52" stroke="#C9B6A4" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeOpacity="0.65" />
+        <path d="M0 -24 Q-2 -34 4 -40 Q8 -44 4 -52" stroke="#C9B6A4" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeOpacity="0.55" />
+        <path d="M12 -24 Q10 -32 16 -36 Q22 -38 18 -46" stroke="#C9B6A4" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeOpacity="0.5" />
+      </g>
+
+      {/* Strikketøj med pinde (højre) */}
+      <g transform="translate(186 154)">
+        {/* Pinde */}
+        <line x1="-22" y1="-12" x2="-30" y2="-42" stroke="#C9B6A4" strokeWidth="2.6" strokeLinecap="round" />
+        <line x1="22" y1="-12" x2="30" y2="-42" stroke="#C9B6A4" strokeWidth="2.6" strokeLinecap="round" />
+        <circle cx="-30" cy="-42" r="3.2" fill="#C9B6A4" />
+        <circle cx="30" cy="-42" r="3.2" fill="#C9B6A4" />
+        {/* Strikkestykke (let bredt forneden) */}
+        <path d="M-22 -12 L22 -12 L20 28 Q0 24 -20 28 Z" fill="#88A798" filter="url(#heroSoftShadow)" />
+        {/* Strikke-rækker */}
+        {[-4, 4, 12, 20].map(y => (
+          <line key={y} x1="-18" y1={y} x2="18" y2={y} stroke="#FFFCF7" strokeOpacity="0.5" strokeWidth="0.8" />
+        ))}
+        {/* Lille garnnøgle nederst-venstre */}
+        <g transform="translate(-14 40)">
+          <circle r="10" fill="#D4ADB6" filter="url(#heroSoftShadow)" />
+          <path d="M-7 -3 Q0 -6 7 -4" stroke="#FFFCF7" strokeWidth="0.9" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+          <path d="M-8 2 Q0 -1 8 2" stroke="#FFFCF7" strokeWidth="0.9" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+          <path d="M-6 7 Q0 4 6 7" stroke="#FFFCF7" strokeWidth="0.9" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+          {/* Tråd op til strikketøj */}
+          <path d="M-2 -9 Q-10 -14 -16 -10" stroke="#D4ADB6" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+        </g>
+      </g>
+
+      {/* Tallerken med lille kage (forrest, midten) */}
+      <g transform="translate(134 200)">
+        {/* Tallerken */}
+        <ellipse cx="0" cy="2" rx="24" ry="5.5" fill="#F9F3E9" filter="url(#heroSoftShadow)" />
+        <ellipse cx="0" cy="2" rx="19" ry="3.2" fill="#EDD9D1" opacity="0.7" />
+        {/* Kage-stykke (lagkage) */}
+        <path d="M-12 -2 L12 -2 L10 -18 L-10 -18 Z" fill="#E2BFC5" />
+        {/* Top-glasur */}
+        <path d="M-10 -18 Q-6 -24 0 -21 Q6 -24 10 -18 Z" fill="#D4ADB6" />
+        {/* Lille bær */}
+        <circle cx="0" cy="-24" r="2.2" fill="#88A798" />
+        {/* Lag-streg */}
+        <line x1="-11" y1="-10" x2="11" y2="-10" stroke="#FFFCF7" strokeWidth="0.8" strokeOpacity="0.6" />
+      </g>
     </>
   )
 }

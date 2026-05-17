@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSupabase } from '@/lib/supabase/client'
 import { HeroIllustration } from '@/components/layout/HeroIllustration'
 import { searchStoresNear, type StoreBase, type StoreResult } from '@/lib/data/stores'
-import type { Brand, OnlineRetailer } from '@/lib/data/retailers'
+import type { Brand } from '@/lib/data/retailers'
+import { HIDDEN_BRAND_SLUGS, orderBrands } from '@/lib/data/retailers'
+import { FilterChip } from '@/components/catalog/FilterChip'
 import type { DanmarksKortHandle } from './DanmarksKortClient'
-import { FilterChip, HIDDEN_BRAND_SLUGS, OnlineRetailersSection, orderBrands } from './OnlineRetailersSection'
 
 const DanmarksKort = dynamic(() => import('./DanmarksKortClient'), {
   ssr: false,
@@ -43,16 +45,23 @@ type GeoError = {
 
 type Props = {
   initialStores: StoreBase[]
-  retailers?: OnlineRetailer[]
   brands?: Brand[]
+  // Brand-slug der præ-aktiverer chip-filter ved page-load (fra ?brand=…)
+  initialBrand?: string | null
+  // Hvis sat: vis kun butikker hvor online_retailer_slug matcher (cross-link
+  // fra /online-forhandlere?retailer=…). Klient kan rydde via "Vis alle".
+  initialRetailerSlug?: string | null
 }
 
 export function FindForhandlerClient({
   initialStores,
-  retailers = [],
   brands = [],
+  initialBrand = null,
+  initialRetailerSlug = null,
 }: Props) {
   const supabase = useSupabase()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const kortRef = useRef<DanmarksKortHandle | null>(null)
   const searchIdRef = useRef(0)
 
@@ -62,8 +71,30 @@ export function FindForhandlerClient({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [geoLoading, setGeoLoading] = useState(false)
-  const [activeBrand, setActiveBrand] = useState<string | null>(null)
+  const [activeBrand, setActiveBrand] = useState<string | null>(initialBrand)
+  const [retailerFilter, setRetailerFilter] = useState<string | null>(initialRetailerSlug)
   const [locationMeta, setLocationMeta] = useState<LocationMeta | null>(null)
+
+  // SEO-fallback: gamle deeplinks til /find-forhandler#online-forhandlere
+  // redirectes til den nye separate side så indhold ikke "forsvinder".
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (window.location.hash === '#online-forhandlere') {
+      router.replace('/online-forhandlere')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Slå online_retailer_slug op pr. butik-id så cross-badge kan vises på
+  // både initial-liste og radius-søgeresultater (StoreResult mangler feltet
+  // fordi RPC ikke joiner det — v2-opgave).
+  const retailerSlugById = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const s of initialStores) {
+      if (s.online_retailer_slug) m.set(s.id, s.online_retailer_slug)
+    }
+    return m
+  }, [initialStores])
 
   // Kun mærker med mindst én fysisk butik vises i chip-listen (mærker uden
   // fysiske butikker kan stadig have online-forhandlere — de vises bare ikke
@@ -79,9 +110,15 @@ export function FindForhandlerClient({
   const orderedBrands = useMemo(() => orderBrands(brandsWithStores), [brandsWithStores])
 
   const filteredStores = useMemo(() => {
-    if (!activeBrand) return initialStores
-    return initialStores.filter(s => s.brands.some(b => b.slug === activeBrand))
-  }, [initialStores, activeBrand])
+    let result = initialStores
+    if (retailerFilter) {
+      result = result.filter(s => s.online_retailer_slug === retailerFilter)
+    }
+    if (activeBrand) {
+      result = result.filter(s => s.brands.some(b => b.slug === activeBrand))
+    }
+    return result
+  }, [initialStores, activeBrand, retailerFilter])
 
   const activeBrandName = activeBrand
     ? brands.find(b => b.slug === activeBrand)?.name ?? null
@@ -249,6 +286,28 @@ export function FindForhandlerClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBrand])
 
+  // Sync brand- og retailer-filter til URL så cross-links bevarer state og
+  // siden kan deles med filter aktivt (?brand=drops&retailer=citystoffer).
+  function syncFiltersToUrl(brand: string | null, retailer: string | null) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (brand) params.set('brand', brand)
+    else params.delete('brand')
+    if (retailer) params.set('retailer', retailer)
+    else params.delete('retailer')
+    const qs = params.toString()
+    router.replace(qs ? `?${qs}` : '?', { scroll: false })
+  }
+
+  function handleBrandChange(slug: string | null) {
+    setActiveBrand(slug)
+    syncFiltersToUrl(slug, retailerFilter)
+  }
+
+  function clearRetailerFilter() {
+    setRetailerFilter(null)
+    syncFiltersToUrl(activeBrand, null)
+  }
+
   // Genskab sidste placering fra sessionStorage så brugeren ikke mister "min placering"
   // ved navigation tilbage til siden eller ved gentagne radius-skift (ipapi.co rate-limit).
   useEffect(() => {
@@ -291,10 +350,10 @@ export function FindForhandlerClient({
             </h1>
             <p style={{ fontSize: 14.5, color: '#6B5D4F', margin: '6px 0 0', maxWidth: 640, lineHeight: 1.55 }}>
               Søg på by, brug din placering eller udforsk kortet. Du kan også{' '}
-              <a href="#online-forhandlere" style={{ color: '#61846D', fontWeight: 500 }}>
-                gå direkte til online-oversigten
+              <a href="/online-forhandlere" style={{ color: '#61846D', fontWeight: 500 }}>
+                købe garn online
               </a>{' '}
-              og se hvem der forhandler dit yndlingsmærke. Du kan også finde{' '}
+              eller finde{' '}
               <a href="/strikkecafeer" style={{ color: '#61846D', fontWeight: 500 }}>
                 butikker med strikkecafé
               </a>
@@ -450,7 +509,47 @@ export function FindForhandlerClient({
         </form>
       </div>
 
-      {/* Mærke-filter over kortet — styrer både kort, resultater og online-sektion */}
+      {/* Cross-link banner — vist når brugeren kommer fra /online-forhandlere?retailer=… */}
+      {retailerFilter && (
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '14px 24px 0' }}>
+          <div
+            role="status"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '10px 14px',
+              background: '#E0EBE3',
+              border: '1px solid #A8C4B1',
+              borderRadius: 8,
+              fontSize: 13,
+              color: '#3E5B47',
+              flexWrap: 'wrap',
+            }}
+          >
+            <span aria-hidden="true">📍</span>
+            <span>Viser kun fysiske butikker for <strong>{capitalize(retailerFilter)}</strong></span>
+            <button
+              type="button"
+              onClick={clearRetailerFilter}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#3E5B47',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                fontSize: 13,
+                padding: 0,
+                fontFamily: "'DM Sans', sans-serif",
+              }}
+            >
+              Vis alle butikker
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mærke-filter over kortet — styrer både kort og resultater */}
       {orderedBrands.length > 0 && (
         <div style={{ maxWidth: 1080, margin: '0 auto', padding: '14px 24px 0' }}>
           <div
@@ -473,14 +572,14 @@ export function FindForhandlerClient({
             <FilterChip
               label="Alle"
               active={activeBrand === null}
-              onClick={() => setActiveBrand(null)}
+              onClick={() => handleBrandChange(null)}
             />
             {orderedBrands.map(brand => (
               <FilterChip
                 key={brand.slug}
                 label={brand.name}
                 active={activeBrand === brand.slug}
-                onClick={() => setActiveBrand(brand.slug)}
+                onClick={() => handleBrandChange(brand.slug)}
               />
             ))}
           </div>
@@ -506,15 +605,15 @@ export function FindForhandlerClient({
             Vi har ikke registreret hvilke fysiske butikker der fører <strong>{activeBrandName}</strong> endnu.
             <br />
             <a
-              href="#online-forhandlere"
+              href={`/online-forhandlere?brand=${encodeURIComponent(activeBrand ?? '')}`}
               style={{ color: '#61846D', fontWeight: 500, textDecoration: 'underline' }}
             >
-              Se webshops der fører {activeBrandName} ↓
+              Se webshops der fører {activeBrandName} →
             </a>
             {' '}eller{' '}
             <button
               type="button"
-              onClick={() => setActiveBrand(null)}
+              onClick={() => handleBrandChange(null)}
               style={{
                 background: 'transparent', border: 'none', padding: 0,
                 color: '#61846D', fontSize: 13.5, cursor: 'pointer',
@@ -575,15 +674,18 @@ export function FindForhandlerClient({
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {results.stores.map(store => (
-                  <StoreCard key={store.id} store={store} />
+                  <StoreCard
+                    key={store.id}
+                    store={store}
+                    onlineRetailerSlug={retailerSlugById.get(store.id) ?? null}
+                    activeBrandSlug={activeBrand}
+                  />
                 ))}
               </div>
             )}
           </>
         )}
       </div>
-
-      <OnlineRetailersSection retailers={retailers} brands={brands} activeBrand={activeBrand} />
     </div>
   )
 }
@@ -622,13 +724,25 @@ function renderLocationStatus(meta: LocationMeta) {
   return <span>✓ Søger fra {meta.label}</span>
 }
 
-function StoreCard({ store }: { store: StoreResult }) {
+function StoreCard({
+  store,
+  onlineRetailerSlug,
+  activeBrandSlug,
+}: {
+  store: StoreResult
+  onlineRetailerSlug: string | null
+  activeBrandSlug: string | null
+}) {
   const websiteHref = store.website
     ? store.website.startsWith('http')
       ? store.website
       : `https://${store.website}`
     : null
   const address = [store.address, store.postcode, store.city].filter(Boolean).join(', ')
+  // Cross-link til online-side bevarer aktivt brand-filter hvis sat.
+  const onlineHref = onlineRetailerSlug
+    ? `/online-forhandlere${activeBrandSlug ? `?brand=${encodeURIComponent(activeBrandSlug)}` : ''}#retailer-${encodeURIComponent(onlineRetailerSlug)}`
+    : null
   return (
     <div style={{
       background: '#FFFCF7', borderRadius: 10, padding: '14px 16px',
@@ -642,6 +756,29 @@ function StoreCard({ store }: { store: StoreResult }) {
           <span style={{ fontSize: 11, background: '#E5DDD9', color: '#302218', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>
             {store.distance_km} km
           </span>
+          {onlineHref && (
+            <a
+              href={onlineHref}
+              aria-label={`${store.name} har også webshop — gå til online-forhandlere`}
+              style={{
+                fontSize: 12.5,
+                background: '#E0EBE3',
+                color: '#3E5B47',
+                border: '1px solid #A8C4B1',
+                borderRadius: 999,
+                padding: '10px 14px',
+                minHeight: 44,
+                whiteSpace: 'nowrap',
+                textDecoration: 'none',
+                fontWeight: 500,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+              }}
+            >
+              <span aria-hidden="true">🌐</span> Også webshop →
+            </a>
+          )}
         </div>
         <div style={{ fontSize: 13.5, color: '#6B5D4F' }}>{address}</div>
       </div>
@@ -666,6 +803,14 @@ function StoreCard({ store }: { store: StoreResult }) {
       </div>
     </div>
   )
+}
+
+// Pragmatisk display-format for retailer-slug i banner — siden henter ikke
+// retailers-data længere, så vi har kun slug ved hånden. Capitalize giver
+// pænt visning for langt de fleste navne ("citystoffer" → "Citystoffer").
+function capitalize(s: string): string {
+  if (!s) return ''
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 function KortSkeleton() {

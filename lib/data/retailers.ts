@@ -18,6 +18,28 @@ export type OnlineRetailer = {
   leverer_til_dk: boolean
   sidst_tjekket: string | null
   brands: Brand[]
+  // Antal fysiske butikker der peger på denne webshop via stores.online_retailer_id.
+  // Bruges til at vise "Også fysisk butik"-cross-badge på /online-forhandlere.
+  physical_store_count: number
+}
+
+// Mærker fremhævet øverst i brand-filtre.
+export const FEATURED_BRAND_SLUGS = ['drops', 'permin', 'filcolana'] as const
+
+// Mærker der midlertidigt skjules overalt på siden (for få forhandlere, lille
+// dansk tilstedeværelse). Data bliver i databasen — kan reaktiveres ved at
+// fjerne slug herfra.
+export const HIDDEN_BRAND_SLUGS = new Set(['hillesvag', 'holst', 'hobbii', 'novita'])
+
+// Sortér brands så Drops, Permin, Filcolana ligger først; derefter alfabetisk.
+export function orderBrands(brands: Brand[]): Brand[] {
+  const featured = FEATURED_BRAND_SLUGS
+    .map(slug => brands.find(b => b.slug === slug))
+    .filter((b): b is Brand => Boolean(b))
+  const rest = brands
+    .filter(b => !FEATURED_BRAND_SLUGS.includes(b.slug as (typeof FEATURED_BRAND_SLUGS)[number]))
+    .sort((a, b) => a.name.localeCompare(b.name, 'da'))
+  return [...featured, ...rest]
 }
 
 type RetailerRow = {
@@ -51,6 +73,22 @@ export async function fetchOnlineRetailers(
     console.error('fetchOnlineRetailers', error)
     return []
   }
+
+  // Tæl fysiske butikker pr. online_retailer_id i én ekstra query.
+  // Returneres ikke aggregeret af PostgREST — vi laver mapping i memory.
+  const { data: storeRows, error: storesError } = await supabase
+    .from('stores')
+    .select('online_retailer_id')
+    .not('online_retailer_id', 'is', null)
+  if (storesError) {
+    console.error('fetchOnlineRetailers (count)', storesError)
+  }
+  const countByRetailer = new Map<string, number>()
+  for (const row of (storeRows ?? []) as { online_retailer_id: string | null }[]) {
+    if (!row.online_retailer_id) continue
+    countByRetailer.set(row.online_retailer_id, (countByRetailer.get(row.online_retailer_id) ?? 0) + 1)
+  }
+
   const rows = (data ?? []) as unknown as RetailerRow[]
   return rows.map(r => ({
     id: r.id,
@@ -65,6 +103,7 @@ export async function fetchOnlineRetailers(
       .map(rb => rb.brands)
       .filter((b): b is Brand => b !== null)
       .sort((a, b) => a.name.localeCompare(b.name, 'da')),
+    physical_store_count: countByRetailer.get(r.id) ?? 0,
   }))
 }
 
