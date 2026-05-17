@@ -2,7 +2,7 @@
 
 Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
-**Sidst synkroniseret:** 2026-05-16 (8.10 + 8.11 shippet; Excel-sync; nav-hub "Fællesskab" omdøbt til "Mød andre")
+**Sidst synkroniseret:** 2026-05-17 (forhandler-split shippet + visuel iteration; nav-hub "Mød andre" omdøbt til "Strikkeliv")
 
 ---
 
@@ -89,7 +89,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
 ### Layout og navigation
 - Glassmorphism-navigation med auth-gating (`components/layout/Nav.tsx`)
-- **Nav-hub "Fællesskab" omdøbt til "Mød andre" og flyttet før Striqipedia (2026-05-16, commit `338ccba`)** — fjernede forvirring mellem hub-label og subitem "Fællesskabet". URLs og subitems uændret (`/faellesskab` hub stadig, `/faellesskabet`/`/kalender`/"Dele strik" subitems intakte).
+- **Nav-hub omdøbt: "Fællesskab" → "Mød andre" → "Strikkeliv" (sidst 2026-05-17)** — første rename fjernede forvirring mellem hub-label og subitem "Fællesskabet"; anden rename undgik konflikt med "Garnbutikker & caféer" (caféer er også et mødested). URLs og subitems uændret (`/faellesskab` hub stadig, `/faellesskabet`/`/kalender`/"Dele strik" subitems intakte).
 - Footer med privatlivspolitik-link og kontakt-email (`components/layout/Footer.tsx`)
 - Roterende baggrunds-karussel (`components/layout/BackgroundCarousel.tsx`)
 - Forside med feature-cards (`app/page.tsx`, `FeatureCards.tsx`)

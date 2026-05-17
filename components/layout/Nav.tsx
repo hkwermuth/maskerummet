@@ -44,7 +44,7 @@ const NAV_LINKS: NavLink[] = [
     ],
   },
   {
-    label: 'Mød andre',
+    label: 'Strikkeliv',
     subitems: [
       { href: '/faellesskabet', label: 'Fællesskabet' },
       { href: '/kalender',      label: 'Kalender' },
