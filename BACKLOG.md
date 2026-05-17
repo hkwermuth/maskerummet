@@ -2,7 +2,7 @@
 
 Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
-**Sidst synkroniseret:** 2026-05-12 (launch-dato fastsat til 2026-05-19 + kvalitetsreview-fund tilføjet som sektion 8)
+**Sidst synkroniseret:** 2026-05-16 (8.10 + 8.11 shippet; Excel-sync; nav-hub "Fællesskab" omdøbt til "Mød andre")
 
 ---
 
@@ -89,6 +89,7 @@ Sandhed for hvad der er lavet, i gang og ønsket. Opdateres via `/backlog sync`.
 
 ### Layout og navigation
 - Glassmorphism-navigation med auth-gating (`components/layout/Nav.tsx`)
+- **Nav-hub "Fællesskab" omdøbt til "Mød andre" og flyttet før Striqipedia (2026-05-16, commit `338ccba`)** — fjernede forvirring mellem hub-label og subitem "Fællesskabet". URLs og subitems uændret (`/faellesskab` hub stadig, `/faellesskabet`/`/kalender`/"Dele strik" subitems intakte).
 - Footer med privatlivspolitik-link og kontakt-email (`components/layout/Footer.tsx`)
 - Roterende baggrunds-karussel (`components/layout/BackgroundCarousel.tsx`)
 - Forside med feature-cards (`app/page.tsx`, `FeatureCards.tsx`)
@@ -664,11 +665,11 @@ Manuelt: garnlager-flow + arkiv-flow på mobil.
 
 - **Post-launch ideal**: konvertér begge til `.tsx`
 
-### 8.10 Topnavigation virker ikke på laptop i Edge og Chrome — BLOKERENDE (2026-05-14, fra Hannah)
-Dropdown-menuer i topnavigationen (`components/layout/Nav.tsx`) virker ikke korrekt på laptop i Edge og Chrome — kun det øverste menupunkt kan vælges. Sandsynligvis en CSS hover/pointer-events-fejl der ikke rammer mobil (touch). Skal reproduceres og fixes inden launch da desktop er primær platform for testbrugerne. Kør med: `/ny-feature Fix topnavigation dropdown på laptop (Edge + Chrome)`
+### ~~8.10 Topnavigation virker ikke på laptop i Edge og Chrome~~ — SHIPPET (commit `79546ff`, 2026-05-15)
+CSS-fix i `components/layout/Nav.tsx`: `top: '100%'` + `paddingTop: 10` erstattede gap'et der lukkede dropdown'en utilsigtet ved mus-bevægelse til sub-item. Plan + arkitekt + tester + reviewer kørt.
 
-### 8.11 Login sender altid til /garnlager — skal sende tilbage til siden man kom fra (2026-05-14, fra Hannah)
-`resolveNext()`-infrastrukturen og `?next=`-parameteren eksisterer allerede, men login-knapper og LoginGate sender ikke altid den aktuelle URL med som `?next=`. Resultat: login sender altid til `/garnlager` uanset hvilken side brugeren stod på. Forventet opførsel: hvis bruger besøger `/opskrifter` og trykker "Log ind", skal de returneres til `/opskrifter` efter login. Kræver at `Nav.tsx`'s login-link og evt. `LoginGate` sætter `?next=<aktuel-sti>` korrekt — og at whitelisten i `ALLOWED_NEXT_PATHS` (`lib/auth/resolveNext.ts`) udvides til at dække alle relevante sider (pt. mangler fx `/opskrifter`, `/find-forhandler`, `/faq`, `/faellesskabet`). Kør med: `/ny-feature Login redirect til siden man kom fra`
+### ~~8.11 Login sender altid til /garnlager — skal sende tilbage til siden man kom fra~~ — SHIPPET (commit `0f0667e`, 2026-05-15)
+`ALLOWED_NEXT_PATHS` i `lib/auth/resolveNext.ts` udvidet fra 8 til 22 stier. Tests udvidet med AC8–AC15 (parametrisk `it.each`), 58/58 tests grønne.
 
 ### 8.9 BØR-FIXES inden launch (bonus hvis tid tillader)
 - ~~**user_profiles mangler create-migration**~~ — **shippet** (commit `cf7b088`, bootstrap-migration tilføjet)
@@ -979,6 +980,8 @@ Kør med (efter launch): `/ny-feature Garncafé-anmeldelser med rul på forsiden
 - **Visualizer: se dig selv i en trøje** — avanceret AI-feature
 - **Hækling** — udvide scope til hækling (fra Excel)
 - **Offentlig forhandler-søgning med mere data** — udvide brands og butiks-database
+- **Komprimér billeder ved upload (2026-05-16, fra Excel)** — brugere uploader billeder til garn og projekter uden at komprimering sker klient-side. Risiko: store filer, langsom upload på mobil, Supabase Storage-kvote. Løsning: klient-side komprimering via `browser-image-compression`-pakke (eller Canvas API) inden upload. Mål: < 500 KB pr. billede, max-bredde 1200px. Berørte steder: billede-upload i `Garnlager.jsx` (garn-foto), `Arkiv.jsx` (projekt-billeder + opskrift-billeder). Estimat: S (~4t). Kør med: `/ny-feature Klient-side billedkomprimering ved upload`.
+- **Finde min farvepalette (2026-05-16, fra Excel)** — bruger ønsker at opdage sin personlige farvepalette baseret på de garner hun har eller har brugt. Kan starte som simpelt: vis de hex-farver brugeren har registreret i `yarn_items` som en samlet palet. Avanceret: farveteori-forslag til næste projekt baseret på eksisterende lager. Estimat: S for simpel visning, L for farveteori-lag. KAN-VENTE efter testbrugere.
 
 **Fra Hannah (research-spike 2026-05-06): Daglig pris-scraping med "billigste pris" på katalog-kort + detalje-side**
 
@@ -1063,9 +1066,26 @@ Synergi med eksisterende KAN-VENTE-emner: "Køb garn til opskriften"-flow (2026-
 
 ## Anbefalet næste skridt
 
-1. **Verificer email-bekræftelse** i Supabase-dashboardet
-2. **Mobil-test** af garnlager + projekter på < 640px
-3. Overvej **onboarding-flow** til nye brugere (`/ny-feature Onboarding: velkomst-modal til ny bruger ved første login`)
+*(Opdateret 2026-05-16 — 3 dage til launch 2026-05-19)*
+
+**Stadig åbne blokere (4 dage til launch):**
+
+1. **Punkt 1: Verificer email-bekræftelse** i Supabase Authentication-dashboard — 15 min, nul kode.
+2. **Punkt 2: Mobil-test** af garnlager + projekter på < 640px — bruger-ansvar, nul kode.
+3. **Punkt 3: Onboarding-velkomsttekst** (`OnboardingModal.tsx` SECTIONS linje 11-31) — Hannah gennemlæser og retter copy.
+4. **Punkt 4: Fold-ud-redesign af Tilføj garn + pris-felt** (sektion 6) — stadig åben, launch-blokerende. Kør: `/ny-feature Fold-ud-redesign af Tilføj garn-modal + valgfrit pris-felt`
+5. **Punkt 5: Feedback-knap + admin-metrics** (sektion 7) — stadig åben, launch-blokerende. Kør: `/ny-feature Feedback-knap + adfærds-tracking + admin-metrics-dashboard`
+6. **Punkt 5.1–5.6 (infra)** — verificér migrations kørt i prod, secrets-audit, email-bekræftelse (overlap med 1).
+7. **Punkt 8.1 Next.js 15.5.18-bump** — verificér om dette er kørt; CVE'er er stadig åbne hvis ikke.
+8. **Punkt 8.2 Admin-e-mails ud af klient-bundle** — verificér status.
+9. **Punkt 8.4 In-app data-eksport** + **8.5 Slet-konto** — GDPR-blokere, stadig åbne.
+
+**Rækkefølge 16–19 maj:**
+
+- Lør 16/5: 8.4 + 8.5 (`/ny-feature In-app data-eksport og slet-konto`)
+- Søn 17/5: Punkt 6 (`/ny-feature Fold-ud-redesign af Tilføj garn-modal + valgfrit pris-felt`)
+- Man 18/5: Punkt 7 (feedback-knap, ekstern formular hvis tidsnød) + infra-verifikation
+- Tirs 19/5: LAUNCH
 4. **A11y-pass** (nice-to-have fra review): touch-targets ≥ 44px, `role="alert"` på fejl-bannere, `role="dialog"` + fokus-trap på modaler, fokus-flytning til bekræftelses-knapper
 
 ---

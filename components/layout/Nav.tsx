@@ -15,7 +15,7 @@ type SubItem = {
 }
 
 type NavLink = {
-  href: string
+  href?: string
   label: string
   subitems?: SubItem[]
 }
@@ -26,7 +26,6 @@ type NavLink = {
 const NAV_LINKS: NavLink[] = [
   { href: '/', label: 'Hjem' },
   {
-    href: '/mit-striq',
     label: 'Mit STRIQ',
     subitems: [
       { href: '/garnlager',        label: 'Mit garn' },
@@ -35,43 +34,39 @@ const NAV_LINKS: NavLink[] = [
     ],
   },
   {
-    href: '/opskrifter-og-garn',
     label: 'Opskrifter & garn',
     subitems: [
-      { href: '/opskrifter',           label: 'Opskrifter' },
-      { href: '/garn',                 label: 'Find garn' },
-      { href: '/visualizer',           label: 'Prøv farven med AI' },
-      { href: '/opskrifter-og-garn',   label: 'Erstatningsmotor', comingSoon: true },
-      { href: '/opskrifter-og-garn',   label: 'Opskrift ↔ garn-match', comingSoon: true },
+      { href: '/opskrifter',         label: 'Opskrifter' },
+      { href: '/garn',               label: 'Find garn' },
+      { href: '/visualizer',         label: 'Prøv farven med AI' },
+      { href: '#',                   label: 'Erstatningsmotor', comingSoon: true },
+      { href: '#',                   label: 'Opskrift ↔ garn-match', comingSoon: true },
     ],
   },
   {
-    href: '/faellesskab',
     label: 'Mød andre',
     subitems: [
       { href: '/faellesskabet', label: 'Fællesskabet' },
       { href: '/kalender',      label: 'Kalender' },
-      { href: '/faellesskab',   label: 'Dele strik', comingSoon: true },
+      { href: '#',              label: 'Dele strik', comingSoon: true },
     ],
   },
   {
-    href: '/striqipedia',
     label: 'Striqipedia',
     subitems: [
       { href: '/faq',           label: 'FAQ & how-to' },
       { href: '/strikkeskolen', label: 'Strikkeskolen' },
-      { href: '/striqipedia',   label: 'Fibre & garntyper', comingSoon: true },
-      { href: '/striqipedia',   label: 'Certificeringer', comingSoon: true },
-      { href: '/striqipedia',   label: 'Bøger, podcasts & YouTube', comingSoon: true },
+      { href: '#',              label: 'Fibre & garntyper', comingSoon: true },
+      { href: '#',              label: 'Certificeringer', comingSoon: true },
+      { href: '#',              label: 'Bøger, podcasts & YouTube', comingSoon: true },
     ],
   },
   {
-    href: '/garnbutikker',
     label: 'Garnbutikker & caféer',
     subitems: [
-      { href: '/find-forhandler', label: 'Fysiske butikker' },
-      { href: '/strikkecafeer',   label: 'Garncaféer' },
-      { href: '/garnbutikker',    label: 'Online forhandlere', comingSoon: true },
+      { href: '/find-forhandler',    label: 'Fysiske butikker' },
+      { href: '/strikkecafeer',      label: 'Garncaféer' },
+      { href: '/online-forhandlere', label: 'Online forhandlere' },
     ],
   },
 ]
@@ -127,8 +122,7 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
 
   const isActive = (link: NavLink) => {
     if (link.href === '/') return pathname === '/'
-    if (pathname === link.href || pathname.startsWith(link.href + '/')) return true
-    // Hub-fanen lyser op når man er på en af dens undersider.
+    if (link.href && (pathname === link.href || pathname.startsWith(link.href + '/'))) return true
     return Boolean(link.subitems?.some(s => !s.comingSoon && (pathname === s.href || pathname.startsWith(s.href + '/'))))
   }
 
@@ -211,54 +205,55 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
           {visibleLinks.map(link => {
             const active = isActive(link)
             const hasSub = Boolean(link.subitems && link.subitems.length > 0)
-            const isOpen = openDropdown === link.href
+            const isOpen = openDropdown === link.label
+
+            const tabStyle: React.CSSProperties = {
+              background:           active ? 'rgba(244, 239, 230, 0.72)' : 'transparent',
+              backdropFilter:       active ? 'blur(10px)' : 'none',
+              WebkitBackdropFilter: active ? 'blur(10px)' : 'none',
+              color:                active ? '#302218' : 'rgba(48,34,24,0.72)',
+              border:               active ? '1px solid rgba(48,34,24,0.08)' : '1px solid transparent',
+              borderRadius:         '999px',
+              padding:              '7px 14px',
+              fontSize:             '13.5px',
+              fontWeight:           active ? 500 : 400,
+              fontFamily:           "'DM Sans', sans-serif",
+              cursor:               'pointer',
+              letterSpacing:        '.01em',
+              transition:           'background .15s, color .15s',
+              whiteSpace:           'nowrap',
+              textDecoration:       'none',
+              display:              'inline-block',
+            }
 
             return (
               <div
-                key={link.href}
+                key={link.label}
                 style={{ position: 'relative' }}
-                onMouseEnter={() => hasSub && setOpenDropdown(link.href)}
-                onMouseLeave={() => setOpenDropdown(prev => (prev === link.href ? null : prev))}
-                onFocusCapture={() => hasSub && setOpenDropdown(link.href)}
+                onMouseEnter={() => hasSub && setOpenDropdown(link.label)}
+                onMouseLeave={() => setOpenDropdown(prev => (prev === link.label ? null : prev))}
+                onFocusCapture={() => hasSub && setOpenDropdown(link.label)}
                 onBlur={e => {
-                  // Luk dropdown når fokus forlader hele hub-gruppen
                   if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-                    setOpenDropdown(prev => (prev === link.href ? null : prev))
+                    setOpenDropdown(prev => (prev === link.label ? null : prev))
                   }
                 }}
               >
-                <Link
-                  href={link.href}
-                  aria-haspopup={hasSub ? 'menu' : undefined}
-                  aria-expanded={hasSub ? isOpen : undefined}
-                  onKeyDown={e => {
-                    // Enter/Space toggles dropdown frem for at navigere, når der er subitems
-                    if (hasSub && (e.key === 'Enter' || e.key === ' ')) {
-                      e.preventDefault()
-                      setOpenDropdown(prev => (prev === link.href ? null : link.href))
-                    }
-                  }}
-                  style={{
-                    background:         active ? 'rgba(244, 239, 230, 0.72)' : 'transparent',
-                    backdropFilter:     active ? 'blur(10px)' : 'none',
-                    WebkitBackdropFilter: active ? 'blur(10px)' : 'none',
-                    color:              active ? '#302218' : 'rgba(48,34,24,0.72)',
-                    border:             active ? '1px solid rgba(48,34,24,0.08)' : '1px solid transparent',
-                    borderRadius:       '999px',
-                    padding:            '7px 14px',
-                    fontSize:           '13.5px',
-                    fontWeight:         active ? 500 : 400,
-                    fontFamily:         "'DM Sans', sans-serif",
-                    cursor:             'pointer',
-                    letterSpacing:      '.01em',
-                    transition:         'background .15s, color .15s',
-                    whiteSpace:         'nowrap',
-                    textDecoration:     'none',
-                    display:            'inline-block',
-                  }}
-                >
-                  {link.label}
-                </Link>
+                {hasSub ? (
+                  <button
+                    type="button"
+                    aria-haspopup="menu"
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenDropdown(prev => prev === link.label ? null : link.label)}
+                    style={tabStyle}
+                  >
+                    {link.label}
+                  </button>
+                ) : (
+                  <Link href={link.href!} style={tabStyle}>
+                    {link.label}
+                  </Link>
+                )}
 
                 {/* Dropdown */}
                 {hasSub && isOpen && (
@@ -415,16 +410,42 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
               {visibleLinks.map(link => {
                 const active = isActive(link)
                 const hasSub = Boolean(link.subitems && link.subitems.length > 0)
-                const expanded = expandedMobileHub === link.href
+                const expanded = expandedMobileHub === link.label
 
                 return (
-                  <li key={link.href}>
-                    <div style={{ display: 'flex', alignItems: 'stretch', gap: 4 }}>
+                  <li key={link.label}>
+                    {hasSub ? (
+                      <button
+                        type="button"
+                        onClick={() => setExpandedMobileHub(prev => prev === link.label ? null : link.label)}
+                        aria-expanded={expanded}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          minHeight: 48,
+                          padding: '10px 14px',
+                          borderRadius: 10,
+                          fontSize: 15,
+                          fontFamily: "'DM Sans', sans-serif",
+                          fontWeight: active ? 500 : 400,
+                          color: active ? '#302218' : 'rgba(48,34,24,0.82)',
+                          background: active ? 'rgba(255,255,255,0.55)' : 'transparent',
+                          border: active ? '1px solid rgba(48,34,24,0.08)' : '1px solid transparent',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <span>{link.label}</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }}>
+                          <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </button>
+                    ) : (
                       <Link
-                        href={link.href}
+                        href={link.href!}
                         onClick={() => setMenuOpen(false)}
                         style={{
-                          flex: 1,
                           display: 'flex',
                           alignItems: 'center',
                           minHeight: 48,
@@ -441,31 +462,7 @@ export function Nav({ onRequestLogin }: { onRequestLogin?: () => void }) {
                       >
                         {link.label}
                       </Link>
-                      {hasSub && (
-                        <button
-                          type="button"
-                          onClick={() => setExpandedMobileHub(prev => prev === link.href ? null : link.href)}
-                          aria-label={expanded ? `Skjul undermenu for ${link.label}` : `Vis undermenu for ${link.label}`}
-                          aria-expanded={expanded}
-                          style={{
-                            minWidth: 48,
-                            minHeight: 48,
-                            background: 'transparent',
-                            border: '1px solid transparent',
-                            borderRadius: 10,
-                            cursor: 'pointer',
-                            color: 'rgba(48,34,24,0.6)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }}>
-                            <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
+                    )}
 
                     {/* Undermenu i drawer */}
                     {hasSub && expanded && (
