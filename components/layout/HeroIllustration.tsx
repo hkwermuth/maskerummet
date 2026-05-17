@@ -14,6 +14,7 @@ export type Variant =
   | 'forhandler-lille-butik'
   | 'online-pakke-laptop'
   | 'cafe-kop-strik'
+  | 'favoritter-noegle-bog'
   | 'projekter-tre-stadier'
   | 'garn-noegle-trio'
   | 'garn-streng'
@@ -74,6 +75,7 @@ function renderVariant(variant: Variant) {
     case 'forhandler-lille-butik':  return <ForhandlerLilleButik />
     case 'online-pakke-laptop':     return <OnlinePakkeLaptop />
     case 'cafe-kop-strik':          return <CafeKopStrik />
+    case 'favoritter-noegle-bog':   return <FavoritterNoegleBog />
     case 'projekter-tre-stadier':   return <ProjekterTreStadier />
     case 'garn-noegle-trio':        return <GarnNoegleTrio />
     case 'garn-streng':             return <GarnStreng />
@@ -534,6 +536,69 @@ function CafeKopStrik() {
         <circle cx="0" cy="-24" r="2.2" fill="#88A798" />
         {/* Lag-streg */}
         <line x1="-11" y1="-10" x2="11" y2="-10" stroke="#FFFCF7" strokeWidth="0.8" strokeOpacity="0.6" />
+      </g>
+    </>
+  )
+}
+
+/* ── Mine favoritter: Garnnøgle med hjerte-tag + lille opskriftsbog ────── */
+
+function FavoritterNoegleBog() {
+  return (
+    <>
+      <ellipse cx="140" cy="222" rx="104" ry="5" fill="#302218" fillOpacity="0.07" />
+
+      {/* Lille opskriftsbog bagved (højre) */}
+      <g transform="translate(196 162)">
+        {/* Bog-omslag */}
+        <path d="M-32 -48 L26 -52 L26 38 L-32 36 Z" fill="#EDD9D1" filter="url(#heroSoftShadow)" />
+        {/* Side-flade (venstre side, åben effekt) */}
+        <path d="M-32 -48 L-40 -42 L-40 42 L-32 36 Z" fill="#C9B6A4" />
+        {/* Forside-detaljer */}
+        <line x1="-22" y1="-32" x2="14" y2="-34" stroke="#9B6272" strokeWidth="1.4" strokeLinecap="round" />
+        <line x1="-22" y1="-22" x2="6" y2="-24" stroke="#8C7E74" strokeWidth="0.9" strokeOpacity="0.6" />
+        <line x1="-22" y1="-14" x2="10" y2="-16" stroke="#8C7E74" strokeWidth="0.9" strokeOpacity="0.6" />
+        {/* Hjerte-bookmark der stikker ud i toppen */}
+        <g transform="translate(8 -52)">
+          <path d="M0 8 L-7 1 Q-10 -3 -7 -6 Q-4 -8 0 -4 Q4 -8 7 -6 Q10 -3 7 1 Z" fill="#9B6272" filter="url(#heroSoftShadow)" />
+        </g>
+      </g>
+
+      {/* Stor garnnøgle (forrest, midten-venstre) */}
+      <g transform="translate(118 164)">
+        {/* Skygge bag nøglen, så bogen virker bagved */}
+        <circle r="50" fill="#D4ADB6" filter="url(#heroSoftShadow)" />
+        {/* Garn-tråd-linjer */}
+        <path d="M-38 -16 Q-14 -34 36 -28" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeOpacity="0.72" strokeLinecap="round" />
+        <path d="M-42 -4 Q-12 -22 40 -12" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeOpacity="0.72" strokeLinecap="round" />
+        <path d="M-44 8 Q-10 -4 42 4" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeOpacity="0.72" strokeLinecap="round" />
+        <path d="M-42 20 Q-6 14 40 18" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeOpacity="0.72" strokeLinecap="round" />
+        <path d="M-34 32 Q0 28 36 32" stroke="#FFFCF7" strokeWidth="1.6" fill="none" strokeOpacity="0.72" strokeLinecap="round" />
+
+        {/* Tråd der løber ud af nøglen og holder hjerte-tag'en */}
+        <path d="M42 -22 Q60 -28 76 -22 Q86 -16 80 -4" stroke="#D4ADB6" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+
+        {/* Hjerte-tag på snoren */}
+        <g transform="translate(82 4)">
+          {/* Lille hul (hvor snoren går igennem) */}
+          <circle cx="0" cy="-8" r="1.6" fill="#FFFCF7" stroke="#9B6272" strokeWidth="0.8" />
+          {/* Selve hjerte-formen */}
+          <path
+            d="M0 14 L-12 2 Q-17 -4 -12 -10 Q-7 -14 0 -6 Q7 -14 12 -10 Q17 -4 12 2 Z"
+            fill="#9B6272"
+            filter="url(#heroSoftShadow)"
+          />
+          {/* Lille glans */}
+          <path d="M-6 -6 Q-2 -8 2 -4" stroke="#FFFCF7" strokeWidth="1.2" fill="none" strokeOpacity="0.7" strokeLinecap="round" />
+        </g>
+      </g>
+
+      {/* Lille ekstra hjerte svævende (decor, øverst venstre) */}
+      <g transform="translate(58 96)" opacity="0.85">
+        <path
+          d="M0 8 L-7 1 Q-10 -3 -7 -6 Q-4 -8 0 -4 Q4 -8 7 -6 Q10 -3 7 1 Z"
+          fill="#D4ADB6"
+        />
       </g>
     </>
   )

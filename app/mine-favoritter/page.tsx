@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { loadRecipes } from '@/lib/data/recipes'
 import { savedRecipeKey, type Recipe } from '@/lib/types-recipes'
 import type { Yarn } from '@/lib/types'
+import { HeroIllustration } from '@/components/layout/HeroIllustration'
 import { FavoriteYarnsSection } from './FavoriteYarnsSection'
 import { FavoriteRecipesSection } from './FavoriteRecipesSection'
 
@@ -76,29 +77,47 @@ export default async function MineFavoritterPage() {
 
   return (
     <div style={{ background: '#F8F3EE', minHeight: 'calc(100vh - 58px)', fontFamily: "'DM Sans', sans-serif" }}>
-      {/* Hero */}
-      <div style={{
-        background: 'linear-gradient(135deg, #D4ADB6 0%, #D9BFC3 100%)',
-        padding: '56px 24px 48px',
-        textAlign: 'center',
+      {/* Hero — matcher find-forhandler/online-forhandlere-mønstret */}
+      <section style={{
+        background: 'linear-gradient(135deg, rgba(255,252,247,0.82) 0%, rgba(244,239,230,0.82) 55%, rgba(234,217,222,0.82) 100%)',
+        padding: '36px 0 32px',
       }}>
-        <div style={{ fontSize: 40, marginBottom: 12 }}>💝</div>
-        <h1 style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 600,
-          color: '#302218', margin: '0 0 10px',
+        <div style={{
+          maxWidth: 1080, margin: '0 auto', padding: '0 24px',
+          display: 'flex', gap: 28,
+          alignItems: 'center', justifyContent: 'space-between',
+          flexWrap: 'wrap',
         }}>
-          Mine favoritter
-        </h1>
-        <p style={{
-          fontFamily: "'Cormorant Garamond', serif",
-          fontSize: 'clamp(16px, 2vw, 20px)', fontStyle: 'italic',
-          color: '#302218', margin: '0 auto', maxWidth: 500,
-          lineHeight: 1.55, opacity: 0.85,
-        }}>
-          De garn og opskrifter du har gemt med et hjerte.
-        </p>
-      </div>
+          <div style={{ flex: '1 1 420px', minWidth: 260 }}>
+            <h1 style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: 'clamp(28px, 4.2vw, 38px)',
+              fontWeight: 600, color: '#302218', margin: 0, letterSpacing: '.01em',
+            }}>
+              Mine favoritter
+            </h1>
+            <p style={{ fontSize: 14.5, color: '#6B5D4F', margin: '6px 0 0', maxWidth: 640, lineHeight: 1.55 }}>
+              De garn og opskrifter du har gemt med et hjerte. Find inspiration i{' '}
+              <Link href="/garn" style={{ color: '#61846D', fontWeight: 500 }}>
+                garn-kataloget
+              </Link>{' '}
+              eller{' '}
+              <Link href="/opskrifter" style={{ color: '#61846D', fontWeight: 500 }}>
+                opskrifterne
+              </Link>
+              {' '}— tryk på hjertet for at gemme.
+            </p>
+          </div>
+          <div className="favoritter-hero-art" style={{ flexShrink: 0, width: 220, maxWidth: '100%' }}>
+            <HeroIllustration variant="favoritter-noegle-bog" />
+          </div>
+        </div>
+        <style>{`
+          @media (max-width: 640px) {
+            .favoritter-hero-art { display: none !important; }
+          }
+        `}</style>
+      </section>
 
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px 72px' }}>
         {totalCount === 0 ? (
